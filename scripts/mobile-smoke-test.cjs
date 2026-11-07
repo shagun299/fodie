@@ -57,6 +57,8 @@ async function runViewport(browser, viewport) {
     reducedMotion: "reduce"
   });
   const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate:3 });
   const pageErrors = [];
   const firstPartyFailures = [];
 
@@ -99,6 +101,12 @@ async function runViewport(browser, viewport) {
       bodyWidth: document.body.scrollWidth,
       dockVisible: getComputedStyle(document.querySelector("#mobileDock")).display !== "none",
       menuImage: document.querySelector("#menuGrid .dish-image")?.getAttribute("src") || "",
+      heroButton: (() => {
+        const button = document.querySelector(".hero-actions .button");
+        if (!button) return null;
+        const r = button.getBoundingClientRect();
+        return { width:r.width, height:r.height, direction:getComputedStyle(button.parentElement).flexDirection };
+      })(),
       dockItems: Array.from(document.querySelectorAll("#mobileDock .mobile-dock-item")).map(element => {
         const r = element.getBoundingClientRect();
         const style = getComputedStyle(element);
@@ -109,6 +117,9 @@ async function runViewport(browser, viewport) {
     check(pageGeometry.documentWidth <= pageGeometry.viewportWidth + 1, viewport, "no-horizontal-page-overflow",
       "viewport=" + pageGeometry.viewportWidth + ", document=" + pageGeometry.documentWidth + ", body=" + pageGeometry.bodyWidth);
     check(pageGeometry.dockVisible, viewport, "mobile-dock-visible");
+    check(Boolean(pageGeometry.heroButton) && pageGeometry.heroButton.height >= 40 &&
+      pageGeometry.heroButton.height <= 60 && pageGeometry.heroButton.direction === "column",
+      viewport, "hero-cta-has-normal-button-height", JSON.stringify(pageGeometry.heroButton));
     check(pageGeometry.dockItems.length === 4 &&
       pageGeometry.dockItems.every(item => item.display === "flex" && item.direction === "column" && item.width >= 60 && item.height >= 46),
       viewport, "mobile-dock-buttons-are-stacked-and-tappable", JSON.stringify(pageGeometry.dockItems));
@@ -212,6 +223,30 @@ async function runViewport(browser, viewport) {
       await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-page.png") });
     }
 
+    const scrollFrameMetrics = await page.evaluate(async () => {
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      const start = performance.now();
+      let last = start;
+      const frames = [];
+      return await new Promise(resolve => {
+        function tick(now) {
+          frames.push(now - last);
+          last = now;
+          const progress = Math.min(1, (now - start) / 1200);
+          window.scrollTo(0, maxScroll * progress);
+          if (progress < 1) requestAnimationFrame(tick);
+          else {
+            const sorted = frames.slice().sort((a,b) => a-b);
+            resolve({
+              frames:frames.length,
+              p95FrameMs:sorted.length ? Math.round(sorted[Math.floor((sorted.length - 1) * .95)] * 10) / 10 : null,
+              maxFrameMs:sorted.length ? Math.round(sorted[sorted.length - 1] * 10) / 10 : null
+            });
+          }
+        }
+        requestAnimationFrame(tick);
+      });
+    });
     const performance = await page.evaluate(() => {
       const nav = window.performance.getEntriesByType("navigation")[0];
       const resources = window.performance.getEntriesByType("resource");
@@ -225,6 +260,7 @@ async function runViewport(browser, viewport) {
         longTasksOver50ms: (window.__foodieLongTasks || []).length
       };
     });
+    performance.scrollFrameMetrics = scrollFrameMetrics;
     check(pageErrors.length === 0, viewport, "no-page-javascript-errors", JSON.stringify(pageErrors));
     check(firstPartyFailures.length === 0, viewport, "no-site-or-food-image-request-failures", JSON.stringify(firstPartyFailures));
     reports.push({ viewport:sizeName(viewport), name:"performance-observation", pass:true, detail:performance });
