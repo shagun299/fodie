@@ -2660,3 +2660,88 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .cart-drawer,.dish-card,.mobile-dock-item { transition:none!important; }
 }
+
+
+/* FOODIEHUB MOBILE PERFORMANCE V21
+   Reduce scroll-time compositing and repaint cost on mobile devices. */
+@media (max-width: 760px) {
+  html, body {
+    background-attachment: scroll !important;
+  }
+  body {
+    background-color: var(--paper) !important;
+    background-image: none !important;
+  }
+
+  .site-header,
+  .announcement-bar,
+  .mobile-dock,
+  .offer-panel,
+  .offer-art,
+  .dish-favourite,
+  .cart-drawer,
+  .cart-backdrop,
+  .site-dialog,
+  .site-dialog::backdrop,
+  .site-footer,
+  .toast,
+  .story-copy,
+  .closing-banner,
+  .quick-access-card,
+  .combo-card,
+  .recommendation-card {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .site-header,
+  .mobile-dock,
+  .offer-art,
+  .dish-favourite,
+  .cart-drawer,
+  .site-dialog,
+  .toast,
+  .quick-access-card {
+    box-shadow: 0 5px 16px rgba(20, 28, 22, .075) !important;
+  }
+
+  .cart-backdrop,
+  .site-dialog::backdrop {
+    background: rgba(10, 13, 12, .42) !important;
+  }
+
+  .dish-card {
+    box-shadow: 0 3px 12px rgba(20, 28, 22, .055) !important;
+    transition: border-color .15s ease !important;
+  }
+  .dish-image,
+  .dish-favourite,
+  .mobile-dock-item {
+    transition: none !important;
+  }
+  .offer-slide,
+  .offer-slide.is-active {
+    transform: none !important;
+    transition: opacity .18s ease !important;
+  }
+
+  .welcome-glow {
+    display: none !important;
+    filter: none !important;
+  }
+  .welcome-mark {
+    animation: none !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
