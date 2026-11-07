@@ -2545,678 +2545,256 @@ select {
 }
 
 
-/* FOODIEHUB MOBILE REPAIR V16
-   Consolidated phone layout rules. Keep controls in normal flow and let
-   each long surface own its scroll area so tap targets never cover content. */
+
+
+/* FOODIEHUB MOBILE SYSTEM V19
+   One authoritative responsive layer. Replaces conflicting V16-V18 patches. */
 @media (max-width: 760px) {
-  html, body { max-width:100%; overflow-x:clip!important; }
-  .page-width { width:calc(100% - 28px)!important; max-width:620px!important; }
-  .site-header { width:100%; }
-  .header-inner { width:100%; min-width:0; gap:7px!important; }
-  .brand { flex:1 1 auto; min-width:0; }
-  .brand img { display:block; width:clamp(104px,32vw,136px)!important; max-width:100%; height:auto; }
-  .header-actions { flex:0 0 auto; min-width:0; gap:4px!important; }
-  .icon-button,.profile-trigger,.cart-trigger { flex:0 0 auto; min-width:36px; min-height:40px!important; }
-  .profile-trigger { width:40px!important; padding:0!important; justify-content:center; }
+  html, body { width:100%; max-width:100%; overflow-x:hidden; }
+  body { padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
+  .page-width { width:calc(100% - 32px)!important; max-width:620px!important; }
+  .announcement-bar { display:flex; flex-wrap:wrap; justify-content:center; gap:4px 7px; padding:7px 12px; text-align:center; font-size:10px; line-height:1.4; }
+  .announcement-bar p { min-width:0; }
+  .announcement-bar a { margin-left:3px; }
+  .site-header { top:0!important; }
+  .header-inner {
+    display:flex!important; align-items:center!important; gap:8px!important;
+    width:100%!important; min-height:62px!important; padding:7px 10px!important;
+    border-radius:0 0 16px 16px!important;
+  }
+  .brand { flex:1 1 auto!important; min-width:0!important; }
+  .brand img { display:block; width:clamp(104px,31vw,132px)!important; height:auto!important; }
+  .desktop-nav { display:none!important; }
+  .header-actions { display:flex!important; flex:0 0 auto!important; gap:5px!important; margin-left:auto!important; }
+  .icon-button,.profile-trigger,.cart-trigger {
+    display:grid!important; flex:0 0 38px!important; place-items:center!important;
+    width:38px!important; min-width:38px!important; height:40px!important;
+    min-height:40px!important; padding:0!important; border-radius:50%!important;
+  }
   .profile-trigger-label,.cart-trigger-label { display:none!important; }
+  .cart-trigger { position:relative!important; border-radius:50%!important; }
+  .cart-count { position:absolute!important; top:-4px!important; right:-4px!important; min-width:18px!important; height:18px!important; }
 
-  /* Every text button can wrap instead of pushing its neighbour off-screen. */
-  button,.button {
-    box-sizing:border-box!important;
-    max-width:100%;
-    min-width:0;
-    line-height:1.25;
-    white-space:normal;
-    overflow-wrap:anywhere;
-    touch-action:manipulation;
+  /* Hero */
+  .hero-section { display:grid!important; grid-template-columns:minmax(0,1fr)!important; gap:25px!important; min-height:0!important; padding:34px 0 30px!important; }
+  .hero-copy { min-width:0!important; padding:0!important; }
+  .eyebrow { flex-wrap:wrap; font-size:9px!important; letter-spacing:.1em!important; }
+  .hero-copy h1 { margin:16px 0 14px!important; font-size:clamp(39px,10vw,55px)!important; line-height:1.04!important; overflow-wrap:anywhere; }
+  .hero-description { max-width:none!important; font-size:13px!important; line-height:1.7!important; }
+  .hero-actions { display:flex!important; flex-wrap:wrap!important; gap:10px!important; margin-top:22px!important; }
+  .hero-actions .button { flex:1 1 150px; min-width:0; }
+  .hero-notes { display:flex!important; flex-wrap:wrap!important; gap:10px!important; margin-top:22px!important; }
+  .hero-note { min-width:0; }
+  .note-divider { display:none!important; }
+  .hero-visual { width:100%!important; max-width:none!important; min-width:0!important; padding:0!important; }
+  .hero-image-frame { height:clamp(235px,65vw,340px)!important; border-radius:22px!important; }
+  .floating-stamp { width:66px!important; height:66px!important; top:12px!important; right:8px!important; outline-width:3px!important; }
+  .hero-side-note { right:5px!important; bottom:-18px!important; font-size:9px!important; }
+
+  .promise-strip { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:12px!important; min-height:0!important; padding:15px 12px!important; }
+  .promise-strip>div { min-width:0!important; gap:7px!important; font-size:10px!important; }
+
+  /* Offers: content and discount graphic are separate rows, never side-by-side. */
+  .offer-section { padding-top:40px!important; }
+  .offer-carousel,.offer-carousel-track { width:100%!important; min-width:0!important; }
+  .offer-panel {
+    display:flex!important; flex-direction:column!important; align-items:stretch!important;
+    justify-content:flex-start!important; gap:18px!important; width:100%!important;
+    min-width:0!important; min-height:0!important; padding:22px 18px!important;
+    border-radius:22px!important; overflow:hidden!important;
   }
-  .button,.add-button,.checkout-button,.place-order-button {
-    min-height:44px!important;
-    padding:10px 14px!important;
-    justify-content:center;
-    text-align:center;
+  .offer-copy { display:flex!important; flex-direction:column!important; align-items:flex-start!important; width:100%!important; max-width:none!important; min-width:0!important; }
+  .offer-copy .offer-kicker { font-size:9px!important; line-height:1.4!important; }
+  .offer-copy h2 { margin:11px 0 9px!important; font-size:clamp(27px,7vw,35px)!important; line-height:1.08!important; overflow-wrap:anywhere; }
+  .offer-copy p { width:100%!important; max-width:none!important; margin:0 0 15px!important; font-size:12px!important; line-height:1.6!important; }
+  .offer-copy .button { align-self:flex-start; min-height:44px!important; }
+  .offer-art {
+    display:flex!important; flex:0 0 auto!important; align-self:center!important;
+    width:142px!important; height:142px!important; min-width:142px!important;
+    margin:0 auto 4px!important; transform:none!important;
   }
-  .close-button { display:grid; flex:0 0 42px; width:42px; height:42px; min-width:42px; min-height:42px!important; place-items:center; }
-  .category-tab,.diet-button,.offer-nav,.offer-dots button { touch-action:manipulation; }
+  .offer-art>strong { font-size:55px!important; }
+  .offer-art>strong span { font-size:23px!important; }
+  .offer-circle,.offer-off { font-size:8px!important; }
+  .offer-code { font-size:8px!important; }
+  .offer-decoration-one { right:8%!important; top:12%!important; font-size:110px!important; }
+  .offer-decoration-two { right:-8px!important; bottom:-45px!important; font-size:120px!important; }
+  .offer-slider-controls { display:flex!important; flex-wrap:wrap!important; align-items:center!important; justify-content:center!important; gap:8px!important; padding:12px 0 0!important; }
+  .offer-dots { display:flex!important; gap:3px!important; max-width:100%!important; }
+  .offer-dots button { min-width:31px!important; min-height:34px!important; padding:0 5px!important; }
+  .offer-slide-count { white-space:nowrap; }
 
-  /* Menu controls stay in their own rows. Category chips scroll horizontally. */
-  .menu-toolbar,.menu-filters { width:100%; min-width:0; }
-  .search-box { width:100%; min-width:0; }
-  .sort-control { width:100%; min-width:0; justify-content:flex-start; }
-  .sort-control select { width:100%; min-width:0; }
-  .category-tabs { max-width:100%; min-width:0; flex-wrap:nowrap!important; overflow-x:auto!important; overscroll-behavior-x:contain; }
-  .diet-filters { display:flex; flex-wrap:wrap; gap:7px; max-width:100%; }
-  .diet-button { max-width:100%; padding:0 11px; white-space:normal; }
+  /* Menu controls */
+  .menu-section { padding-top:54px!important; }
+  .section-heading { align-items:flex-start!important; gap:12px!important; }
+  .section-heading>div { min-width:0!important; }
+  .section-heading h2 { font-size:clamp(30px,7.5vw,40px)!important; line-height:1.12!important; }
+  .section-heading p { font-size:12px!important; }
+  .menu-count { flex:0 0 auto!important; padding:8px 10px!important; gap:7px!important; }
+  .menu-count strong { font-size:24px!important; }
+  .menu-count span { font-size:8px!important; }
+  .menu-toolbar { display:flex!important; flex-direction:column!important; align-items:stretch!important; gap:10px!important; margin-top:20px!important; }
+  .search-box { width:100%!important; min-width:0!important; min-height:48px!important; }
+  .search-box input { min-width:0!important; font-size:14px!important; }
+  .search-box kbd { display:none!important; }
+  .sort-control { display:grid!important; grid-template-columns:auto minmax(0,1fr)!important; align-items:center!important; gap:10px!important; width:100%!important; }
+  .sort-control select { width:100%!important; min-width:0!important; min-height:44px!important; }
+  .menu-filters { display:flex!important; flex-direction:column!important; align-items:stretch!important; gap:10px!important; }
+  .category-tabs { display:flex!important; flex-wrap:nowrap!important; width:100%!important; max-width:100%!important; overflow-x:auto!important; gap:7px!important; padding:2px 1px 7px!important; }
+  .category-tab { flex:0 0 auto!important; min-height:38px!important; white-space:nowrap!important; }
+  .diet-filters { display:flex!important; flex-wrap:wrap!important; gap:7px!important; width:100%!important; }
+  .diet-button { min-height:38px!important; padding:0 12px!important; }
 
-  /* On phones the food cards become roomy horizontal rows. Price, customise
-     and Add stay together instead of fighting for a narrow two-column footer. */
-  .dish-grid { grid-template-columns:minmax(0,1fr)!important; gap:12px!important; }
+  /* Food cards are calm horizontal rows, with independent image and content columns. */
+  .dish-grid { display:grid!important; grid-template-columns:minmax(0,1fr)!important; gap:12px!important; }
   .dish-card {
-    display:grid!important;
-    grid-template-columns:minmax(108px,34%) minmax(0,1fr)!important;
-    align-items:stretch;
-    min-width:0;
-    width:100%;
-    overflow:hidden;
+    display:grid!important; grid-template-columns:116px minmax(0,1fr)!important;
+    width:100%!important; min-width:0!important; overflow:hidden!important;
+    border-radius:17px!important; transform:none!important;
   }
-  .dish-image-wrap {
-    height:auto!important;
-    min-height:178px!important;
-    align-self:stretch;
-  }
-  .dish-image {    position:absolute!important;    inset:0!important;    display:block!important;    width:100%!important;    height:100%!important;    object-fit:cover!important;  }
-  .dish-content {
-    display:flex!important;
-    flex-direction:column;
-    justify-content:flex-start;
-    gap:0;
-    min-width:0;
-    padding:12px 11px!important;
-  }
-  .dish-topline { flex-wrap:wrap; justify-content:flex-start; gap:4px 8px; min-width:0; }
-  .dish-time { white-space:normal; }
-  .dish-content h3 {
-    min-width:0;
-    min-height:0;
-    margin:7px 0 5px;
-    font-size:14px!important;
-    line-height:1.3;
-    white-space:normal!important;
-    overflow-wrap:anywhere;
-  }
-  .dish-description {
-    min-width:0;
-    min-height:0!important;
-    margin-bottom:8px;
-    font-size:11px!important;
-    line-height:1.45;
-    display:-webkit-box;
-    overflow:hidden;
-    -webkit-box-orient:vertical;
-    -webkit-line-clamp:2;
-  }
-  .customize-link {
-    display:flex;
-    align-items:center;
-    justify-content:flex-start;
-    width:100%;
-    max-width:100%;
-    min-height:38px!important;
-    margin:2px 0 7px!important;
-    padding:7px 8px!important;
-    font-size:10px!important;
-    line-height:1.3;
-    white-space:normal!important;
-    text-align:left;
-  }
-  .dish-bottom {
-    display:grid!important;
-    grid-template-columns:minmax(0,1fr) auto;
-    align-items:center!important;
-    gap:7px!important;
-    width:100%;
-    margin-top:auto!important;
-    padding-top:9px!important;
-    min-width:0;
-  }
-  .dish-prices { min-width:0; gap:4px 6px; flex-wrap:wrap; }
-  .dish-prices strong { font-size:15px!important; white-space:nowrap; }
-  .dish-prices del { font-size:10px; }
-  .dish-card .add-button {
-    min-width:76px;
-    min-height:42px!important;
-    padding:8px 11px!important;
-    font-size:11px!important;
-    white-space:nowrap;
-  }
-  .dish-badge-line { min-height:0; margin-top:7px; font-size:9px; line-height:1.35; }
-  .dish-favourite { width:38px!important; height:38px!important; min-width:38px; min-height:38px!important; }
+  .dish-image-wrap { position:relative!important; width:100%!important; height:100%!important; min-height:172px!important; align-self:stretch!important; }
+  .dish-image { position:absolute!important; inset:0!important; width:100%!important; height:100%!important; object-fit:cover!important; }
+  .dish-content { display:flex!important; flex-direction:column!important; min-width:0!important; gap:0!important; padding:11px!important; }
+  .dish-topline { display:flex!important; flex-wrap:wrap!important; gap:4px 7px!important; min-width:0!important; }
+  .dish-content h3 { min-width:0!important; margin:7px 0 4px!important; font-size:14px!important; line-height:1.28!important; white-space:normal!important; overflow-wrap:anywhere; }
+  .dish-description { min-width:0!important; min-height:0!important; margin:0 0 7px!important; font-size:10px!important; line-height:1.4!important; display:-webkit-box!important; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden!important; }
+  .customize-link { display:inline-flex!important; align-items:center!important; justify-content:flex-start!important; width:100%!important; max-width:100%!important; min-height:34px!important; margin:0 0 6px!important; padding:5px 0!important; font-size:10px!important; white-space:normal!important; text-align:left!important; }
+  .dish-bottom { display:flex!important; flex-wrap:wrap!important; align-items:center!important; justify-content:space-between!important; gap:7px!important; width:100%!important; margin-top:auto!important; padding-top:7px!important; }
+  .dish-prices { display:flex!important; flex-wrap:wrap!important; align-items:baseline!important; gap:4px 6px!important; min-width:0!important; }
+  .dish-prices strong { font-size:15px!important; white-space:nowrap!important; }
+  .dish-card .add-button { flex:0 0 auto!important; min-width:68px!important; min-height:40px!important; padding:7px 10px!important; font-size:11px!important; white-space:nowrap!important; }
+  .discount-badge { top:8px!important; left:8px!important; max-width:calc(100% - 16px)!important; padding:5px 7px!important; font-size:9px!important; line-height:1.15!important; white-space:normal!important; }
+  .dish-favourite { top:8px!important; right:8px!important; width:34px!important; height:34px!important; min-width:34px!important; }
 
-  /* Stack all option groups on phones. Labels wrap, never sit on top of radios. */
-  .form-grid,.payment-choice,.customizer-size-options,.customizer-addon-list,
-  .customizer-preference-options,.meal-builder-controls,.admin-login-form {
-    grid-template-columns:minmax(0,1fr)!important;
-  }
-  .form-grid>* { min-width:0; }
-  .form-field,.address-grid .form-field { min-width:0; }
-  .form-field input,.form-field select,.form-field textarea,
-  .address-grid input,.address-grid select {
-    box-sizing:border-box!important;
-    width:100%;
-    min-width:0;
-    min-height:48px;
-    font-size:16px!important;
-  }
-  .address-fields-intro { flex-direction:column; align-items:flex-start; gap:5px; }
-  .address-fields-intro>small { text-align:left; }
-  .payment-choice { display:grid!important; width:100%; gap:10px!important; }
-  .payment-choice label {
-    display:grid!important;
-    grid-template-columns:30px minmax(0,1fr) 18px!important;
-    align-items:center;
-    gap:10px!important;
-    width:100%;
-    min-width:0;
-    min-height:78px!important;
-    padding:12px!important;
-  }
-  .payment-choice .payment-card-icon { grid-column:1; }
-  .payment-choice label>span:not(.payment-card-icon) {
-    grid-column:2;
-    min-width:0;
-    overflow-wrap:anywhere;
-  }
-  .payment-choice label>span strong {
-    font-size:13px!important;
-    line-height:1.3;
-    overflow-wrap:anywhere;
-  }
-  .payment-choice label>span small {
-    display:block;
-    margin-top:4px;
-    font-size:11px!important;
-    line-height:1.4!important;
-    white-space:normal;
-    overflow-wrap:anywhere;
-  }
-  .payment-choice label>i { grid-column:3; justify-self:end; }
-  .payment-choice input { top:10px; left:10px; }
-  .save-profile-choice { align-items:flex-start; gap:10px; min-width:0; padding:12px!important; }
-  .save-profile-choice>span { min-width:0; overflow-wrap:anywhere; }
-  .save-profile-choice small { display:block; line-height:1.4; }
-  .checkout-summary { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
-  .checkout-review,.checkout-review-item,.checkout-review-breakdown { min-width:0; }
-  .checkout-review-item>div { min-width:0; overflow-wrap:anywhere; }
-  .checkout-review-item>strong { white-space:nowrap; }
-
-  /* Checkout is a full-height sheet with one scrollable body.
-     The submit button stays in document flow, never over form options. */
-  #checkoutDialog[open] {
-    position:fixed!important;
-    inset:0!important;
-    margin:0!important;
-    width:100vw!important;
-    max-width:none!important;
-    height:100dvh!important;
-    max-height:100dvh!important;
-    display:flex!important;
-    flex-direction:column;
+  /* Bag: full-width bottom sheet, with one stable scroll area for cart lines
+     and another for coupon + bill. No sticky checkout button over the totals. */
+  .cart-backdrop { z-index:100!important; }
+  .cart-drawer {
+    position:fixed!important; z-index:101!important;
+    top:auto!important; right:0!important; bottom:0!important; left:0!important;
+    display:flex!important; flex-direction:column!important;
+    width:100%!important; max-width:100%!important;
+    height: min(92dvh, 820px)!important; max-height:92dvh!important;
+    padding-bottom:env(safe-area-inset-bottom)!important;
+    border:1px solid var(--glass-border)!important; border-bottom:0!important;
+    border-radius:24px 24px 0 0!important;
     overflow:hidden!important;
-    border:0!important;
-    border-radius:0!important;
-    transform:none!important;
+    transform:translateY(105%)!important;
+    transition:transform .28s cubic-bezier(.2,.8,.2,1)!important;
   }
-  #checkoutDialog .dialog-header {
-    position:relative!important;
-    z-index:2;
-    display:flex;
-    flex:0 0 auto;
-    align-items:center;
-    gap:12px;
-    padding:calc(12px + env(safe-area-inset-top)) 16px 13px!important;
-    border-radius:0!important;
+  .cart-drawer.is-open { transform:translateY(0)!important; }
+  .cart-drawer .drawer-header {
+    display:flex!important; flex:0 0 auto!important; min-height:72px!important;
+    gap:10px!important; padding:14px 16px!important;
   }
-  #checkoutDialog .dialog-header>div { min-width:0; }
-  #checkoutDialog .dialog-header h2 { font-size:clamp(21px,6vw,27px)!important; line-height:1.12!important; }
-  #checkoutDialog .checkout-form {
-    display:block!important;
-    flex:1 1 auto;
-    min-height:0!important;
-    max-height:none!important;
-    width:100%;
-    overflow-x:hidden!important;
-    overflow-y:auto!important;
-    overscroll-behavior:contain;
-    -webkit-overflow-scrolling:touch;
-    padding:15px 16px calc(24px + env(safe-area-inset-bottom))!important;
+  .cart-drawer .drawer-header h2 { font-size:23px!important; }
+  .cart-drawer .drawer-header .drawer-kicker { font-size:8px!important; }
+  .cart-drawer .cart-items {
+    display:block!important; flex:1 1 0!important; min-height:90px!important;
+    height:auto!important; overflow-x:hidden!important; overflow-y:auto!important;
+    padding:4px 16px!important; overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch!important;
   }
-  #checkoutDialog .place-order-button {
-    position:static!important;
-    inset:auto!important;
-    display:flex!important;
-    width:100%!important;
-    min-height:54px!important;
-    margin:16px 0 8px!important;
-    padding:13px 16px!important;
-    white-space:normal!important;
-    line-height:1.25!important;
-    box-shadow:0 10px 24px rgba(29,77,53,.18)!important;
+  .cart-drawer .cart-empty { padding:24px 12px!important; }
+  .cart-drawer .cart-line { grid-template-columns:64px minmax(0,1fr) auto!important; gap:9px!important; padding:12px 0!important; }
+  .cart-drawer .cart-line>img { width:64px!important; height:64px!important; }
+  .cart-drawer .drawer-bottom {
+    display:block!important; flex:0 0 auto!important; width:100%!important;
+    min-height:0!important; max-height:48dvh!important;
+    overflow-x:hidden!important; overflow-y:auto!important;
+    padding:12px 16px calc(14px + env(safe-area-inset-bottom))!important;
+    border-top:1px solid var(--line)!important;
+    overscroll-behavior:contain; -webkit-overflow-scrolling:touch!important;
   }
-  #checkoutDialog .demo-disclaimer { margin-bottom:6px; line-height:1.45; }
-  .form-error { overflow-wrap:anywhere; }
+  .coupon-entry label { margin-bottom:6px!important; font-size:10px!important; }
+  .coupon-row { display:grid!important; grid-template-columns:minmax(0,1fr) 82px!important; gap:8px!important; width:100%!important; }
+  .coupon-row input { width:100%!important; min-width:0!important; min-height:44px!important; font-size:13px!important; }
+  .coupon-row button { width:82px!important; min-width:82px!important; min-height:44px!important; }
+  .coupon-message { min-height:0!important; margin:5px 0 8px!important; font-size:10px!important; line-height:1.35!important; }
+  .delivery-progress { margin:7px 0!important; padding:9px 10px!important; font-size:10px!important; line-height:1.35!important; }
+  .bill-lines>div { min-height:27px!important; font-size:11px!important; }
+  .bill-lines strong { font-size:11px!important; }
+  .bill-lines .bill-total { min-height:45px!important; }
+  .bill-lines .bill-total strong { font-size:19px!important; }
+  .cart-drawer .checkout-button {
+    position:static!important; display:flex!important; width:100%!important;
+    min-height:50px!important; margin:10px 0 0!important;
+    white-space:normal!important; line-height:1.2!important;
+  }
+  .cart-drawer .secure-note { margin:7px 0 0!important; font-size:9px!important; line-height:1.35!important; }
 
-  /* Other dialogs use the available phone width without horizontal clipping. */
-  .site-dialog:not(#checkoutDialog) {
-    width:calc(100% - 16px)!important;
-    max-width:none!important;
-    max-height:92dvh!important;
-    overflow-x:hidden!important;
-    overflow-y:auto!important;
-    border-radius:19px!important;
+  /* Mobile dock sits below the bag sheet and never overlaps page content. */
+  .mobile-dock {
+    z-index:70!important; left:50%!important; bottom:calc(7px + env(safe-area-inset-bottom))!important;
+    width:calc(100% - 24px)!important; max-width:480px!important;
+    min-height:62px!important; padding:5px!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
   }
-  .dialog-header { gap:10px; min-width:0; }
-  .dialog-header>div { min-width:0; }
-  .checkout-form,.tracking-form,.profile-form { padding:15px!important; }
+  .mobile-dock-item { min-width:0!important; min-height:50px!important; gap:4px!important; font-size:10px!important; }
+  .mobile-dock-item svg { width:20px!important; height:20px!important; }
+  .mobile-dock-count { top:0!important; right:calc(50% - 23px)!important; }
+  .toast-region { z-index:120!important; right:10px!important; left:10px!important; bottom:calc(82px + env(safe-area-inset-bottom))!important; width:auto!important; }
 
-  /* Lower-page sections and utility buttons keep a single clear column. */
-  .quick-access-strip { display:flex; flex-direction:column; align-items:stretch; gap:12px; }
-  .quick-access-actions { display:grid!important; grid-template-columns:minmax(0,1fr)!important; width:100%; max-width:none!important; }
-  .quick-access-card { width:100%; min-width:0; min-height:64px; }
-  .combo-grid,.recommendation-grid { grid-template-columns:minmax(0,1fr)!important; }
-  .combo-card-footer { flex-wrap:wrap; }
-  .rewards-panel { grid-template-columns:minmax(0,1fr)!important; }
-  .meal-builder-shell { grid-template-columns:minmax(0,1fr)!important; }
-  .meal-builder-controls { display:grid; grid-template-columns:minmax(0,1fr)!important; }
-  .admin-login-form { display:grid; grid-template-columns:minmax(0,1fr)!important; }
-  .footer-main { grid-template-columns:minmax(0,1fr)!important; }
+  /* Checkout and detail dialogs */
+  #checkoutDialog[open] {
+    position:fixed!important; inset:0!important; margin:0!important;
+    display:flex!important; flex-direction:column!important;
+    width:100vw!important; max-width:100vw!important;
+    height:100dvh!important; max-height:100dvh!important;
+    overflow:hidden!important; border:0!important; border-radius:0!important;
+  }
+  #checkoutDialog>.dialog-header { display:flex!important; flex:0 0 auto!important; align-items:center!important; gap:10px!important; padding:calc(12px + env(safe-area-inset-top)) 14px 12px!important; }
+  #checkoutDialog>.dialog-header>div { flex:1 1 auto!important; min-width:0!important; }
+  #checkoutDialog .checkout-form { display:block!important; flex:1 1 0!important; height:0!important; min-height:0!important; width:100%!important; overflow:auto!important; overflow-x:hidden!important; padding:14px 14px calc(24px + env(safe-area-inset-bottom))!important; -webkit-overflow-scrolling:touch!important; }
+  #checkoutDialog .form-grid,#checkoutDialog .address-grid,#checkoutDialog .payment-choice { display:grid!important; grid-template-columns:minmax(0,1fr)!important; width:100%!important; gap:10px!important; }
+  #checkoutDialog .form-field,#checkoutDialog .form-field-full { display:flex!important; grid-column:1!important; width:100%!important; min-width:0!important; }
+  #checkoutDialog .form-field input,#checkoutDialog .form-field select,#checkoutDialog .form-field textarea { width:100%!important; min-width:0!important; min-height:48px!important; font-size:16px!important; }
+  #checkoutDialog .payment-choice label { display:grid!important; grid-template-columns:30px minmax(0,1fr) 18px!important; align-items:center!important; gap:9px!important; width:100%!important; min-height:72px!important; padding:12px!important; }
+  #checkoutDialog .payment-choice label>span:not(.payment-card-icon) { grid-column:2!important; min-width:0!important; white-space:normal!important; overflow-wrap:anywhere!important; }
+  #checkoutDialog .payment-choice label strong,#checkoutDialog .payment-choice label small { display:block!important; white-space:normal!important; overflow-wrap:anywhere!important; line-height:1.35!important; }
+  #checkoutDialog .payment-choice label>i { grid-column:3!important; justify-self:end!important; }
+  #checkoutDialog .place-order-button { position:static!important; display:flex!important; width:100%!important; min-height:52px!important; margin:14px 0 8px!important; }
+  .site-dialog:not(#checkoutDialog)[open] { position:fixed!important; inset:12px 8px auto!important; width:calc(100% - 16px)!important; max-width:none!important; max-height:calc(100dvh - 24px)!important; margin:0 auto!important; overflow:auto!important; border-radius:20px!important; -webkit-overflow-scrolling:touch!important; }
+  .site-dialog:not(#checkoutDialog) .dialog-header { position:sticky!important; top:0!important; z-index:4!important; background:var(--card)!important; }
+  .dish-detail-dialog[open] { overflow:hidden!important; }
+  .dish-detail-dialog .dish-customizer-form { max-height:calc(100dvh - 205px)!important; overflow:auto!important; -webkit-overflow-scrolling:touch!important; }
+
+  /* All remaining feature sections collapse into readable single columns. */
+  .quick-access-strip { display:flex!important; flex-direction:column!important; align-items:stretch!important; gap:12px!important; }
+  .quick-access-actions,.combo-grid,.recommendation-grid,.meal-builder-shell,.rewards-panel,.footer-main { grid-template-columns:minmax(0,1fr)!important; }
+  .quick-access-actions { display:grid!important; }
+  .quick-access-card { width:100%!important; min-width:0!important; }
+  .meal-builder-controls { display:grid!important; grid-template-columns:minmax(0,1fr)!important; }
+  .feature-heading { align-items:flex-start!important; flex-direction:column!important; }
+  .recommendation-card { grid-template-columns:96px minmax(0,1fr)!important; min-width:0!important; }
   .footer-brand,.footer-newsletter { grid-column:1!important; }
-  .recommendation-card { grid-template-columns:104px minmax(0,1fr)!important; min-width:0; }
-  .recommendation-card-copy { min-width:0; }
-  .recommendation-card-copy .button { white-space:normal!important; }
-
-  /* Compact navigation and drawers respect screen and system safe areas. */
-  .mobile-dock { padding-bottom:max(5px,env(safe-area-inset-bottom)); }
-  .mobile-dock-item { min-height:50px; }
-  .cart-drawer { display:flex!important; flex-direction:column; overflow:hidden!important; }
-  .drawer-header { flex:0 0 auto; min-width:0; }
-  .cart-items { flex:1 1 auto; min-height:0; overflow-x:hidden; overflow-y:auto; }
-  .drawer-bottom {
-    flex:0 1 auto;
-    min-height:0;
-    max-height:58dvh!important;
-    overflow-x:hidden!important;
-    overflow-y:auto!important;
-    overscroll-behavior:contain;
-    -webkit-overflow-scrolling:touch;
-  }
-  .coupon-row { display:grid!important; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
-  .coupon-row input { width:100%; min-width:0; }
-  .coupon-row button { min-width:76px; min-height:44px!important; }
-  .checkout-button { position:sticky!important; bottom:0; width:100%; min-height:52px!important; }
-  .toast-region { right:10px; left:10px; width:auto; max-width:none; bottom:calc(88px + env(safe-area-inset-bottom))!important; }
+  .button,.add-button { max-width:100%!important; }
 }
-@media (max-width: 520px) {
+@media (max-width: 390px) {
   .page-width { width:calc(100% - 24px)!important; }
-  .header-inner { padding-inline:8px!important; }
-  .brand img { width:clamp(100px,30vw,120px)!important; }
+  .header-inner { padding-inline:7px!important; }
+  .brand img { width:100px!important; }
   .header-actions { gap:3px!important; }
-  .icon-button,.profile-trigger,.cart-trigger { min-width:34px; min-height:40px!important; }
-  .icon-button { width:36px!important; }
-  .cart-trigger { width:38px!important; }
-  .hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
-  .hero-actions .button { flex:1 1 145px; min-width:0; }
-  .offer-panel { min-width:0; gap:8px!important; }
-  .offer-copy { min-width:0; max-width:63%!important; }
-  .offer-copy h2 { overflow-wrap:anywhere; }
-  .offer-art { flex:0 0 clamp(92px,29vw,122px)!important; width:clamp(92px,29vw,122px)!important; height:clamp(92px,29vw,122px)!important; }
-  .offer-slider-controls { display:flex; flex-wrap:wrap; justify-content:center; }
-  .offer-dots { max-width:100%; }
-  .offer-dots button { min-width:25px; min-height:32px!important; }
-  .dish-grid { gap:10px!important; }
-  .dish-card { grid-template-columns:minmax(100px,33%) minmax(0,1fr)!important; }
+  .icon-button,.profile-trigger,.cart-trigger { flex-basis:35px!important; width:35px!important; min-width:35px!important; }
+  .hero-copy h1 { font-size:39px!important; }
+  .offer-panel { padding:19px 15px!important; }
+  .offer-art { width:128px!important; height:128px!important; min-width:128px!important; }
+  .dish-card { grid-template-columns:104px minmax(0,1fr)!important; }
   .dish-image-wrap { min-height:164px!important; }
   .dish-content { padding:10px!important; }
-  .dish-content h3 { font-size:13px!important; }
-  .dish-bottom { gap:6px!important; }
-  .dish-card .add-button { min-width:70px; padding-inline:9px!important; }
-  .site-dialog:not(#checkoutDialog) { padding:0; }
-}
-@media (max-width: 390px) {
-  .page-width { width:calc(100% - 20px)!important; }
-  .announcement-bar { padding-inline:9px; text-align:center; }
-  .brand img { width:103px!important; }
-  .header-actions { gap:2px!important; }
-  .icon-button,.profile-trigger,.cart-trigger { min-width:32px; }
-  .icon-button { width:34px!important; }
-  .cart-trigger { width:36px!important; }
-  .dish-card { grid-template-columns:minmax(94px,32%) minmax(0,1fr)!important; }
-  .dish-image-wrap { min-height:156px!important; }
-  .dish-content { padding:9px!important; }
-  .dish-description { font-size:10px!important; }
-  .dish-prices strong { font-size:14px!important; }
-  .mobile-dock { width:calc(100% - 16px)!important; }
-  #checkoutDialog .dialog-header { padding-inline:13px!important; }
-  #checkoutDialog .checkout-form { padding-inline:13px!important; }
-  #checkoutDialog .payment-choice label { gap:8px!important; padding:11px!important; }
-  .customer-dashboard-stats { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
+  .dish-card .add-button { min-width:64px!important; padding-inline:8px!important; }
+  .cart-drawer .drawer-header { padding-inline:13px!important; }
+  .cart-drawer .cart-items,.cart-drawer .drawer-bottom { padding-inline:13px!important; }
 }
 @media (max-width: 340px) {
-  .brand img { width:94px!important; }
-  .dish-card { grid-template-columns:minmax(88px,31%) minmax(0,1fr)!important; }
-  .dish-image-wrap { min-height:148px!important; }
+  .brand img { width:90px!important; }
+  .icon-button,.profile-trigger,.cart-trigger { flex-basis:32px!important; width:32px!important; min-width:32px!important; }
+  .dish-card { grid-template-columns:92px minmax(0,1fr)!important; }
   .dish-content { padding:8px!important; }
-  .dish-card .add-button { min-width:64px; padding-inline:7px!important; }
-  #checkoutDialog .dialog-header h2 { font-size:20px!important; }
-  #checkoutDialog .checkout-form { padding-inline:10px!important; }
-  #checkoutDialog .payment-choice label { grid-template-columns:25px minmax(0,1fr) 15px!important; gap:7px!important; }
+  .dish-card .add-button { min-width:60px!important; }
+  .offer-art { width:116px!important; height:116px!important; min-width:116px!important; }
+  .mobile-dock-item { font-size:9px!important; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dish-card,.dish-card:hover,.mobile-dock-item,.cart-drawer { transition:none!important; }
-}
-
-
-/* FOODIEHUB MOBILE OVERLAP FIX V17
-   Final mobile layout contract: dialogs and drawers own their scroll,
-   option cards never share a row on narrow screens, actions stay in flow. */
-@media (max-width: 760px) {
-  html { scroll-padding-top: 78px; }
-  body { padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important; }
-
-  /* Checkout/profile/tracking: true viewport sheet with independent scroll. */
-  dialog.site-dialog[open] {
-    box-sizing: border-box !important;
-    max-width: 100vw !important;
-    overscroll-behavior: contain;
-  }
-  #checkoutDialog[open] {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    height: 100dvh !important;
-    max-height: 100% !important;
-    margin: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-  }
-  #checkoutDialog > .dialog-header {
-    flex: 0 0 auto !important;
-    min-height: 68px;
-    padding: calc(12px + env(safe-area-inset-top)) 14px 12px !important;
-  }
-  #checkoutDialog > .dialog-header > div { flex: 1 1 auto; min-width: 0; }
-  #checkoutDialog .checkout-form {
-    flex: 1 1 0 !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow: auto !important;
-    overflow-x: hidden !important;
-    padding: 14px 14px calc(28px + env(safe-area-inset-bottom)) !important;
-    -webkit-overflow-scrolling: touch;
-  }
-  #checkoutDialog .form-grid,
-  #checkoutDialog .address-grid,
-  #checkoutDialog .payment-choice {
-    display: grid !important;
-    grid-template-columns: minmax(0,1fr) !important;
-    width: 100% !important;
-    gap: 10px !important;
-  }
-  #checkoutDialog .form-field,
-  #checkoutDialog .form-field-full { grid-column: 1 !important; min-width: 0 !important; }
-  #checkoutDialog .payment-choice label {
-    position: relative !important;
-    display: grid !important;
-    grid-template-columns: 32px minmax(0,1fr) 18px !important;
-    align-items: center !important;
-    gap: 10px !important;
-    width: 100% !important;
-    min-height: 76px !important;
-    height: auto !important;
-    padding: 12px !important;
-    overflow: visible !important;
-  }
-  #checkoutDialog .payment-choice label > span:not(.payment-card-icon) {
-    grid-column: 2 !important;
-    min-width: 0 !important;
-    white-space: normal !important;
-    overflow-wrap: anywhere !important;
-  }
-  #checkoutDialog .payment-choice label > span strong,
-  #checkoutDialog .payment-choice label > span small {
-    display: block !important;
-    white-space: normal !important;
-    overflow-wrap: anywhere !important;
-    line-height: 1.4 !important;
-  }
-  #checkoutDialog .payment-choice label > i {
-    grid-column: 3 !important;
-    justify-self: end !important;
-  }
-  #checkoutDialog .place-order-button {
-    position: static !important;
-    display: flex !important;
-    width: 100% !important;
-    min-height: 52px !important;
-    margin: 16px 0 8px !important;
-    padding: 13px 16px !important;
-    white-space: normal !important;
-    overflow-wrap: anywhere !important;
-  }
-
-  /* Every other dialog scrolls as one surface, not behind its controls. */
-  .site-dialog:not(#checkoutDialog)[open] {
-    display: block !important;
-    width: calc(100% - 20px) !important;
-    max-width: 620px !important;
-    max-height: calc(100dvh - 24px - env(safe-area-inset-top)) !important;
-    margin: 12px auto !important;
-    overflow: auto !important;
-    padding: 0 !important;
-    -webkit-overflow-scrolling: touch;
-  }
-  .site-dialog:not(#checkoutDialog) .dialog-header {
-    position: sticky;
-    top: 0;
-    z-index: 4;
-    background: var(--card);
-  }
-
-  /* Cart sheet: item list and bill section scroll independently without
-     allowing the coupon, totals and checkout action to collide. */
-  .cart-drawer {
-    display: flex !important;
-    flex-direction: column !important;
-    height: min(90dvh, 820px) !important;
-    max-height: 90dvh !important;
-    overflow: hidden !important;
-  }
-  .cart-drawer .drawer-header { flex: 0 0 auto !important; }
-  .cart-drawer .cart-items {
-    flex: 1 1 auto !important;
-    min-height: 72px !important;
-    overflow: auto !important;
-  }
-  .cart-drawer .drawer-bottom {
-    flex: 0 1 auto !important;
-    min-height: 0 !important;
-    max-height: 62dvh !important;
-    overflow: auto !important;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
-  }
-  .cart-drawer .checkout-button {
-    position: static !important;
-    width: 100% !important;
-    min-height: 50px !important;
-    margin-top: 10px !important;
-  }
-
-  /* Avoid cramped multi-control rows and clipped labels. */
-  .header-inner { min-width: 0 !important; }
-  .header-actions { min-width: 0 !important; }
-  .offer-slider-controls { flex-wrap: wrap !important; }
-  .offer-copy,.offer-art,.offer-panel { min-width: 0 !important; }
-  .quick-access-actions { grid-template-columns: minmax(0,1fr) !important; }
-  .mobile-dock { z-index: 70 !important; bottom: calc(8px + env(safe-area-inset-bottom)) !important; }
-  .toast-region { z-index: 90 !important; }
-}
-@media (max-width: 390px) {
-  #checkoutDialog .dialog-header { padding-inline: 12px !important; }
-  #checkoutDialog .checkout-form { padding-inline: 12px !important; }
-  #checkoutDialog .payment-choice label { grid-template-columns: 28px minmax(0,1fr) 16px !important; gap: 8px !important; padding: 11px !important; }
-  .mobile-dock { width: calc(100% - 16px) !important; }
-  .mobile-dock-item { min-width: 0 !important; font-size: 8px !important; }
-}
-
-
-/* FOODIEHUB MOBILE REBUILD V18
-   Correct the checkout form hierarchy and remove cramped mobile layouts. */
-@media (max-width: 760px) {
-  /* Main phone canvas */
-  html, body { width:100%; max-width:100%; overflow-x:hidden !important; }
-  body { padding-bottom:calc(102px + env(safe-area-inset-bottom)) !important; }
-  .page-width { width:calc(100% - 28px) !important; max-width:620px !important; }
-
-  /* Header: logo and actions each get their own predictable space. */
-  .header-inner { display:flex !important; gap:8px !important; padding-inline:10px !important; }
-  .brand { flex:1 1 auto !important; min-width:0 !important; }
-  .brand img { width:clamp(98px,29vw,126px) !important; max-width:100% !important; }
-  .header-actions { display:flex !important; flex:0 0 auto !important; gap:4px !important; }
-  .icon-button,.profile-trigger,.cart-trigger {
-    flex:0 0 38px !important; width:38px !important; min-width:38px !important;
-    height:40px !important; min-height:40px !important; padding:0 !important;
-    display:grid !important; place-items:center !important;
-  }
-  .profile-trigger-label,.cart-trigger-label { display:none !important; }
-
-  /* Hero and offer cards must wrap rather than squeeze neighbouring content. */
-  .hero-section { display:grid !important; grid-template-columns:minmax(0,1fr) !important; gap:25px !important; padding-block:35px !important; }
-  .hero-copy { min-width:0 !important; padding:0 !important; }
-  .hero-copy h1 { font-size:clamp(39px,10vw,55px) !important; overflow-wrap:anywhere; }
-  .hero-actions { display:flex !important; flex-wrap:wrap !important; gap:10px !important; }
-  .hero-actions > * { max-width:100%; }
-  .hero-visual { width:100% !important; min-width:0 !important; }
-  .offer-panel {
-    display:grid !important; grid-template-columns:minmax(0,1fr) !important;
-    align-items:start !important; gap:16px !important; min-width:0 !important;
-    padding:20px !important; min-height:0 !important;
-  }
-  .offer-copy { width:100% !important; max-width:none !important; min-width:0 !important; }
-  .offer-copy h2 { overflow-wrap:anywhere; }
-  .offer-copy p { max-width:100%; }
-  .offer-art { justify-self:end !important; margin-top:0 !important; }
-
-  /* Menu: full-width dish rows with distinct image, text and action zones. */
-  .dish-grid { display:grid !important; grid-template-columns:minmax(0,1fr) !important; gap:14px !important; }
-  .dish-card {
-    display:grid !important; grid-template-columns:112px minmax(0,1fr) !important;
-    width:100% !important; min-width:0 !important; overflow:hidden !important;
-  }
-  .dish-image-wrap { width:100% !important; min-width:0 !important; min-height:180px !important; height:auto !important; }
-  .dish-content { min-width:0 !important; padding:12px !important; }
-  .dish-content h3 { min-width:0 !important; white-space:normal !important; overflow-wrap:anywhere; line-height:1.3 !important; }
-  .dish-description { min-width:0 !important; min-height:0 !important; overflow-wrap:anywhere; }
-  .dish-topline { display:flex !important; flex-wrap:wrap !important; gap:4px 7px !important; }
-  .dish-bottom { display:grid !important; grid-template-columns:minmax(0,1fr) auto !important; align-items:center !important; gap:8px !important; }
-  .dish-prices { min-width:0 !important; display:flex !important; flex-wrap:wrap !important; }
-  .dish-card .add-button { min-width:76px !important; width:auto !important; white-space:nowrap !important; }
-
-  /* Checkout: corrected HTML now has separate personal and address grids. */
-  #checkoutDialog[open] {
-    position:fixed !important; inset:0 !important; margin:0 !important;
-    display:flex !important; flex-direction:column !important;
-    width:100vw !important; max-width:100vw !important;
-    height:100dvh !important; max-height:100dvh !important;
-    overflow:hidden !important; border:0 !important; border-radius:0 !important;
-  }
-  #checkoutDialog > .dialog-header {
-    display:flex !important; flex:0 0 auto !important; align-items:center !important;
-    gap:10px !important; padding:calc(12px + env(safe-area-inset-top)) 14px 12px !important;
-  }
-  #checkoutDialog > .dialog-header > div { min-width:0 !important; flex:1 1 auto !important; }
-  #checkoutDialog .checkout-form {
-    display:block !important; flex:1 1 0 !important; height:0 !important;
-    min-height:0 !important; width:100% !important; max-height:none !important;
-    overflow-y:auto !important; overflow-x:hidden !important;
-    padding:14px 14px calc(28px + env(safe-area-inset-bottom)) !important;
-    -webkit-overflow-scrolling:touch !important; overscroll-behavior:contain;
-  }
-  #checkoutDialog .form-grid,
-  #checkoutDialog .address-grid,
-  #checkoutDialog .payment-choice {
-    display:grid !important; grid-template-columns:minmax(0,1fr) !important;
-    width:100% !important; gap:10px !important;
-  }
-  #checkoutDialog .form-field,
-  #checkoutDialog .form-field-full {
-    display:flex !important; grid-column:1 !important;
-    width:100% !important; min-width:0 !important;
-  }
-  #checkoutDialog .form-field input,
-  #checkoutDialog .form-field select,
-  #checkoutDialog .form-field textarea {
-    display:block !important; width:100% !important; min-width:0 !important;
-    min-height:48px !important; font-size:16px !important; box-sizing:border-box !important;
-  }
-  #checkoutDialog .address-fields-intro {
-    display:flex !important; flex-direction:column !important;
-    align-items:flex-start !important; gap:4px !important; margin:18px 0 10px !important;
-  }
-  #checkoutDialog .payment-choice label {
-    display:grid !important; grid-template-columns:32px minmax(0,1fr) 18px !important;
-    align-items:center !important; gap:10px !important;
-    width:100% !important; min-width:0 !important; min-height:76px !important;
-    height:auto !important; padding:12px !important; overflow:visible !important;
-  }
-  #checkoutDialog .payment-choice label > span:not(.payment-card-icon) {
-    grid-column:2 !important; display:block !important; min-width:0 !important;
-    white-space:normal !important; overflow-wrap:anywhere !important;
-  }
-  #checkoutDialog .payment-choice label strong,
-  #checkoutDialog .payment-choice label small {
-    display:block !important; white-space:normal !important;
-    overflow-wrap:anywhere !important; line-height:1.4 !important;
-  }
-  #checkoutDialog .payment-choice label > i { grid-column:3 !important; justify-self:end !important; }
-  #checkoutDialog .place-order-button {
-    position:static !important; display:flex !important; width:100% !important;
-    min-height:52px !important; margin:16px 0 8px !important;
-    padding:13px 16px !important; white-space:normal !important;
-  }
-
-  /* All secondary dialogs and the customiser stay inside the viewport. */
-  .site-dialog:not(#checkoutDialog)[open] {
-    display:block !important; position:fixed !important;
-    inset:12px 10px auto !important; margin:0 auto !important;
-    width:calc(100% - 20px) !important; max-width:620px !important;
-    max-height:calc(100dvh - 24px) !important;
-    overflow:auto !important; padding:0 !important;
-    -webkit-overflow-scrolling:touch !important;
-  }
-  .site-dialog:not(#checkoutDialog) .dialog-header {
-    position:sticky !important; top:0 !important; z-index:4 !important;
-    background:var(--card) !important;
-  }
-  .dish-detail-dialog[open] { overflow:hidden !important; }
-  .dish-detail-dialog .dish-customizer-form {
-    max-height:calc(100dvh - 210px) !important; overflow:auto !important;
-    -webkit-overflow-scrolling:touch !important;
-  }
-
-  /* Bottom cart sheet: no footer control may cover the items or totals. */
-  .cart-drawer {
-    display:flex !important; flex-direction:column !important;
-    height:88dvh !important; max-height:88dvh !important;
-    overflow:hidden !important;
-  }
-  .cart-drawer .drawer-header { flex:0 0 auto !important; }
-  .cart-drawer .cart-items { flex:1 1 auto !important; min-height:65px !important; overflow:auto !important; }
-  .cart-drawer .drawer-bottom {
-    flex:0 1 auto !important; min-height:0 !important; max-height:60dvh !important;
-    overflow:auto !important; padding-bottom:calc(14px + env(safe-area-inset-bottom)) !important;
-  }
-  .cart-drawer .checkout-button { position:static !important; width:100% !important; min-height:50px !important; }
-
-  /* Large tap targets and no horizontal overflow. */
-  button,.button { max-width:100% !important; min-width:0; white-space:normal; overflow-wrap:anywhere; }
-  .category-tabs { display:flex !important; flex-wrap:nowrap !important; max-width:100% !important; overflow-x:auto !important; }
-  .mobile-dock { z-index:70 !important; width:calc(100% - 18px) !important; }
-  .toast-region { z-index:90 !important; }
-}
-@media (max-width: 390px) {
-  .page-width { width:calc(100% - 20px) !important; }
-  .header-inner { padding-inline:6px !important; }
-  .brand img { width:96px !important; }
-  .header-actions { gap:2px !important; }
-  .icon-button,.profile-trigger,.cart-trigger { flex-basis:34px !important; width:34px !important; min-width:34px !important; }
-  .dish-card { grid-template-columns:100px minmax(0,1fr) !important; }
-  .dish-content { padding:10px !important; }
-  .dish-card .add-button { min-width:68px !important; padding-inline:8px !important; }
-  #checkoutDialog .checkout-form { padding-inline:12px !important; }
-  #checkoutDialog .payment-choice label { grid-template-columns:28px minmax(0,1fr) 16px !important; gap:8px !important; }
-  .mobile-dock-item { min-width:0 !important; font-size:8px !important; }
+  .cart-drawer,.dish-card,.mobile-dock-item { transition:none!important; }
 }
