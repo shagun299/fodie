@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "check": "node --check server/index.js && node --check server/production.js && node --check assets/js/app.js && node --check \"fit check/app.js\" && node --check scripts/hash-password.js",
+    "check": "node --check server/index.js && node --check server/production.js && node --check assets/js/config.js && node --check assets/js/app.js && node --check scripts/hash-password.js",
     "test": "node --test tests/*.test.js"
   },
   "engines": {
