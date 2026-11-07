@@ -2577,7 +2577,7 @@ select {
     text-align:center;
   }
   .close-button { display:grid; flex:0 0 42px; width:42px; height:42px; min-width:42px; min-height:42px!important; place-items:center; }
-  .category-tab,.diet-button,.offer-nav,.offer-dots button { touch-action:pan-x manipulation; }
+  .category-tab,.diet-button,.offer-nav,.offer-dots button { touch-action:manipulation; }
 
   /* Menu controls stay in their own rows. Category chips scroll horizontally. */
   .menu-toolbar,.menu-filters { width:100%; min-width:0; }
@@ -2604,7 +2604,7 @@ select {
     min-height:178px!important;
     align-self:stretch;
   }
-  .dish-image { width:100%!important; height:100%!important; object-fit:cover; }
+  .dish-image {    position:absolute!important;    inset:0!important;    display:block!important;    width:100%!important;    height:100%!important;    object-fit:cover!important;  }
   .dish-content {
     display:flex!important;
     flex-direction:column;
