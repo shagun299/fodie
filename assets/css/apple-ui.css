@@ -2111,3 +2111,131 @@ body::before {
     transition-duration:.01ms!important;
   }
 }
+
+
+/* FOODIEHUB PREMIUM TYPOGRAPHY: editorial display + crisp modern interface */
+:root {
+  --sans:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  --display:"Playfair Display","Iowan Old Style",Georgia,serif!important;
+}
+html,
+body,
+button,
+input,
+select,
+textarea {
+  font-family:var(--sans)!important;
+  font-optical-sizing:auto;
+  font-kerning:normal;
+}
+body {
+  letter-spacing:-.012em;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+h1,
+h2,
+.hero-copy h1,
+.section-heading h2,
+.story-copy h2,
+.offer-copy h2,
+.feature-heading h2,
+.rewards-copy h2,
+.customizer-hero-copy h2,
+.dialog-header h2,
+.drawer-header h2 {
+  font-family:var(--display)!important;
+  font-weight:500!important;
+  letter-spacing:-.042em!important;
+  line-height:1.06!important;
+  font-optical-sizing:auto;
+}
+h1 em,
+h2 em,
+.hero-copy h1 em,
+.section-heading h2 em,
+.story-copy h2 em,
+.offer-copy h2 em,
+.feature-heading h2 em,
+.rewards-copy h2 em {
+  font-family:var(--display)!important;
+  font-style:italic!important;
+  font-weight:500!important;
+  letter-spacing:-.035em!important;
+}
+h3,
+h4,
+.dish-content h3,
+.recommendation-card h3,
+.combo-card h3 {
+  font-family:var(--sans)!important;
+  font-weight:700!important;
+  letter-spacing:-.035em!important;
+}
+.hero-copy h1 {
+  line-height:1.02!important;
+  letter-spacing:-.052em!important;
+}
+.hero-copy h1 em { letter-spacing:-.045em!important; }
+.hero-image-caption strong,
+.empty-menu h3,
+.cart-empty h3,
+.success-dialog h2,
+.menu-count strong {
+  font-family:var(--display)!important;
+  font-weight:500!important;
+  letter-spacing:-.035em!important;
+}
+.eyebrow,
+.offer-kicker,
+.drawer-kicker,
+.caption-kicker,
+.feature-index,
+.discount-badge {
+  letter-spacing:.14em!important;
+}
+.button,
+button,
+.nav-link,
+.add-button,
+.customize-link,
+.category-tab,
+.diet-button,
+.sort-control,
+.profile-trigger,
+.cart-trigger {
+  font-family:var(--sans)!important;
+  letter-spacing:-.012em;
+}
+.button,
+.add-button {
+  font-weight:700!important;
+}
+.dish-content h3 {
+  font-size:15px!important;
+  font-weight:700!important;
+  letter-spacing:-.035em!important;
+}
+.dish-description,
+.hero-description,
+.section-heading p,
+.feature-description,
+.story-copy p {
+  font-weight:500;
+  letter-spacing:-.012em;
+}
+input,
+textarea,
+select {
+  font-feature-settings:"ss01" 1;
+}
+@media(max-width:760px) {
+  h1,
+  h2,
+  .hero-copy h1,
+  .section-heading h2,
+  .story-copy h2,
+  .offer-copy h2 {
+    letter-spacing:-.035em!important;
+  }
+}
