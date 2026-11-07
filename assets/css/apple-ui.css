@@ -2037,3 +2037,77 @@ button:disabled { opacity:.55!important;cursor:not-allowed!important; }
   -webkit-filter:none!important;
   opacity:1!important;
 }
+
+
+/* FOODIEHUB PERFORMANCE PASS: keep the glass look, reduce expensive paint work */
+body::before {
+  filter:blur(24px)!important;
+  opacity:.42!important;
+}
+.site-header {
+  -webkit-backdrop-filter:blur(8px) saturate(125%)!important;
+  backdrop-filter:blur(8px) saturate(125%)!important;
+}
+.header-inner,
+.promise-strip,
+.quick-access-strip,
+.quick-access-card,
+.hero-note,
+.hero-note-action,
+.menu-count,
+.search-box,
+.sort-control select,
+.diet-filters,
+.category-tab,
+.offer-art,
+.story-image-tag,
+.closing-banner,
+.site-footer {
+  -webkit-backdrop-filter:blur(10px) saturate(130%)!important;
+  backdrop-filter:blur(10px) saturate(130%)!important;
+}
+.cart-drawer {
+  -webkit-backdrop-filter:blur(14px) saturate(135%)!important;
+  backdrop-filter:blur(14px) saturate(135%)!important;
+}
+.cart-backdrop,
+.site-dialog::backdrop {
+  -webkit-backdrop-filter:blur(4px)!important;
+  backdrop-filter:blur(4px)!important;
+}
+.dish-card,
+.dish-card:hover,
+.dish-card:focus-within {
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+#meal-studio,
+#smart-combos,
+#smart-picks,
+#rewards,
+#about,
+.closing-banner,
+.site-footer {
+  content-visibility:auto;
+  contain-intrinsic-size:auto 650px;
+}
+.dish-card,
+.quick-access-card,
+.category-tab,
+.icon-button,
+.profile-trigger,
+.cart-trigger,
+.add-button,
+.button {
+  transition-duration:.18s!important;
+}
+@media(prefers-reduced-motion:reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior:auto!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+  }
+}
