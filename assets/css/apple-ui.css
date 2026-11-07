@@ -1989,3 +1989,35 @@ button:disabled { opacity:.55!important;cursor:not-allowed!important; }
     max-height:230px!important;
   }
 }
+
+
+/* FOODIEHUB HOVER CLARITY FIX: food photos must stay sharp on pointer hover */
+.dish-card:hover,
+.dish-card:focus-within {
+  filter:none!important;
+  -webkit-filter:none!important;
+}
+.dish-card:hover *,
+.dish-card:focus-within * {
+  filter:none!important;
+  -webkit-filter:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.dish-card:hover .dish-image,
+.dish-card:focus-within .dish-image {
+  filter:none!important;
+  -webkit-filter:none!important;
+  opacity:1!important;
+}
+.dish-card:hover .dish-image-wrap::after,
+.dish-card:focus-within .dish-image-wrap::after {
+  background:none!important;
+  opacity:0!important;
+  mix-blend-mode:normal!important;
+}
+.dish-card:hover::before,
+.dish-card:focus-within::before {
+  background:none!important;
+  box-shadow:none!important;
+}
