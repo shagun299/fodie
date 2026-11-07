@@ -18,6 +18,40 @@
     Featured:"https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=88",
     General:"https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1100&q=88"
   };
+  function getDetailFoodImageUrl(source){
+    if(!source)return source;
+    try{
+      const url=new URL(source);
+      const host=url.hostname.toLowerCase();
+      if(host==="images.unsplash.com"){
+        url.searchParams.set("auto","format");
+        url.searchParams.set("fit","crop");
+        url.searchParams.set("w","1800");
+        url.searchParams.set("q","95");
+      }else if(host==="images.pexels.com"){
+        url.searchParams.set("auto","compress");
+        url.searchParams.set("cs","tinysrgb");
+        url.searchParams.set("w","1800");
+      }
+      return url.toString();
+    }catch(_error){return source;}
+  }
+  function protectDetailFoodPhoto(image,item,preferredSource){
+    const sources=[preferredSource||item.image,PHOTO_FALLBACKS[item.category]||PHOTO_FALLBACKS.Featured,PHOTO_FALLBACKS.General]
+      .filter(Boolean).map(getDetailFoodImageUrl).filter((url,index,all)=>all.indexOf(url)===index);
+    let next=1;
+    image.alt=item.name+" — "+item.description;
+    image.loading="eager";
+    image.decoding="sync";
+    image.fetchPriority="high";
+    image.onerror=()=>{
+      if(next<sources.length){image.src=sources[next++];return;}
+      image.onerror=null;
+      image.classList.add("photo-unavailable");
+    };
+    image.classList.remove("photo-unavailable");
+    image.src=sources[0]||item.image;
+  }
   function protectFoodPhoto(image,item){
     const list=[PHOTO_FALLBACKS[item.category]||PHOTO_FALLBACKS.Featured,PHOTO_FALLBACKS.General];
     let next=0;
@@ -373,9 +407,7 @@
     state.currentCustomizer = id;
     state.customizerQuantity = 1;
     const customizerImage=$("#customizerImage");
-    customizerImage.alt=item.name+" — "+item.description;
-    protectFoodPhoto(customizerImage,item);
-    customizerImage.src=state.imageFallbacks[id]||item.image;
+    protectDetailFoodPhoto(customizerImage,item,state.imageFallbacks[id]||item.image);
     $("#customizerTitle").textContent = item.name;
     $("#customizerDescription").textContent = item.description;
     $("#customizerBasePrice").textContent = money(item.price);
