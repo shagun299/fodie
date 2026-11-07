@@ -577,6 +577,11 @@
     const bill = calculateBill();
     const count = bill.lines.reduce((sum, item) => sum + item.quantity, 0);
     $("#cartCount").textContent = count;
+    const mobileCartCount = $("#mobileCartCount");
+    if (mobileCartCount) {
+      mobileCartCount.textContent = count > 99 ? "99+" : String(count);
+      mobileCartCount.hidden = count === 0;
+    }
     $("#drawerItemCount").textContent = "(" + count + ")";
     const checkoutButton = $("#checkoutButton");
     checkoutButton.disabled = count === 0;
@@ -1494,6 +1499,10 @@
 
   function bindEvents() {
     $("#openCart").addEventListener("click", openCart);
+    const mobileOpenCart = $("#mobileOpenCart");
+    if (mobileOpenCart) mobileOpenCart.addEventListener("click", openCart);
+    const mobileTrackOrder = $("#mobileTrackOrder");
+    if (mobileTrackOrder) mobileTrackOrder.addEventListener("click", () => openTracking());
     $("#openProfile").addEventListener("click", openProfile);
     $("#profileForm").addEventListener("submit", saveProfile);
     ["checkoutForm","profileForm"].forEach(formId=>{
