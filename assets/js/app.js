@@ -100,7 +100,8 @@
     adminAnalytics: null,
     adminChartView: "month",
     adminSource: "none",
-    paymentGateway: { enabled: false, keyId: "" }
+    paymentGateway: { enabled: false, keyId: "" },
+    checkoutIdempotencyKey: ""
   };
 
   function readStore(key, fallback) {
@@ -114,6 +115,18 @@
 
   function saveStore(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
+  }
+
+  function createCheckoutIdempotencyKey() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+      return window.crypto.randomUUID().replace(/-/g, "");
+    }
+    const bytes = new Uint8Array(18);
+    if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+      window.crypto.getRandomValues(bytes);
+      return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+    }
+    return Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
   }
 
   function escapeHTML(value) {
@@ -573,6 +586,32 @@
     return { lines, subtotal, couponDiscount, delivery, tax, total: taxable + delivery + tax };
   }
 
+  function renderCheckoutReview(bill) {
+    const items = $("#checkoutReviewItems");
+    if (!items) return;
+    const lines = bill.lines || [];
+    if (!lines.length) {
+      items.innerHTML = '<p class="checkout-review-empty">Your selected dishes will appear here.</p>';
+    } else {
+      items.innerHTML = lines.map(item => {
+        const custom = item.customization || {};
+        const details = [
+          custom.size && custom.size !== "Regular" ? custom.size : "",
+          ...(Array.isArray(custom.extras) ? custom.extras.map(extra => extra.name) : []),
+          ...(Array.isArray(custom.preferences) ? custom.preferences : [])
+        ].filter(Boolean);
+        return '<div class="checkout-review-item"><div><strong>' + item.quantity + ' × ' + escapeHTML(item.name) + '</strong>' +
+          (details.length ? '<small>' + escapeHTML(details.join(" · ")) + '</small>' : '') +
+          '</div><strong>' + money(item.price * item.quantity) + '</strong></div>';
+      }).join("");
+    }
+    $("#checkoutReviewSubtotal").textContent = money(bill.subtotal);
+    $("#checkoutReviewDiscount").textContent = "−" + money(bill.couponDiscount);
+    $("#checkoutReviewDelivery").textContent = bill.delivery ? money(bill.delivery) : "FREE";
+    $("#checkoutReviewTax").textContent = money(bill.tax);
+    $("#checkoutTotal").textContent = money(bill.total);
+  }
+
   function renderCart() {
     const bill = calculateBill();
     const count = bill.lines.reduce((sum, item) => sum + item.quantity, 0);
@@ -593,6 +632,7 @@
     $("#billTax").textContent = money(bill.tax);
     $("#billTotal").textContent = money(bill.total);
     $("#checkoutTotal").textContent = money(bill.total);
+    renderCheckoutReview(bill);
 
     if (bill.subtotal >= 499) {
       $("#deliveryMessage").textContent = "Lovely. You've unlocked free delivery.";
@@ -724,6 +764,7 @@
     showLegacyAddress("checkoutLegacyAddress",state.profile);
     updateAddressPreview("checkoutForm","checkoutAddressPreview");
     $("#saveCheckoutProfile").checked = true;
+    if (!state.checkoutIdempotencyKey) state.checkoutIdempotencyKey = createCheckoutIdempotencyKey();
     updatePaymentButtonLabel("");
     renderPaymentAvailability();
     renderCart();
@@ -736,6 +777,7 @@
   }
 
   function finalizeOrder(order, customer, payload, paymentMode) {
+    state.checkoutIdempotencyKey = "";
     const appliedCouponCode = state.coupon ? state.coupon.code : "";
     if (appliedCouponCode === "REWARD25" && state.pendingRewardRedemption) {
       state.rewards.points = Math.max(0, Number(state.rewards.points || 0) - 50);
@@ -766,30 +808,56 @@
     openDialog("successDialog");
   }
 
+  let razorpayLoadPromise = null;
   function loadRazorpayCheckout() {
     if (window.Razorpay) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector("script[data-razorpay-checkout]");
-      if (existing) {
-        existing.addEventListener("load", resolve, { once: true });
-        existing.addEventListener("error", () => reject(new Error("The secure payment window could not be loaded. Please try again.")), { once: true });
-        return;
+    if (razorpayLoadPromise) return razorpayLoadPromise;
+    let script = document.querySelector("script[data-razorpay-checkout]");
+    if (script && (script.dataset.failed === "true" || script.dataset.loaded === "true")) {
+      script.remove();
+      script = null;
+    }
+    razorpayLoadPromise = new Promise((resolve, reject) => {
+      const activeScript = script || document.createElement("script");
+      const fail = () => {
+        activeScript.dataset.failed = "true";
+        activeScript.remove();
+        reject(new Error("The secure payment window could not be loaded. Please check your connection and try again."));
+      };
+      activeScript.addEventListener("load", () => {
+        activeScript.dataset.loaded = "true";
+        if (window.Razorpay) resolve();
+        else fail();
+      }, { once: true });
+      activeScript.addEventListener("error", fail, { once: true });
+      if (!script) {
+        activeScript.src = "https://checkout.razorpay.com/v1/checkout.js";
+        activeScript.async = true;
+        activeScript.dataset.razorpayCheckout = "true";
+        document.head.appendChild(activeScript);
+      } else if (window.Razorpay) {
+        resolve();
       }
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.async = true;
-      script.dataset.razorpayCheckout = "true";
-      script.onload = resolve;
-      script.onerror = () => reject(new Error("The secure payment window could not be loaded. Please try again."));
-      document.head.appendChild(script);
+    }).catch(error => {
+      razorpayLoadPromise = null;
+      throw error;
     });
+    return razorpayLoadPromise;
   }
 
   async function startOnlinePayment(payload, customer) {
     if (!state.backendOnline || !state.paymentGateway.enabled) {
       throw new Error("Online payments are not configured yet. Choose Cash on Delivery or UPI on Delivery.");
     }
-    const order = await request("/api/payments/create-order", { method: "POST", body: JSON.stringify(payload) });
+    const order = await request("/api/payments/create-order", {
+      method: "POST",
+      headers: { "Idempotency-Key": state.checkoutIdempotencyKey },
+      body: JSON.stringify(payload)
+    });
+    if (order.alreadyPaid) {
+      finalizeOrder(order, customer, payload, "online");
+      return;
+    }
     await loadRazorpayCheckout();
     const checkout = new window.Razorpay({
       key: order.keyId,
@@ -892,7 +960,11 @@
       }
       let order;
       if (state.backendOnline) {
-        order = await request("/api/orders", { method: "POST", body: JSON.stringify(payload) });
+        order = await request("/api/orders", {
+          method: "POST",
+          headers: { "Idempotency-Key": state.checkoutIdempotencyKey },
+          body: JSON.stringify(payload)
+        });
       } else {
         const bill = calculateBill();
         order = {
@@ -1526,6 +1598,9 @@
     $("#applyCoupon").addEventListener("click", applyCoupon);
     $("#couponInput").addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); applyCoupon(); } });
     $("#checkoutForm").addEventListener("submit", placeOrder);
+    $("#checkoutDialog").addEventListener("close", () => {
+      state.checkoutIdempotencyKey = "";
+    });
     $("#checkoutForm").addEventListener("change", event => {
       if (event.target && event.target.name === "paymentMethod") {
         $("#checkoutError").textContent = "";
