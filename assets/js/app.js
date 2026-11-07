@@ -1413,10 +1413,6 @@
       const dishId=dishButton?.dataset.openDish||(card?.dataset.primaryDish);
       if(dishId)openDishDetails(dishId);
     });
-    $("#comboGrid").addEventListener("keydown",event=>{
-      const trigger=event.target.closest("[data-open-dish]");
-      if(trigger&&(event.key==="Enter"||event.key===" ")){event.preventDefault();openDishDetails(trigger.dataset.openDish);}
-    });
     $("#recommendationMood").addEventListener("change",renderRecommendations);
     $("#recommendationGrid").addEventListener("click",event=>{
       const addButton=event.target.closest("[data-recommend-add]");
@@ -1425,10 +1421,6 @@
       const card=event.target.closest(".recommendation-card[data-primary-dish]");
       const dishId=trigger?.dataset.openDish||(card?.dataset.primaryDish);
       if(dishId)openDishDetails(dishId);
-    });
-    $("#recommendationGrid").addEventListener("keydown",event=>{
-      const trigger=event.target.closest("[data-open-dish]");
-      if(trigger&&(event.key==="Enter"||event.key===" ")){event.preventDefault();openDishDetails(trigger.dataset.openDish);}
     });
     $("#redeemRewards").addEventListener("click",redeemRewards);
     $("#openAdmin").addEventListener("click",openTeamDashboard);
