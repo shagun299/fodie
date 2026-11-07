@@ -2745,3 +2745,102 @@ select {
     transition-duration: .01ms !important;
   }
 }
+
+
+/* FOODIEHUB MOBILE QA FIXES V22
+   Restores dock button styling and removes visual interference in the open bag. */
+@media (max-width: 760px) {
+  .mobile-dock {
+    position:fixed!important;
+    display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    gap:4px!important;
+    border:1px solid var(--line)!important;
+    border-radius:18px!important;
+    background:var(--card)!important;
+    box-shadow:0 8px 24px rgba(18,26,22,.16)!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    isolation:isolate!important;
+  }
+
+  .mobile-dock-item {
+    position:relative!important;
+    display:flex!important;
+    min-width:0!important;
+    min-height:50px!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:4px!important;
+    padding:5px 2px!important;
+    border:0!important;
+    border-radius:13px!important;
+    background:transparent!important;
+    color:var(--muted)!important;
+    font:800 9px/1 var(--sans)!important;
+    letter-spacing:.01em!important;
+    text-align:center!important;
+    text-decoration:none!important;
+    white-space:nowrap!important;
+    cursor:pointer!important;
+    overflow:hidden!important;
+    box-shadow:none!important;
+  }
+  .mobile-dock-item svg {
+    display:block!important;
+    width:19px!important;
+    height:19px!important;
+    flex:0 0 19px!important;
+  }
+  .mobile-dock-item>span:not(.mobile-dock-count):not(.mobile-dock-bag-icon) {
+    display:block!important;
+    max-width:100%!important;
+    line-height:1.1!important;
+  }
+  .mobile-dock-bag {
+    color:#fff!important;
+    background:var(--orange)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.24)!important;
+  }
+  .mobile-dock-bag-icon {
+    display:grid!important;
+    width:21px!important;
+    height:21px!important;
+    place-items:center!important;
+  }
+  .mobile-dock-count {
+    position:absolute!important;
+    top:0!important;
+    right:calc(50% - 22px)!important;
+    display:grid!important;
+    min-width:17px!important;
+    height:17px!important;
+    place-items:center!important;
+    padding:0 4px!important;
+    border:2px solid var(--orange-dark)!important;
+    border-radius:99px!important;
+    background:#fff!important;
+    color:#9f4b27!important;
+    font-size:8px!important;
+    font-weight:900!important;
+    line-height:1!important;
+  }
+  .mobile-dock-count[hidden] { display:none!important; }
+
+  .cart-drawer {
+    background:var(--card)!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  .cart-drawer .drawer-header,
+  .cart-drawer .drawer-bottom {
+    background:var(--card)!important;
+  }
+  body.drawer-open .toast-region {
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+}
