@@ -16,9 +16,9 @@
   <link rel="preconnect" href="https://images.pexels.com">
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./assets/css/styles.css?v=premium-type-v12-20261107">
-  <link rel="stylesheet" href="./assets/css/apple-ui.css?v=dark-hover-crisp-v13-20261107">
+  <link rel="stylesheet" href="./assets/css/apple-ui.css?v=mobile-premium-v14-20261107">
   <script src="./assets/js/config.js"></script>
-  <script defer src="./assets/js/app.js?v=performance-smooth-v11-20261107"></script>
+  <script defer src="./assets/js/app.js?v=mobile-premium-v14-20261107"></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -546,6 +546,28 @@
     <div class="success-order-number"><span>YOUR ORDER NUMBER</span><strong id="successOrderNumber">FH-000000</strong></div>
     <button class="button button-primary" id="successDone" type="button">Lovely, thank you <span aria-hidden="true">✦</span></button>
   </dialog>
+
+  <nav class="mobile-dock" id="mobileDock" aria-label="Quick navigation">
+    <a class="mobile-dock-item" href="#menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      <span>Menu</span>
+    </a>
+    <a class="mobile-dock-item" href="#offers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>
+      <span>Offers</span>
+    </a>
+    <button class="mobile-dock-item" id="mobileTrackOrder" type="button" aria-label="Track an order">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h11v12H3z"/><path d="M14 10h4l3 3v5h-7z"/><circle cx="7.5" cy="18" r="1.8"/><circle cx="17.5" cy="18" r="1.8"/><path d="M6 9h5"/></svg>
+      <span>Track</span>
+    </button>
+    <button class="mobile-dock-item mobile-dock-bag" id="mobileOpenCart" type="button" aria-label="Open shopping bag" aria-controls="cartDrawer">
+      <span class="mobile-dock-bag-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l1 13H4L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+      </span>
+      <span>Bag</span>
+      <span class="mobile-dock-count" id="mobileCartCount" hidden>0</span>
+    </button>
+  </nav>
 
   <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
   <template id="dishCardTemplate">
