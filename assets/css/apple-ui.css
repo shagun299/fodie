@@ -2543,3 +2543,353 @@ select {
   .checkout-review-item>div strong { font-size:10px; }
   .checkout-review-breakdown>div,.checkout-review-breakdown>div strong { font-size:9px; }
 }
+
+
+/* FOODIEHUB MOBILE REPAIR V16
+   Consolidated phone layout rules. Keep controls in normal flow and let
+   each long surface own its scroll area so tap targets never cover content. */
+@media (max-width: 760px) {
+  html, body { max-width:100%; overflow-x:clip!important; }
+  .page-width { width:calc(100% - 28px)!important; max-width:620px!important; }
+  .site-header { width:100%; }
+  .header-inner { width:100%; min-width:0; gap:7px!important; }
+  .brand { flex:1 1 auto; min-width:0; }
+  .brand img { display:block; width:clamp(104px,32vw,136px)!important; max-width:100%; height:auto; }
+  .header-actions { flex:0 0 auto; min-width:0; gap:4px!important; }
+  .icon-button,.profile-trigger,.cart-trigger { flex:0 0 auto; min-width:36px; min-height:40px!important; }
+  .profile-trigger { width:40px!important; padding:0!important; justify-content:center; }
+  .profile-trigger-label,.cart-trigger-label { display:none!important; }
+
+  /* Every text button can wrap instead of pushing its neighbour off-screen. */
+  button,.button {
+    box-sizing:border-box!important;
+    max-width:100%;
+    min-width:0;
+    line-height:1.25;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    touch-action:manipulation;
+  }
+  .button,.add-button,.checkout-button,.place-order-button {
+    min-height:44px!important;
+    padding:10px 14px!important;
+    justify-content:center;
+    text-align:center;
+  }
+  .close-button { display:grid; flex:0 0 42px; width:42px; height:42px; min-width:42px; min-height:42px!important; place-items:center; }
+  .category-tab,.diet-button,.offer-nav,.offer-dots button { touch-action:pan-x manipulation; }
+
+  /* Menu controls stay in their own rows. Category chips scroll horizontally. */
+  .menu-toolbar,.menu-filters { width:100%; min-width:0; }
+  .search-box { width:100%; min-width:0; }
+  .sort-control { width:100%; min-width:0; justify-content:flex-start; }
+  .sort-control select { width:100%; min-width:0; }
+  .category-tabs { max-width:100%; min-width:0; flex-wrap:nowrap!important; overflow-x:auto!important; overscroll-behavior-x:contain; }
+  .diet-filters { display:flex; flex-wrap:wrap; gap:7px; max-width:100%; }
+  .diet-button { max-width:100%; padding:0 11px; white-space:normal; }
+
+  /* On phones the food cards become roomy horizontal rows. Price, customise
+     and Add stay together instead of fighting for a narrow two-column footer. */
+  .dish-grid { grid-template-columns:minmax(0,1fr)!important; gap:12px!important; }
+  .dish-card {
+    display:grid!important;
+    grid-template-columns:minmax(108px,34%) minmax(0,1fr)!important;
+    align-items:stretch;
+    min-width:0;
+    width:100%;
+    overflow:hidden;
+  }
+  .dish-image-wrap {
+    height:auto!important;
+    min-height:178px!important;
+    align-self:stretch;
+  }
+  .dish-image { width:100%!important; height:100%!important; object-fit:cover; }
+  .dish-content {
+    display:flex!important;
+    flex-direction:column;
+    justify-content:flex-start;
+    gap:0;
+    min-width:0;
+    padding:12px 11px!important;
+  }
+  .dish-topline { flex-wrap:wrap; justify-content:flex-start; gap:4px 8px; min-width:0; }
+  .dish-time { white-space:normal; }
+  .dish-content h3 {
+    min-width:0;
+    min-height:0;
+    margin:7px 0 5px;
+    font-size:14px!important;
+    line-height:1.3;
+    white-space:normal!important;
+    overflow-wrap:anywhere;
+  }
+  .dish-description {
+    min-width:0;
+    min-height:0!important;
+    margin-bottom:8px;
+    font-size:11px!important;
+    line-height:1.45;
+    display:-webkit-box;
+    overflow:hidden;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+  }
+  .customize-link {
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    width:100%;
+    max-width:100%;
+    min-height:38px!important;
+    margin:2px 0 7px!important;
+    padding:7px 8px!important;
+    font-size:10px!important;
+    line-height:1.3;
+    white-space:normal!important;
+    text-align:left;
+  }
+  .dish-bottom {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center!important;
+    gap:7px!important;
+    width:100%;
+    margin-top:auto!important;
+    padding-top:9px!important;
+    min-width:0;
+  }
+  .dish-prices { min-width:0; gap:4px 6px; flex-wrap:wrap; }
+  .dish-prices strong { font-size:15px!important; white-space:nowrap; }
+  .dish-prices del { font-size:10px; }
+  .dish-card .add-button {
+    min-width:76px;
+    min-height:42px!important;
+    padding:8px 11px!important;
+    font-size:11px!important;
+    white-space:nowrap;
+  }
+  .dish-badge-line { min-height:0; margin-top:7px; font-size:9px; line-height:1.35; }
+  .dish-favourite { width:38px!important; height:38px!important; min-width:38px; min-height:38px!important; }
+
+  /* Stack all option groups on phones. Labels wrap, never sit on top of radios. */
+  .form-grid,.payment-choice,.customizer-size-options,.customizer-addon-list,
+  .customizer-preference-options,.meal-builder-controls,.admin-login-form {
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  .form-grid>* { min-width:0; }
+  .form-field,.address-grid .form-field { min-width:0; }
+  .form-field input,.form-field select,.form-field textarea,
+  .address-grid input,.address-grid select {
+    box-sizing:border-box!important;
+    width:100%;
+    min-width:0;
+    min-height:48px;
+    font-size:16px!important;
+  }
+  .address-fields-intro { flex-direction:column; align-items:flex-start; gap:5px; }
+  .address-fields-intro>small { text-align:left; }
+  .payment-choice { display:grid!important; width:100%; gap:10px!important; }
+  .payment-choice label {
+    display:grid!important;
+    grid-template-columns:30px minmax(0,1fr) 18px!important;
+    align-items:center;
+    gap:10px!important;
+    width:100%;
+    min-width:0;
+    min-height:78px!important;
+    padding:12px!important;
+  }
+  .payment-choice .payment-card-icon { grid-column:1; }
+  .payment-choice label>span:not(.payment-card-icon) {
+    grid-column:2;
+    min-width:0;
+    overflow-wrap:anywhere;
+  }
+  .payment-choice label>span strong {
+    font-size:13px!important;
+    line-height:1.3;
+    overflow-wrap:anywhere;
+  }
+  .payment-choice label>span small {
+    display:block;
+    margin-top:4px;
+    font-size:11px!important;
+    line-height:1.4!important;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  .payment-choice label>i { grid-column:3; justify-self:end; }
+  .payment-choice input { top:10px; left:10px; }
+  .save-profile-choice { align-items:flex-start; gap:10px; min-width:0; padding:12px!important; }
+  .save-profile-choice>span { min-width:0; overflow-wrap:anywhere; }
+  .save-profile-choice small { display:block; line-height:1.4; }
+  .checkout-summary { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+  .checkout-review,.checkout-review-item,.checkout-review-breakdown { min-width:0; }
+  .checkout-review-item>div { min-width:0; overflow-wrap:anywhere; }
+  .checkout-review-item>strong { white-space:nowrap; }
+
+  /* Checkout is a full-height sheet with one scrollable body.
+     The submit button stays in document flow, never over form options. */
+  #checkoutDialog[open] {
+    position:fixed!important;
+    inset:0!important;
+    margin:0!important;
+    width:100vw!important;
+    max-width:none!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    display:flex!important;
+    flex-direction:column;
+    overflow:hidden!important;
+    border:0!important;
+    border-radius:0!important;
+    transform:none!important;
+  }
+  #checkoutDialog .dialog-header {
+    position:relative!important;
+    z-index:2;
+    display:flex;
+    flex:0 0 auto;
+    align-items:center;
+    gap:12px;
+    padding:calc(12px + env(safe-area-inset-top)) 16px 13px!important;
+    border-radius:0!important;
+  }
+  #checkoutDialog .dialog-header>div { min-width:0; }
+  #checkoutDialog .dialog-header h2 { font-size:clamp(21px,6vw,27px)!important; line-height:1.12!important; }
+  #checkoutDialog .checkout-form {
+    display:block!important;
+    flex:1 1 auto;
+    min-height:0!important;
+    max-height:none!important;
+    width:100%;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    padding:15px 16px calc(24px + env(safe-area-inset-bottom))!important;
+  }
+  #checkoutDialog .place-order-button {
+    position:static!important;
+    inset:auto!important;
+    display:flex!important;
+    width:100%!important;
+    min-height:54px!important;
+    margin:16px 0 8px!important;
+    padding:13px 16px!important;
+    white-space:normal!important;
+    line-height:1.25!important;
+    box-shadow:0 10px 24px rgba(29,77,53,.18)!important;
+  }
+  #checkoutDialog .demo-disclaimer { margin-bottom:6px; line-height:1.45; }
+  .form-error { overflow-wrap:anywhere; }
+
+  /* Other dialogs use the available phone width without horizontal clipping. */
+  .site-dialog:not(#checkoutDialog) {
+    width:calc(100% - 16px)!important;
+    max-width:none!important;
+    max-height:92dvh!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    border-radius:19px!important;
+  }
+  .dialog-header { gap:10px; min-width:0; }
+  .dialog-header>div { min-width:0; }
+  .checkout-form,.tracking-form,.profile-form { padding:15px!important; }
+
+  /* Lower-page sections and utility buttons keep a single clear column. */
+  .quick-access-strip { display:flex; flex-direction:column; align-items:stretch; gap:12px; }
+  .quick-access-actions { display:grid!important; grid-template-columns:minmax(0,1fr)!important; width:100%; max-width:none!important; }
+  .quick-access-card { width:100%; min-width:0; min-height:64px; }
+  .combo-grid,.recommendation-grid { grid-template-columns:minmax(0,1fr)!important; }
+  .combo-card-footer { flex-wrap:wrap; }
+  .rewards-panel { grid-template-columns:minmax(0,1fr)!important; }
+  .meal-builder-shell { grid-template-columns:minmax(0,1fr)!important; }
+  .meal-builder-controls { display:grid; grid-template-columns:minmax(0,1fr)!important; }
+  .admin-login-form { display:grid; grid-template-columns:minmax(0,1fr)!important; }
+  .footer-main { grid-template-columns:minmax(0,1fr)!important; }
+  .footer-brand,.footer-newsletter { grid-column:1!important; }
+  .recommendation-card { grid-template-columns:104px minmax(0,1fr)!important; min-width:0; }
+  .recommendation-card-copy { min-width:0; }
+  .recommendation-card-copy .button { white-space:normal!important; }
+
+  /* Compact navigation and drawers respect screen and system safe areas. */
+  .mobile-dock { padding-bottom:max(5px,env(safe-area-inset-bottom)); }
+  .mobile-dock-item { min-height:50px; }
+  .cart-drawer { display:flex!important; flex-direction:column; overflow:hidden!important; }
+  .drawer-header { flex:0 0 auto; min-width:0; }
+  .cart-items { flex:1 1 auto; min-height:0; overflow-x:hidden; overflow-y:auto; }
+  .drawer-bottom {
+    flex:0 1 auto;
+    min-height:0;
+    max-height:58dvh!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .coupon-row { display:grid!important; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+  .coupon-row input { width:100%; min-width:0; }
+  .coupon-row button { min-width:76px; min-height:44px!important; }
+  .checkout-button { position:sticky!important; bottom:0; width:100%; min-height:52px!important; }
+  .toast-region { right:10px; left:10px; width:auto; max-width:none; bottom:calc(88px + env(safe-area-inset-bottom))!important; }
+}
+@media (max-width: 520px) {
+  .page-width { width:calc(100% - 24px)!important; }
+  .header-inner { padding-inline:8px!important; }
+  .brand img { width:clamp(100px,30vw,120px)!important; }
+  .header-actions { gap:3px!important; }
+  .icon-button,.profile-trigger,.cart-trigger { min-width:34px; min-height:40px!important; }
+  .icon-button { width:36px!important; }
+  .cart-trigger { width:38px!important; }
+  .hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+  .hero-actions .button { flex:1 1 145px; min-width:0; }
+  .offer-panel { min-width:0; gap:8px!important; }
+  .offer-copy { min-width:0; max-width:63%!important; }
+  .offer-copy h2 { overflow-wrap:anywhere; }
+  .offer-art { flex:0 0 clamp(92px,29vw,122px)!important; width:clamp(92px,29vw,122px)!important; height:clamp(92px,29vw,122px)!important; }
+  .offer-slider-controls { display:flex; flex-wrap:wrap; justify-content:center; }
+  .offer-dots { max-width:100%; }
+  .offer-dots button { min-width:25px; min-height:32px!important; }
+  .dish-grid { gap:10px!important; }
+  .dish-card { grid-template-columns:minmax(100px,33%) minmax(0,1fr)!important; }
+  .dish-image-wrap { min-height:164px!important; }
+  .dish-content { padding:10px!important; }
+  .dish-content h3 { font-size:13px!important; }
+  .dish-bottom { gap:6px!important; }
+  .dish-card .add-button { min-width:70px; padding-inline:9px!important; }
+  .site-dialog:not(#checkoutDialog) { padding:0; }
+}
+@media (max-width: 390px) {
+  .page-width { width:calc(100% - 20px)!important; }
+  .announcement-bar { padding-inline:9px; text-align:center; }
+  .brand img { width:103px!important; }
+  .header-actions { gap:2px!important; }
+  .icon-button,.profile-trigger,.cart-trigger { min-width:32px; }
+  .icon-button { width:34px!important; }
+  .cart-trigger { width:36px!important; }
+  .dish-card { grid-template-columns:minmax(94px,32%) minmax(0,1fr)!important; }
+  .dish-image-wrap { min-height:156px!important; }
+  .dish-content { padding:9px!important; }
+  .dish-description { font-size:10px!important; }
+  .dish-prices strong { font-size:14px!important; }
+  .mobile-dock { width:calc(100% - 16px)!important; }
+  #checkoutDialog .dialog-header { padding-inline:13px!important; }
+  #checkoutDialog .checkout-form { padding-inline:13px!important; }
+  #checkoutDialog .payment-choice label { gap:8px!important; padding:11px!important; }
+  .customer-dashboard-stats { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
+}
+@media (max-width: 340px) {
+  .brand img { width:94px!important; }
+  .dish-card { grid-template-columns:minmax(88px,31%) minmax(0,1fr)!important; }
+  .dish-image-wrap { min-height:148px!important; }
+  .dish-content { padding:8px!important; }
+  .dish-card .add-button { min-width:64px; padding-inline:7px!important; }
+  #checkoutDialog .dialog-header h2 { font-size:20px!important; }
+  #checkoutDialog .checkout-form { padding-inline:10px!important; }
+  #checkoutDialog .payment-choice label { grid-template-columns:25px minmax(0,1fr) 15px!important; gap:7px!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dish-card,.dish-card:hover,.mobile-dock-item,.cart-drawer { transition:none!important; }
+}
