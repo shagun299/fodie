@@ -2239,3 +2239,55 @@ select {
     letter-spacing:-.035em!important;
   }
 }
+
+
+/* DARK THEME ONLY: stop hover compositing from softening card photos */
+:root[data-theme="dark"] .dish-card,
+:root[data-theme="dark"] .dish-card:hover,
+:root[data-theme="dark"] .dish-card:focus-within {
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  filter:none!important;
+  -webkit-filter:none!important;
+  background:#20232b!important;
+}
+:root[data-theme="dark"] .dish-card:hover {
+  /* Keep the gentle lift, remove parent scaling that can resample the whole card. */
+  transform:translate3d(0,-5px,0)!important;
+}
+:root[data-theme="dark"] .dish-card .dish-content,
+:root[data-theme="dark"] .dish-card:hover .dish-content,
+:root[data-theme="dark"] .dish-card:focus-within .dish-content {
+  background:#20232b!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+:root[data-theme="dark"] .dish-card .dish-image-wrap,
+:root[data-theme="dark"] .dish-card:hover .dish-image-wrap {
+  background:#191c23!important;
+  filter:none!important;
+  -webkit-filter:none!important;
+}
+:root[data-theme="dark"] .dish-card .dish-image,
+:root[data-theme="dark"] .dish-card:hover .dish-image,
+:root[data-theme="dark"] .dish-card:focus-within .dish-image {
+  display:block!important;
+  filter:none!important;
+  -webkit-filter:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  opacity:1!important;
+  transform:none!important;
+  transition:none!important;
+  mix-blend-mode:normal!important;
+  backface-visibility:visible!important;
+}
+:root[data-theme="dark"] .dish-card:hover .dish-image-wrap::after,
+:root[data-theme="dark"] .dish-card:focus-within .dish-image-wrap::after,
+:root[data-theme="dark"] .dish-card:hover::before,
+:root[data-theme="dark"] .dish-card:focus-within::before {
+  display:none!important;
+  content:none!important;
+  filter:none!important;
+  opacity:0!important;
+}
