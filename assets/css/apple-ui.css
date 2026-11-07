@@ -2293,147 +2293,6 @@ select {
 }
 
 
-/* FOODIEHUB MOBILE EXPERIENCE V14: thumb-first navigation, touch targets and cart sheet */
-.mobile-dock { display:none; }
-@media (max-width:760px) {
-  body { padding-bottom:calc(96px + env(safe-area-inset-bottom)); }
-  #menu, #offers, #rewards { scroll-margin-top:94px; }
-  .mobile-dock {
-    position:fixed;
-    z-index:55;
-    left:50%;
-    bottom:calc(10px + env(safe-area-inset-bottom));
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    align-items:stretch;
-    width:min(500px,calc(100% - 24px));
-    min-height:68px;
-    padding:6px;
-    border:1px solid var(--glass-border);
-    border-radius:22px;
-    background:color-mix(in srgb,var(--glass-strong) 92%,transparent);
-    box-shadow:0 16px 42px rgba(18,26,22,.20),inset 0 1px 0 var(--glass-highlight);
-    -webkit-backdrop-filter:blur(20px) saturate(155%);
-    backdrop-filter:blur(20px) saturate(155%);
-    transform:translateX(-50%);
-    isolation:isolate;
-  }
-  .mobile-dock-item {
-    position:relative;
-    display:flex;
-    min-width:0;
-    min-height:54px;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:4px;
-    padding:5px 3px;
-    border:0;
-    border-radius:15px;
-    background:transparent;
-    color:var(--muted);
-    font:800 9px/1 var(--sans);
-    letter-spacing:.01em;
-    text-decoration:none;
-    cursor:pointer;
-    -webkit-tap-highlight-color:transparent;
-    touch-action:manipulation;
-    transition:background .18s ease,color .18s ease,transform .18s ease;
-  }
-  .mobile-dock-item svg { width:20px;height:20px;flex:0 0 20px; }
-  .mobile-dock-item:active { transform:scale(.94); }
-  .mobile-dock-item:focus-visible { outline:2px solid var(--orange);outline-offset:1px; }
-  .mobile-dock-bag {
-    color:#fff;
-    background:linear-gradient(145deg,var(--orange),var(--orange-dark));
-    box-shadow:0 6px 16px rgba(204,112,69,.27),inset 0 1px 0 rgba(255,255,255,.25);
-  }
-  .mobile-dock-bag:active { background:var(--orange-dark); }
-  .mobile-dock-bag-icon { display:grid;width:21px;height:21px;place-items:center; }
-  .mobile-dock-count {
-    position:absolute;
-    top:2px;
-    right:calc(50% - 24px);
-    display:grid;
-    min-width:17px;
-    height:17px;
-    place-items:center;
-    padding:0 4px;
-    border:2px solid var(--orange-dark);
-    border-radius:99px;
-    background:#fff;
-    color:#9f4b27;
-    font-size:8px;
-    font-weight:900;
-    line-height:1;
-  }
-  .mobile-dock-count[hidden] { display:none!important; }
-
-  /* Cart becomes a reachable bottom sheet instead of a narrow side panel. */
-  .cart-drawer {
-    top:auto!important;
-    right:0!important;
-    bottom:0!important;
-    left:0!important;
-    width:100%!important;
-    height:min(88dvh,820px)!important;
-    max-height:88dvh!important;
-    border:1px solid var(--glass-border)!important;
-    border-bottom:0!important;
-    border-radius:26px 26px 0 0!important;
-    background:var(--card)!important;
-    box-shadow:0 -22px 70px rgba(0,0,0,.20)!important;
-    -webkit-backdrop-filter:none!important;
-    backdrop-filter:none!important;
-    transform:translate3d(0,105%,0)!important;
-    transition:transform .3s cubic-bezier(.2,.8,.2,1)!important;
-  }
-  .cart-drawer.is-open { transform:translate3d(0,0,0)!important; }
-  .cart-drawer::before {
-    position:absolute;
-    z-index:5;
-    top:9px;
-    left:50%;
-    width:38px;
-    height:4px;
-    border-radius:99px;
-    background:var(--muted);
-    opacity:.42;
-    content:"";
-    transform:translateX(-50%);
-    pointer-events:none;
-  }
-  .drawer-header { padding:22px 18px 13px!important; }
-  .cart-items { padding:7px 16px!important; }
-  .drawer-bottom {
-    padding:13px 16px max(16px,env(safe-area-inset-bottom))!important;
-    box-shadow:0 -10px 25px rgba(20,28,22,.06);
-  }
-  .cart-backdrop { background:rgba(10,13,12,.48)!important; }
-
-  /* Make the most-used controls comfortable for thumbs. */
-  .search-box { min-height:52px!important; }
-  .sort-control select { min-height:46px; }
-  .category-tab,.diet-button { min-height:42px; }
-  .dish-card .add-button { min-height:40px; }
-  .dish-card .customize-link { min-height:36px; }
-  .offer-nav { width:38px;height:38px; }
-  .offer-dots button { min-height:30px; }
-  .toast-region { bottom:calc(91px + env(safe-area-inset-bottom))!important; }
-}
-@media (max-width:390px) {
-  .mobile-dock { width:calc(100% - 18px);bottom:calc(7px + env(safe-area-inset-bottom));padding:5px;border-radius:19px; }
-  .mobile-dock-item { min-height:52px;font-size:8px; }
-  .mobile-dock-item svg { width:19px;height:19px; }
-  .drawer-header { padding-inline:15px!important; }
-  .cart-items { padding-inline:13px!important; }
-  .drawer-bottom { padding-inline:13px!important; }
-}
-@media (prefers-reduced-motion:reduce) {
-  .mobile-dock-item,.cart-drawer { transition:none!important; }
-}
-
-
 /* FOODIEHUB CHECKOUT V15: clear order review, deliberate payment choice and thumb-ready submit */
 .checkout-review {
   margin:18px 0 22px;
@@ -2547,8 +2406,9 @@ select {
 
 
 
-/* FOODIEHUB MOBILE SYSTEM V19
-   One authoritative responsive layer. Replaces conflicting V16-V18 patches. */
+/* FOODIEHUB MOBILE SYSTEM V20
+   Single mobile layout layer. The obsolete V14 cart/dock rules have been removed. */
+.mobile-dock { display:none; }
 @media (max-width: 760px) {
   html, body { width:100%; max-width:100%; overflow-x:hidden; }
   body { padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
@@ -2596,7 +2456,7 @@ select {
 
   /* Offers: content and discount graphic are separate rows, never side-by-side. */
   .offer-section { padding-top:40px!important; }
-  .offer-carousel,.offer-carousel-track { width:100%!important; min-width:0!important; }
+  .offer-carousel,.offer-carousel-track { display:grid!important; grid-template-columns:minmax(0,1fr)!important; width:100%!important; min-width:0!important; }
   .offer-panel {
     display:flex!important; flex-direction:column!important; align-items:stretch!important;
     justify-content:flex-start!important; gap:18px!important; width:100%!important;
@@ -2684,13 +2544,13 @@ select {
   }
   .cart-drawer.is-open { transform:translateY(0)!important; }
   .cart-drawer .drawer-header {
-    display:flex!important; flex:0 0 auto!important; min-height:72px!important;
+    position:relative!important; display:flex!important; flex:0 0 auto!important; min-height:72px!important;
     gap:10px!important; padding:14px 16px!important;
   }
   .cart-drawer .drawer-header h2 { font-size:23px!important; }
   .cart-drawer .drawer-header .drawer-kicker { font-size:8px!important; }
   .cart-drawer .cart-items {
-    display:block!important; flex:1 1 0!important; min-height:90px!important;
+    display:block!important; flex:1 1 0!important; min-height:0!important;
     height:auto!important; overflow-x:hidden!important; overflow-y:auto!important;
     padding:4px 16px!important; overscroll-behavior:contain;
     -webkit-overflow-scrolling:touch!important;
@@ -2699,8 +2559,8 @@ select {
   .cart-drawer .cart-line { grid-template-columns:64px minmax(0,1fr) auto!important; gap:9px!important; padding:12px 0!important; }
   .cart-drawer .cart-line>img { width:64px!important; height:64px!important; }
   .cart-drawer .drawer-bottom {
-    display:block!important; flex:0 0 auto!important; width:100%!important;
-    min-height:0!important; max-height:48dvh!important;
+    display:block!important; flex:0 1 auto!important; width:100%!important;
+    min-height:0!important; max-height:min(48dvh, 420px)!important;
     overflow-x:hidden!important; overflow-y:auto!important;
     padding:12px 16px calc(14px + env(safe-area-inset-bottom))!important;
     border-top:1px solid var(--line)!important;
@@ -2725,10 +2585,12 @@ select {
 
   /* Mobile dock sits below the bag sheet and never overlaps page content. */
   .mobile-dock {
-    z-index:70!important; left:50%!important; bottom:calc(7px + env(safe-area-inset-bottom))!important;
+    position:fixed!important; display:grid!important; z-index:70!important;
+    left:50%!important; bottom:calc(7px + env(safe-area-inset-bottom))!important;
     width:calc(100% - 24px)!important; max-width:480px!important;
     min-height:62px!important; padding:5px!important;
     grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    transform:translateX(-50%)!important; isolation:isolate!important;
   }
   .mobile-dock-item { min-width:0!important; min-height:50px!important; gap:4px!important; font-size:10px!important; }
   .mobile-dock-item svg { width:20px!important; height:20px!important; }
