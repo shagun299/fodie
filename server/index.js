@@ -364,14 +364,24 @@ function readIdempotencyKey(req) {
   return key;
 }
 
-function checkoutFingerprint(customer, bill, paymentMethod) {
-  return crypto.createHash("sha256").update(JSON.stringify({
+function checkoutFingerprint(customer, items, couponCode, paymentMethod) {
+  function stable(value) {
+    if (Array.isArray(value)) return value.map(stable);
+    if (value && typeof value === "object") {
+      return Object.keys(value).sort().reduce((result, key) => {
+        result[key] = stable(value[key]);
+        return result;
+      }, {});
+    }
+    return value;
+  }
+  const payload = {
     customer,
-    items: bill.items,
-    couponCode: bill.couponCode,
-    paymentMethod,
-    total: bill.total
-  })).digest("hex");
+    items: Array.isArray(items) ? items : [],
+    couponCode: String(couponCode || "").trim().toUpperCase(),
+    paymentMethod
+  };
+  return crypto.createHash("sha256").update(JSON.stringify(stable(payload))).digest("hex");
 }
 
 app.get("/api/payments/config", (req, res) => {
@@ -383,11 +393,10 @@ app.post("/api/payments/create-order", async (req, res, next) => {
     if (!razorpayEnabled()) return res.status(503).json({ error: "Online payment is not enabled yet. Choose a delivery payment option." });
     const body = req.body || {};
     const customer = validateCustomer(body.customer);
-    const bill = calculateOrder(body.items, body.couponCode);
     const paymentMethod = String(body.paymentMethod || "razorpay");
     if (paymentMethod !== "razorpay") return res.status(400).json({ error: "This payment endpoint accepts online payment orders only." });
     const idempotencyKey = readIdempotencyKey(req);
-    const fingerprint = checkoutFingerprint(customer, bill, paymentMethod);
+    const fingerprint = checkoutFingerprint(customer, body.items, body.couponCode, paymentMethod);
 
     if (idempotencyKey) {
       const existing = db.prepare("SELECT order_number, gateway_order_id, total, payment_status, status, idempotency_fingerprint FROM orders WHERE idempotency_key = ?").get(idempotencyKey);
@@ -413,6 +422,7 @@ app.post("/api/payments/create-order", async (req, res, next) => {
       }
     }
 
+    const bill = calculateOrder(body.items, body.couponCode);
     const orderNumber = createOrderNumber();
     const createdAt = new Date().toISOString();
     const insertPendingOrder = db.prepare([
@@ -576,9 +586,8 @@ app.post("/api/orders", (req, res, next) => {
     if (address.length < 12 || address.length > 500) return res.status(400).json({ error: "Please enter a complete delivery address." });
     if (!["cod", "upi_at_door"].includes(paymentMethod)) return res.status(400).json({ error: "Choose a supported demo payment method." });
 
-    const bill = calculateOrder(body.items, body.couponCode);
     const idempotencyKey = readIdempotencyKey(req);
-    const fingerprint = checkoutFingerprint(customer, bill, paymentMethod);
+    const fingerprint = checkoutFingerprint(customer, body.items, body.couponCode, paymentMethod);
     if (idempotencyKey) {
       const existing = db.prepare("SELECT order_number, total, payment_method, payment_status, status, created_at, items_json, subtotal, coupon_discount, delivery_fee, tax, idempotency_fingerprint FROM orders WHERE idempotency_key = ?").get(idempotencyKey);
       if (existing) {
@@ -595,6 +604,7 @@ app.post("/api/orders", (req, res, next) => {
       }
     }
 
+    const bill = calculateOrder(body.items, body.couponCode);
     const orderNumber = createOrderNumber();
     const createdAt = new Date().toISOString();
     const insertDeliveryOrder = db.prepare([
