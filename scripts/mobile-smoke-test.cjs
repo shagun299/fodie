@@ -1,0 +1,234 @@
+"use strict";
+
+const fs = require("node:fs");
+const path = require("node:path");
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
+
+const BASE_URL = process.env.FOODIEHUB_QA_URL || "https://shagun299.github.io/fodie/?qa=mobile";
+const OUT_DIR = path.join(process.cwd(), "mobile-qa-artifacts");
+fs.mkdirSync(OUT_DIR, { recursive: true });
+
+const failures = [];
+const reports = [];
+const viewports = [
+  { width: 360, height: 800 },
+  { width: 390, height: 844 },
+  { width: 430, height: 932 }
+];
+
+function sizeName(viewport) {
+  return String(viewport.width) + "x" + String(viewport.height);
+}
+
+function check(condition, viewport, name, detail) {
+  const result = { viewport: sizeName(viewport), name, pass: Boolean(condition) };
+  if (detail) result.detail = detail;
+  reports.push(result);
+  if (!condition) failures.push(result);
+}
+
+async function waitForSite(page) {
+  let lastError;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const response = await page.goto(BASE_URL, {
+        waitUntil: "domcontentloaded",
+        timeout: 45000
+      });
+      if (response && response.status() >= 400) {
+        throw new Error("Site returned HTTP " + response.status());
+      }
+      await page.waitForSelector("#menuGrid .dish-card", { timeout: 45000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await page.waitForTimeout(2500);
+    }
+  }
+  throw lastError || new Error("Site did not become ready");
+}
+
+async function runViewport(browser, viewport) {
+  const context = await browser.newContext({
+    viewport,
+    deviceScaleFactor: 1,
+    isMobile: true,
+    hasTouch: true,
+    reducedMotion: "reduce"
+  });
+  const page = await context.newPage();
+  const pageErrors = [];
+  const firstPartyFailures = [];
+
+  await page.addInitScript(() => {
+    window.__foodieLongTasks = [];
+    try {
+      new PerformanceObserver(list => {
+        for (const entry of list.getEntries()) {
+          window.__foodieLongTasks.push(Math.round(entry.duration));
+        }
+      }).observe({ type: "longtask", buffered: true });
+    } catch (_) {}
+  });
+
+  page.on("pageerror", error => pageErrors.push(error.message));
+  page.on("requestfailed", request => {
+    const url = request.url();
+    if (url.includes("shagun299.github.io") || url.includes("images.unsplash.com") || url.includes("images.pexels.com")) {
+      firstPartyFailures.push({ url, error: request.failure()?.errorText || "request failed" });
+    }
+  });
+
+  try {
+    await waitForSite(page);
+
+    const introButton = page.locator("#skipWelcome");
+    if (await introButton.isVisible().catch(() => false)) {
+      await introButton.click({ timeout: 3000 }).catch(() => {});
+    }
+
+    const menuCount = await page.locator("#menuGrid .dish-card").count();
+    check(menuCount >= 20, viewport, "menu-rendered", "Found " + menuCount + " menu cards");
+
+    const pageGeometry = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+      dockVisible: getComputedStyle(document.querySelector("#mobileDock")).display !== "none",
+      menuImage: document.querySelector("#menuGrid .dish-image")?.getAttribute("src") || ""
+    }));
+    check(pageGeometry.documentWidth <= pageGeometry.viewportWidth + 1, viewport, "no-horizontal-page-overflow",
+      "viewport=" + pageGeometry.viewportWidth + ", document=" + pageGeometry.documentWidth + ", body=" + pageGeometry.bodyWidth);
+    check(pageGeometry.dockVisible, viewport, "mobile-dock-visible");
+    check(/(?:\?|&)w=480(?:&|$)/.test(pageGeometry.menuImage), viewport, "mobile-menu-image-sized",
+      pageGeometry.menuImage);
+
+    await page.locator("#offers").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(250);
+    const offer = await page.evaluate(() => {
+      const panel = document.querySelector("#offerCarousel .offer-slide.is-active");
+      if (!panel) return null;
+      const copy = panel.querySelector(".offer-copy")?.getBoundingClientRect();
+      const art = panel.querySelector(".offer-art")?.getBoundingClientRect();
+      if (!copy || !art) return null;
+      const overlap = copy.left < art.right && copy.right > art.left &&
+        copy.top < art.bottom && copy.bottom > art.top;
+      return { overlap, copyBottom:copy.bottom, artTop:art.top, panelWidth:panel.getBoundingClientRect().width };
+    });
+    check(Boolean(offer) && !offer.overlap, viewport, "offer-copy-and-discount-do-not-overlap",
+      offer ? JSON.stringify(offer) : "Offer elements not found");
+
+    await page.locator("#menu").scrollIntoViewIfNeeded();
+    await page.locator("#menuSearch").fill("burger");
+    await page.waitForTimeout(300);
+    const searchCount = await page.locator("#menuGrid .dish-card").count();
+    check(searchCount >= 1 && searchCount < menuCount, viewport, "menu-search-works", "Burger results: " + searchCount);
+    await page.locator("#menuSearch").fill("");
+    await page.waitForTimeout(250);
+
+    const firstCard = page.locator("#menuGrid .dish-card").first();
+    const badgeInsideImage = await firstCard.evaluate(card => {
+      const image = card.querySelector(".dish-image-wrap")?.getBoundingClientRect();
+      const badge = card.querySelector(".discount-badge")?.getBoundingClientRect();
+      return Boolean(image && badge && badge.left >= image.left - 1 && badge.right <= image.right + 1 &&
+        badge.top >= image.top - 1 && badge.bottom <= image.bottom + 1);
+    });
+    check(badgeInsideImage, viewport, "discount-badge-contained-in-photo");
+
+    await page.locator("#menuGrid [data-add]").first().click();
+    await page.locator("#mobileOpenCart").click();
+    await page.waitForFunction(() => document.querySelector("#cartDrawer")?.classList.contains("is-open"));
+    const bag = await page.evaluate(() => {
+      const selectors = ["#cartDrawer", "#cartDrawer .coupon-entry", "#cartDrawer .coupon-row",
+        "#cartDrawer .bill-lines", "#cartDrawer .checkout-button", "#cartDrawer .drawer-bottom"];
+      const values = {};
+      for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (!element) { values[selector] = null; continue; }
+        const r = element.getBoundingClientRect();
+        values[selector] = { x:r.x, y:r.y, right:r.right, bottom:r.bottom, width:r.width, height:r.height };
+      }
+      return {
+        values,
+        drawerWidth: values["#cartDrawer"]?.width || 0,
+        couponWithin: Boolean(values["#cartDrawer .coupon-row"]) &&
+          values["#cartDrawer .coupon-row"].x >= -1 &&
+          values["#cartDrawer .coupon-row"].right <= window.innerWidth + 1,
+        billAfterCoupon: Boolean(values["#cartDrawer .bill-lines"] && values["#cartDrawer .coupon-entry"]) &&
+          values["#cartDrawer .bill-lines"].y >= values["#cartDrawer .coupon-entry"].bottom - 1,
+        checkoutAfterBill: Boolean(values["#cartDrawer .checkout-button"] && values["#cartDrawer .bill-lines"]) &&
+          values["#cartDrawer .checkout-button"].y >= values["#cartDrawer .bill-lines"].bottom - 1
+      };
+    });
+    check(bag.drawerWidth >= viewport.width - 2, viewport, "bag-is-full-width", JSON.stringify(bag.values["#cartDrawer"]));
+    check(bag.couponWithin, viewport, "coupon-fits-bag-width");
+    check(bag.billAfterCoupon, viewport, "bill-below-coupon");
+    check(bag.checkoutAfterBill, viewport, "checkout-below-bill");
+
+    if (viewport.width === 390) {
+      await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-bag.png") });
+    }
+
+    await page.locator("#closeCart").click();
+    await page.locator("#menuGrid [data-customize]").first().click();
+    await page.waitForFunction(() => document.querySelector("#dishDetailDialog")?.open === true);
+    const detail = await page.evaluate(() => {
+      const dialog = document.querySelector("#dishDetailDialog");
+      const r = dialog.getBoundingClientRect();
+      const image = dialog.querySelector("img")?.getBoundingClientRect();
+      const width = window.innerWidth;
+      return {
+        dialogWithinViewport: r.left >= -1 && r.right <= width + 1,
+        imageWithinDialog: !image || (image.left >= r.left - 1 && image.right <= r.right + 1),
+        dialogWidth: r.width,
+        viewportWidth: width
+      };
+    });
+    check(detail.dialogWithinViewport && detail.imageWithinDialog, viewport, "dish-detail-fits-viewport", JSON.stringify(detail));
+    await page.locator('[data-close-dialog="dishDetailDialog"]').click().catch(() => {});
+    if (viewport.width === 390) {
+      await page.locator("#offers").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-page.png") });
+    }
+
+    const performance = await page.evaluate(() => {
+      const nav = window.performance.getEntriesByType("navigation")[0];
+      const resources = window.performance.getEntriesByType("resource");
+      const images = resources.filter(item => /\.(?:png|jpe?g|webp|avif)(?:\?|$)/i.test(item.name));
+      return {
+        domContentLoadedMs: nav ? Math.round(nav.domContentLoadedEventEnd - nav.startTime) : null,
+        loadEventMs: nav ? Math.round(nav.loadEventEnd - nav.startTime) : null,
+        imageRequests: images.length,
+        encodedImageBytes: images.reduce((sum, item) => sum + (item.encodedBodySize || 0), 0),
+        longTasksOver50ms: (window.__foodieLongTasks || []).length
+      };
+    });
+    check(pageErrors.length === 0, viewport, "no-page-javascript-errors", JSON.stringify(pageErrors));
+    check(firstPartyFailures.length === 0, viewport, "no-site-or-food-image-request-failures", JSON.stringify(firstPartyFailures));
+    reports.push({ viewport:sizeName(viewport), name:"performance-observation", pass:true, detail:performance });
+  } catch (error) {
+    failures.push({ viewport:sizeName(viewport), name:"browser-test-execution", pass:false, detail:error.stack || error.message });
+  } finally {
+    await context.close();
+  }
+}
+
+(async () => {
+  const browser = await chromium.launch({ headless:true, args:["--no-sandbox","--disable-dev-shm-usage"] });
+  try {
+    for (const viewport of viewports) await runViewport(browser, viewport);
+  } finally {
+    await browser.close();
+  }
+  const report = {
+    url: BASE_URL,
+    generatedAt: new Date().toISOString(),
+    passed: reports.filter(item => item.pass).length,
+    failed: failures.length,
+    failures,
+    checks: reports
+  };
+  fs.writeFileSync(path.join(OUT_DIR, "report.json"), JSON.stringify(report, null, 2));
+  console.log(JSON.stringify(report, null, 2));
+  if (failures.length) process.exitCode = 1;
+})();
