@@ -302,8 +302,6 @@ h1 em, h2 em { font-family: var(--sans); font-style: normal; font-weight: 750; c
   border-radius: 22px;
   background: var(--glass);
   box-shadow: 0 8px 28px rgba(27,32,42,.055), inset 0 1px 0 var(--glass-highlight);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  backdrop-filter: blur(20px) saturate(150%);
   transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
 }
 .dish-card:hover {
@@ -2020,4 +2018,22 @@ button:disabled { opacity:.55!important;cursor:not-allowed!important; }
 .dish-card:focus-within::before {
   background:none!important;
   box-shadow:none!important;
+}
+
+
+/* FOOD CARD HOVER: keep food photography perfectly sharp.
+   Dish cards are photo containers, not frosted panes. The backdrop-filter
+   on a transformed card softened its own contents in Chromium browsers. */
+.dish-card,
+.dish-card:hover,
+.dish-card:focus-within {
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+.dish-card:hover .dish-image,
+.dish-card:focus-within .dish-image {
+  transform:none!important;
+  filter:none!important;
+  -webkit-filter:none!important;
+  opacity:1!important;
 }
