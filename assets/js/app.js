@@ -1080,7 +1080,7 @@
     container.innerHTML=SMART_COMBOS.map(combo=>{
       const items=combo.ids.map(findMenuItem).filter(Boolean);if(items.length!==3)return "";
       const subtotal=items.reduce((sum,item)=>sum+item.price,0),saving=Math.min(Math.round(subtotal*.1),150),hero=items[0];
-      return '<article class="combo-card"><div class="combo-image"><img src="'+escapeHTML(hero.image)+'" alt="'+escapeHTML(hero.name)+'" loading="lazy"><span>'+escapeHTML(combo.tag)+'</span><strong>'+money(subtotal)+'</strong></div><div class="combo-card-body"><h3>'+escapeHTML(combo.title)+'</h3><p>'+escapeHTML(combo.subtitle)+'</p><ul>'+items.map(item=>'<li><span>'+escapeHTML(item.name)+'</span><strong>'+money(item.price)+'</strong></li>').join("")+'</ul><div class="combo-card-footer"><span>Save up to '+money(saving)+' with COMBO10</span><button type="button" class="button button-outline" data-combo="'+combo.id+'">Add combo <span aria-hidden="true">＋</span></button></div></div></article>';
+      return '<article class="combo-card" data-primary-dish="'+escapeHTML(hero.id)+'"><button type="button" class="combo-image combo-image-trigger" data-open-dish="'+escapeHTML(hero.id)+'" aria-label="View details for '+escapeHTML(hero.name)+'"><img src="'+escapeHTML(hero.image)+'" alt="'+escapeHTML(hero.name)+'" loading="lazy"><span>'+escapeHTML(combo.tag)+'</span><strong>'+money(subtotal)+'</strong></button><div class="combo-card-body"><h3><button type="button" class="combo-title-trigger" data-open-dish="'+escapeHTML(hero.id)+'">'+escapeHTML(combo.title)+'</button></h3><p>'+escapeHTML(combo.subtitle)+'</p><ul>'+items.map(item=>'<li><button type="button" class="combo-dish-trigger" data-open-dish="'+escapeHTML(item.id)+'">'+escapeHTML(item.name)+'</button><strong>'+money(item.price)+'</strong></li>').join("")+'</ul><div class="combo-card-footer"><span>Save up to '+money(saving)+' with COMBO10</span><button type="button" class="button button-outline" data-combo="'+combo.id+'">Add combo <span aria-hidden="true">＋</span></button></div></div></article>';
     }).join("");
     $$("#comboGrid img").forEach(img=>{const item=state.menu.find(entry=>entry.name===img.alt);if(item)protectFoodPhoto(img,item);});
   }
@@ -1105,7 +1105,7 @@
     const container=$("#recommendationGrid");if(!container||!state.menu.length)return;
     const items=getRecommendedItems($("#recommendationMood").value||"popular");
     if(!items.length){container.innerHTML='<p class="recommendation-empty">No matches in that mood yet. Try another pick.</p>';return;}
-    container.innerHTML=items.map(item=>'<article class="recommendation-card"><img src="'+escapeHTML(item.image)+'" alt="'+escapeHTML(item.name)+'" loading="lazy"><div class="recommendation-card-copy"><span>'+escapeHTML(item.category)+' · '+escapeHTML(String(item.prepTime||"—"))+' min</span><h3>'+escapeHTML(item.name)+'</h3><p>'+escapeHTML(item.description)+'</p><div><strong>'+money(item.price)+'</strong><button type="button" class="button button-outline" data-recommend-add="'+escapeHTML(item.id)+'">Add <span aria-hidden="true">＋</span></button></div></div></article>').join("");
+    container.innerHTML=items.map(item=>'<article class="recommendation-card" data-primary-dish="'+escapeHTML(item.id)+'"><button type="button" class="recommendation-image-trigger" data-open-dish="'+escapeHTML(item.id)+'" aria-label="View details for '+escapeHTML(item.name)+'"><img src="'+escapeHTML(item.image)+'" alt="'+escapeHTML(item.name)+'" loading="lazy"></button><div class="recommendation-card-copy"><span>'+escapeHTML(item.category)+' · '+escapeHTML(String(item.prepTime||"—"))+' min</span><h3><button type="button" class="recommendation-title-trigger" data-open-dish="'+escapeHTML(item.id)+'">'+escapeHTML(item.name)+'</button></h3><p>'+escapeHTML(item.description)+'</p><div><strong>'+money(item.price)+'</strong><button type="button" class="button button-outline" data-recommend-add="'+escapeHTML(item.id)+'">Add <span aria-hidden="true">＋</span></button></div></div></article>').join("");
     $$("#recommendationGrid img").forEach(img=>{const item=state.menu.find(entry=>entry.name===img.alt);if(item)protectFoodPhoto(img,item);});
   }
   function renderRewards(){
@@ -1405,9 +1405,31 @@
   function bindFeatureEvents(){
     ["mealMain","mealSide","mealDrink"].forEach(id=>$("#"+id).addEventListener("change",updateMealSummary));
     $("#mealVegOnly").addEventListener("change",populateMealBuilder);$("#addMealBundle").addEventListener("click",addMealBundle);
-    $("#comboGrid").addEventListener("click",event=>{const button=event.target.closest("[data-combo]");if(button)addSmartCombo(button.dataset.combo);});
+    $("#comboGrid").addEventListener("click",event=>{
+      const addButton=event.target.closest("[data-combo]");
+      if(addButton){addSmartCombo(addButton.dataset.combo);return;}
+      const dishButton=event.target.closest("[data-open-dish]");
+      const card=event.target.closest(".combo-card[data-primary-dish]");
+      const dishId=dishButton?.dataset.openDish||(card?.dataset.primaryDish);
+      if(dishId)openDishDetails(dishId);
+    });
+    $("#comboGrid").addEventListener("keydown",event=>{
+      const trigger=event.target.closest("[data-open-dish]");
+      if(trigger&&(event.key==="Enter"||event.key===" ")){event.preventDefault();openDishDetails(trigger.dataset.openDish);}
+    });
     $("#recommendationMood").addEventListener("change",renderRecommendations);
-    $("#recommendationGrid").addEventListener("click",event=>{const button=event.target.closest("[data-recommend-add]");if(button)addToCart(button.dataset.recommendAdd,button);});
+    $("#recommendationGrid").addEventListener("click",event=>{
+      const addButton=event.target.closest("[data-recommend-add]");
+      if(addButton){addToCart(addButton.dataset.recommendAdd,addButton);return;}
+      const trigger=event.target.closest("[data-open-dish]");
+      const card=event.target.closest(".recommendation-card[data-primary-dish]");
+      const dishId=trigger?.dataset.openDish||(card?.dataset.primaryDish);
+      if(dishId)openDishDetails(dishId);
+    });
+    $("#recommendationGrid").addEventListener("keydown",event=>{
+      const trigger=event.target.closest("[data-open-dish]");
+      if(trigger&&(event.key==="Enter"||event.key===" ")){event.preventDefault();openDishDetails(trigger.dataset.openDish);}
+    });
     $("#redeemRewards").addEventListener("click",redeemRewards);
     $("#openAdmin").addEventListener("click",openTeamDashboard);
     $("#adminLoginForm").addEventListener("submit",connectAdmin);
