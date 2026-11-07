@@ -87,6 +87,9 @@ async function runViewport(browser, viewport) {
       await introButton.click({ timeout: 3000 }).catch(() => {});
     }
 
+    if (viewport.width === 390) {
+      await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-home.png") });
+    }
     const menuCount = await page.locator("#menuGrid .dish-card").count();
     check(menuCount >= 20, viewport, "menu-rendered", "Found " + menuCount + " menu cards");
 
@@ -95,11 +98,20 @@ async function runViewport(browser, viewport) {
       documentWidth: document.documentElement.scrollWidth,
       bodyWidth: document.body.scrollWidth,
       dockVisible: getComputedStyle(document.querySelector("#mobileDock")).display !== "none",
-      menuImage: document.querySelector("#menuGrid .dish-image")?.getAttribute("src") || ""
+      menuImage: document.querySelector("#menuGrid .dish-image")?.getAttribute("src") || "",
+      dockItems: Array.from(document.querySelectorAll("#mobileDock .mobile-dock-item")).map(element => {
+        const r = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return { width:r.width, height:r.height, display:style.display, direction:style.flexDirection,
+          text:element.innerText.trim().replace(/\\s+/g," ") };
+      })
     }));
     check(pageGeometry.documentWidth <= pageGeometry.viewportWidth + 1, viewport, "no-horizontal-page-overflow",
       "viewport=" + pageGeometry.viewportWidth + ", document=" + pageGeometry.documentWidth + ", body=" + pageGeometry.bodyWidth);
     check(pageGeometry.dockVisible, viewport, "mobile-dock-visible");
+    check(pageGeometry.dockItems.length === 4 &&
+      pageGeometry.dockItems.every(item => item.display === "flex" && item.direction === "column" && item.width >= 60 && item.height >= 46),
+      viewport, "mobile-dock-buttons-are-stacked-and-tappable", JSON.stringify(pageGeometry.dockItems));
     check(/(?:\?|&)w=480(?:&|$)/.test(pageGeometry.menuImage), viewport, "mobile-menu-image-sized",
       pageGeometry.menuImage);
 
@@ -148,8 +160,15 @@ async function runViewport(browser, viewport) {
         const r = element.getBoundingClientRect();
         values[selector] = { x:r.x, y:r.y, right:r.right, bottom:r.bottom, width:r.width, height:r.height };
       }
+      const drawerBackground = getComputedStyle(document.querySelector("#cartDrawer")).backgroundColor;
+      const drawerOpaque = drawerBackground.startsWith("rgb(") ||
+        Number(drawerBackground.split(",").pop().replace(")","").trim()) >= 0.99;
+      const toastDisplay = getComputedStyle(document.querySelector("#toastRegion")).display;
       return {
         values,
+        drawerBackground,
+        drawerOpaque,
+        toastHidden: toastDisplay === "none",
         drawerWidth: values["#cartDrawer"]?.width || 0,
         couponWithin: Boolean(values["#cartDrawer .coupon-row"]) &&
           values["#cartDrawer .coupon-row"].x >= -1 &&
@@ -164,6 +183,8 @@ async function runViewport(browser, viewport) {
     check(bag.couponWithin, viewport, "coupon-fits-bag-width");
     check(bag.billAfterCoupon, viewport, "bill-below-coupon");
     check(bag.checkoutAfterBill, viewport, "checkout-below-bill");
+    check(bag.drawerOpaque, viewport, "bag-drawer-is-opaque", bag.drawerBackground);
+    check(bag.toastHidden, viewport, "toast-does-not-cover-bag");
 
     if (viewport.width === 390) {
       await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-bag.png") });
@@ -194,7 +215,8 @@ async function runViewport(browser, viewport) {
     const performance = await page.evaluate(() => {
       const nav = window.performance.getEntriesByType("navigation")[0];
       const resources = window.performance.getEntriesByType("resource");
-      const images = resources.filter(item => /\.(?:png|jpe?g|webp|avif)(?:\?|$)/i.test(item.name));
+      const images = resources.filter(item => item.initiatorType === "img" ||
+        item.name.includes("images.unsplash.com") || item.name.includes("images.pexels.com"));
       return {
         domContentLoadedMs: nav ? Math.round(nav.domContentLoadedEventEnd - nav.startTime) : null,
         loadEventMs: nav ? Math.round(nav.loadEventEnd - nav.startTime) : null,
