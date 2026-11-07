@@ -2844,3 +2844,29 @@ select {
     pointer-events:none!important;
   }
 }
+
+
+/* FOODIEHUB MOBILE HERO CTA FIX V23 */
+@media (max-width: 760px) {
+  .hero-actions {
+    display:flex!important;
+    flex-direction:column!important;
+    flex-wrap:nowrap!important;
+    align-items:flex-start!important;
+    gap:11px!important;
+  }
+  .hero-actions .button {
+    flex:0 0 auto!important;
+    width:auto!important;
+    min-width:0!important;
+    min-height:46px!important;
+    height:auto!important;
+    align-self:flex-start!important;
+    padding:0 19px!important;
+  }
+  .hero-actions .text-link {
+    flex:0 0 auto!important;
+    align-self:flex-start!important;
+    min-height:32px!important;
+  }
+}
