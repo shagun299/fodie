@@ -54,7 +54,7 @@ async function runViewport(browser, viewport) {
     deviceScaleFactor: 1,
     isMobile: true,
     hasTouch: true,
-    reducedMotion: "reduce"
+    reducedMotion: "no-preference"
   });
   const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
@@ -67,7 +67,10 @@ async function runViewport(browser, viewport) {
     try {
       new PerformanceObserver(list => {
         for (const entry of list.getEntries()) {
-          window.__foodieLongTasks.push(Math.round(entry.duration));
+          window.__foodieLongTasks.push({
+            durationMs:Math.round(entry.duration),
+            startTimeMs:Math.round(entry.startTime)
+          });
         }
       }).observe({ type: "longtask", buffered: true });
     } catch (_) {}
@@ -92,6 +95,18 @@ async function runViewport(browser, viewport) {
     if (viewport.width === 390) {
       await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-home.png") });
     }
+    const initialPerformance = await page.evaluate(() => {
+      const nav = window.performance.getEntriesByType("navigation")[0];
+      const images = window.performance.getEntriesByType("resource").filter(item =>
+        item.initiatorType === "img" || item.name.includes("images.unsplash.com") || item.name.includes("images.pexels.com"));
+      return {
+        domContentLoadedMs: nav ? Math.round(nav.domContentLoadedEventEnd - nav.startTime) : null,
+        imageRequestsBeforeScrolling: images.length,
+        encodedImageBytesBeforeScrolling: images.reduce((sum, item) => sum + (item.encodedBodySize || 0), 0),
+        domNodeCount: document.getElementsByTagName("*").length
+      };
+    });
+    reports.push({ viewport:sizeName(viewport), name:"initial-load-observation", pass:true, detail:initialPerformance });
     const menuCount = await page.locator("#menuGrid .dish-card").count();
     check(menuCount >= 20, viewport, "menu-rendered", "Found " + menuCount + " menu cards");
 
@@ -257,7 +272,8 @@ async function runViewport(browser, viewport) {
         loadEventMs: nav ? Math.round(nav.loadEventEnd - nav.startTime) : null,
         imageRequests: images.length,
         encodedImageBytes: images.reduce((sum, item) => sum + (item.encodedBodySize || 0), 0),
-        longTasksOver50ms: (window.__foodieLongTasks || []).length
+        longTasksOver50ms: (window.__foodieLongTasks || []).length,
+        longTaskDetails: window.__foodieLongTasks || []
       };
     });
     performance.scrollFrameMetrics = scrollFrameMetrics;
