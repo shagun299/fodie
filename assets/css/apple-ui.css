@@ -464,6 +464,41 @@ h1 em, h2 em { font-family: var(--sans); font-style: normal; font-weight: 750; c
 .footer-column a:hover { color: var(--orange-dark); }
 .footer-bottom { border-color: var(--line); color: var(--muted); }
 
+/* Explicit dark-mode accents for components with legacy theme selectors. */
+:root[data-theme="dark"] .announcement-bar {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper-deep) 86%, #090a0d);
+  color: var(--ink);
+}
+:root[data-theme="dark"] .add-button,
+:root[data-theme="dark"] .coupon-row button {
+  background: var(--orange);
+  color: #fff;
+}
+:root[data-theme="dark"] .quick-access-strip,
+:root[data-theme="dark"] .quick-access-card,
+:root[data-theme="dark"] .my-dashboard-welcome,
+:root[data-theme="dark"] .customer-dashboard-stats article,
+:root[data-theme="dark"] .my-order-card,
+:root[data-theme="dark"] .my-dashboard-note,
+:root[data-theme="dark"] .admin-stats article,
+:root[data-theme="dark"] .admin-analytics,
+:root[data-theme="dark"] .admin-analytics-overview article,
+:root[data-theme="dark"] .admin-chart-panel,
+:root[data-theme="dark"] .meal-builder-shell,
+:root[data-theme="dark"] .meal-builder-summary,
+:root[data-theme="dark"] .combo-card,
+:root[data-theme="dark"] .recommendation-card,
+:root[data-theme="dark"] .rewards-panel,
+:root[data-theme="dark"] .rewards-score {
+  border-color: var(--glass-border);
+  background-color: var(--glass);
+}
+:root[data-theme="dark"] .site-footer {
+  border-color: var(--glass-border);
+  background: var(--glass);
+}
+
 /* Native-feeling interactions */
 button, .button, .category-tab, .diet-button, .add-button, .offer-nav, .close-button {
   -webkit-user-select: none;
@@ -578,6 +613,7 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .brand img { width: 125px; }
   .header-actions { gap: 4px; }
   .icon-button { width: 34px; min-height: 34px; }
+  .theme-button { display: grid; }
   .profile-trigger { width: 34px; min-height: 34px; padding: 0; border-radius: 50%; }
   .profile-trigger-label { display: none; }
   .profile-icon { width: 22px; height: 22px; }
