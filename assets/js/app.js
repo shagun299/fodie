@@ -291,10 +291,10 @@
   }
 
   function visibleMenu() {
+    const query = state.query.trim().toLowerCase();
     let items = state.menu.filter(item => {
       const matchesCategory = state.category === "All" || item.category === state.category;
       const matchesDiet = state.diet === "all" || (state.diet === "veg" ? item.isVeg : !item.isVeg);
-      const query = state.query.trim().toLowerCase();
       const matchesSearch = !query || [item.name, item.description, item.category, ...(item.tags || [])].join(" ").toLowerCase().includes(query);
       const matchesFavourite = !state.onlyFavourites || state.favourites.includes(item.id);
       return matchesCategory && matchesDiet && matchesSearch && matchesFavourite;
@@ -311,22 +311,25 @@
   function renderMenu() {
     const grid = $("#menuGrid");
     const items = visibleMenu();
-    grid.innerHTML = "";
     $("#menuCount").textContent = items.length;
     $("#menuStatus").textContent = state.onlyFavourites ? "Your saved favourites" : (state.query ? "Showing matches for “" + state.query + "”" : "A few good things to get you started");
     $("#emptyMenu").hidden = items.length > 0;
 
-    if (!items.length) return;
+    if (!items.length) {
+      grid.replaceChildren();
+      return;
+    }
     const template = $("#dishCardTemplate");
+    const fragment = document.createDocumentFragment();
     items.forEach(item => {
       const card = template.content.firstElementChild.cloneNode(true);
+      card.dataset.dishId = item.id;
       const image = $("[data-image]", card);
       image.alt = item.name + " — " + item.description;
+      image.loading = "lazy";
+      image.decoding = "async";
       protectFoodPhoto(image,item);
       image.src = state.imageFallbacks[item.id] || item.image;
-      image.addEventListener("click", () => openDishDetails(item.id));
-      $("[data-name]", card).addEventListener("click", () => openDishDetails(item.id));
-      $("[data-customize]", card).addEventListener("click", () => openDishDetails(item.id));
       $("[data-discount]", card).textContent = item.discountPercent + "% OFF";
       $("[data-diet-indicator]", card).classList.add(item.isVeg ? "diet-veg" : "diet-nonveg");
       $("[data-diet-indicator]", card).setAttribute("aria-label", item.isVeg ? "Vegetarian" : "Non-vegetarian");
@@ -342,10 +345,18 @@
       favourite.classList.toggle("is-saved", saved);
       favourite.textContent = saved ? "♥" : "♡";
       favourite.setAttribute("aria-label", saved ? "Remove from favourites" : "Add to favourites");
-      favourite.addEventListener("click", () => toggleFavourite(item.id));
-      $("[data-add]", card).addEventListener("click", event => addToCart(item.id, event.currentTarget));
-      grid.appendChild(card);
+      fragment.appendChild(card);
     });
+    grid.replaceChildren(fragment);
+  }
+
+  let menuSearchTimer = null;
+  function scheduleMenuRender() {
+    if (menuSearchTimer) window.clearTimeout(menuSearchTimer);
+    menuSearchTimer = window.setTimeout(() => {
+      menuSearchTimer = null;
+      renderMenu();
+    }, 140);
   }
 
 
@@ -1334,10 +1345,11 @@
   function pauseOfferRotation(){
     if(offerRotationTimer){window.clearInterval(offerRotationTimer);offerRotationTimer=null;}
   }
+  let offerIsInView = true;
   function resumeOfferRotation(){
     pauseOfferRotation();
     const reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if(reduced||document.hidden)return;
+    if(reduced||document.hidden||!offerIsInView)return;
     offerRotationTimer=window.setInterval(()=>renderOfferSlide(offerSlideIndex+1),4800);
   }
   function applyOfferCode(code){
@@ -1383,7 +1395,16 @@
       if(!carousel.contains(document.activeElement))resumeOfferRotation();
     },120));
     document.addEventListener("visibilitychange",()=>document.hidden?pauseOfferRotation():resumeOfferRotation());
-    resumeOfferRotation();
+    if ("IntersectionObserver" in window) {
+      const visibilityObserver = new IntersectionObserver(entries => {
+        offerIsInView = entries.some(entry => entry.isIntersecting);
+        if (offerIsInView) resumeOfferRotation();
+        else pauseOfferRotation();
+      }, { threshold: 0.12 });
+      visibilityObserver.observe(carousel);
+    } else {
+      resumeOfferRotation();
+    }
   }
   function showWelcomeIntro(){
     const overlay=$("#welcomeIntro");
@@ -1544,7 +1565,27 @@
       renderMenu();
       document.getElementById("menu").scrollIntoView({ behavior: "smooth" });
     });
-    $("#menuSearch").addEventListener("input", event => { state.query = event.target.value; renderMenu(); });
+    $("#menuGrid").addEventListener("click", event => {
+      const card = event.target.closest(".dish-card[data-dish-id]");
+      if (!card) return;
+      const id = card.dataset.dishId;
+      const addButton = event.target.closest("[data-add]");
+      if (addButton) {
+        addToCart(id, addButton);
+        return;
+      }
+      if (event.target.closest("[data-favourite]")) {
+        toggleFavourite(id);
+        return;
+      }
+      if (event.target.closest("[data-image], [data-name], [data-customize]")) {
+        openDishDetails(id);
+      }
+    });
+    $("#menuSearch").addEventListener("input", event => {
+      state.query = event.target.value;
+      scheduleMenuRender();
+    });
     $("#sortMenu").addEventListener("change", event => { state.sort = event.target.value; renderMenu(); });
     $$(".diet-button").forEach(button => button.addEventListener("click", () => {
       state.diet = button.dataset.diet;
