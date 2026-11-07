@@ -1754,3 +1754,159 @@ button:disabled { opacity:.55!important;cursor:not-allowed!important; }
 @media(prefers-reduced-motion:reduce) {
   .combo-card,.recommendation-card,.recommendation-image-trigger img { transition:none!important; }
 }
+
+
+/* FOODIEHUB POPUP SHARPNESS FIX V6: no blurred backdrop or translucent text */
+/* A modal backdrop should dim the page, not smear the food underneath it. */
+.site-dialog::backdrop,
+.site-dialog[open]::backdrop {
+  background:rgba(14,18,27,.46)!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+/* Keep the dialog face and every text/image layer fully crisp. */
+.dish-detail-dialog,
+.dish-detail-dialog[open] {
+  filter:none!important;
+  opacity:1!important;
+  isolation:isolate!important;
+  background:#f7f9fc!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  color:#202530!important;
+  text-rendering:optimizeLegibility!important;
+}
+.dish-detail-dialog *,
+.dish-detail-dialog *::before,
+.dish-detail-dialog *::after {
+  filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  mix-blend-mode:normal!important;
+  text-shadow:none!important;
+}
+.dish-detail-dialog .customizer-hero {
+  background:#eef2f8!important;
+}
+.dish-detail-dialog .customizer-image-wrap {
+  background:#e7ecf3!important;
+  filter:none!important;
+  opacity:1!important;
+}
+.dish-detail-dialog #customizerImage,
+.dish-detail-dialog .customizer-image-wrap img {
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:245px!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  filter:none!important;
+  opacity:1!important;
+  transform:none!important;
+  image-rendering:auto!important;
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+}
+.dish-detail-dialog .customizer-hero-copy,
+.dish-detail-dialog .customizer-hero-copy h2,
+.dish-detail-dialog .customizer-hero-copy p,
+.dish-detail-dialog .customizer-starting-price,
+.dish-detail-dialog .customizer-starting-price strong,
+.dish-detail-dialog .customizer-section-heading,
+.dish-detail-dialog .customizer-section-heading strong,
+.dish-detail-dialog .customizer-section-heading small,
+.dish-detail-dialog .customizer-choice,
+.dish-detail-dialog .customizer-choice span,
+.dish-detail-dialog .customizer-choice small,
+.dish-detail-dialog .customizer-choice strong,
+.dish-detail-dialog .customizer-addon,
+.dish-detail-dialog .customizer-addon span,
+.dish-detail-dialog .customizer-addon strong,
+.dish-detail-dialog .customizer-preference,
+.dish-detail-dialog .customizer-note-label,
+.dish-detail-dialog .customizer-total-row,
+.dish-detail-dialog .customizer-total-row strong {
+  opacity:1!important;
+  filter:none!important;
+  -webkit-filter:none!important;
+}
+.dish-detail-dialog .dish-customizer-form {
+  background:#f7f9fc!important;
+}
+.dish-detail-dialog .customizer-choice,
+.dish-detail-dialog .customizer-addon,
+.dish-detail-dialog .customizer-preference,
+.dish-detail-dialog .customizer-quantity {
+  background:#fff!important;
+  border-color:#cdd5e2!important;
+  box-shadow:0 3px 10px rgba(26,38,57,.055),inset 0 1px 0 #fff!important;
+}
+.dish-detail-dialog .customizer-choice span,
+.dish-detail-dialog .customizer-addon span,
+.dish-detail-dialog .customizer-preference,
+.dish-detail-dialog .customizer-section-heading strong {
+  color:#202530!important;
+}
+.dish-detail-dialog .customizer-choice small,
+.dish-detail-dialog .customizer-section-heading small {
+  color:#5d6879!important;
+}
+.dish-detail-dialog .customizer-footer {
+  background:#f7f9fc!important;
+  border-top:1px solid #d7deea!important;
+  opacity:1!important;
+}
+/* Dark theme uses an opaque graphite panel, not grey-on-grey glass. */
+:root[data-theme="dark"] .dish-detail-dialog,
+:root[data-theme="dark"] .dish-detail-dialog[open] {
+  background:#191d27!important;
+  color:#f6f8fc!important;
+}
+:root[data-theme="dark"] .dish-detail-dialog .customizer-hero {
+  background:#252b38!important;
+  border-color:#3b4557!important;
+}
+:root[data-theme="dark"] .dish-detail-dialog .customizer-image-wrap {
+  background:#202633!important;
+}
+:root[data-theme="dark"] .dish-detail-dialog .dish-customizer-form {
+  background:#191d27!important;
+}
+:root[data-theme="dark"] .dish-detail-dialog .customizer-choice,
+:root[data-theme="dark"] .dish-detail-dialog .customizer-addon,
+:root[data-theme="dark"] .dish-detail-dialog .customizer-preference,
+:root[data-theme="dark"] .dish-detail-dialog .customizer-quantity {
+  background:#2b3241!important;
+  border-color:#4a566b!important;
+  box-shadow:0 4px 13px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+:root[data-theme="dark"] .dish-detail-dialog .customizer-choice span,
+:root[data-theme="dark"] .dish-detail-dialog .customizer-addon span,
+:root[data-theme="dark"] .dish-detail-dialog .customizer-preference,
+:root[data-theme="dark"] .dish-detail-dialog .customizer-section-heading strong,
+:root[data-theme="dark"] .dish-detail-dialog .customizer-total-row,
+:root[data-theme="dark"] .dish-detail-dialog .customizer-total-row strong {
+  color:#f6f8fc!important;
+}
+:root[data-theme="dark"] .dish-detail-dialog .customizer-choice small,
+:root[data-theme="dark"] .dish-detail-dialog .customizer-section-heading small,
+:root[data-theme="dark"] .dish-detail-dialog .customizer-note-label {
+  color:#c0c9d8!important;
+}
+:root[data-theme="dark"] .dish-detail-dialog .customizer-note-label textarea {
+  background:#252c39!important;
+  color:#fff!important;
+  border-color:#465267!important;
+}
+:root[data-theme="dark"] .dish-detail-dialog .customizer-footer {
+  background:#191d27!important;
+  border-color:#3b4557!important;
+}
+@media(max-width:760px) {
+  .dish-detail-dialog .customizer-image-wrap,
+  .dish-detail-dialog .customizer-image-wrap img {
+    min-height:190px!important;
+    max-height:230px!important;
+  }
+}
