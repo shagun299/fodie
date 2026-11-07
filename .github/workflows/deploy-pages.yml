@@ -41,33 +41,27 @@ jobs:
         run: |
           set -euo pipefail
           npm run check
-          node --check "fit check/app.js"
           node -e "JSON.parse(require('fs').readFileSync('data/menu.json', 'utf8'))"
 
       - name: Run backend tests
         run: npm test
 
-      - name: Prepare static website
+      - name: Prepare FoodieHub website
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf _site
           mkdir -p _site/assets _site/data
           cp index.html _site/
           cp FoodieHub_Logo_Dark.svg FoodieHub_Logo_Light.svg FoodieHub_Logo_Icon.svg _site/
           cp -R assets/css assets/js _site/assets/
-          mkdir -p "_site/fit check"
-          cp -R "fit check/." "_site/fit check/"
-          mkdir -p _site/projects/fittrack _site/fittrack
-          cp projects/fittrack/index.html _site/projects/fittrack/index.html
-          cp fittrack/index.html _site/fittrack/index.html
-          test -s "_site/fit check/index.html"
-          test -s "_site/fit check/style.css"
-          test -s "_site/fit check/app.js"
           cp data/menu.json _site/data/
           touch _site/.nojekyll
           test -s _site/index.html
           test -s _site/assets/css/styles.css
+          test -s _site/assets/css/apple-ui.css
           test -s _site/assets/js/app.js
+          test -s _site/assets/js/config.js
           test -s _site/data/menu.json
 
       - name: Upload website artifact
