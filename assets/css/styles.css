@@ -609,8 +609,6 @@ body::before {
   border-radius: 22px;
   background: var(--glass);
   box-shadow: var(--glass-shadow);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
-  backdrop-filter: blur(22px) saturate(150%);
   transition: transform .28s cubic-bezier(.2,.8,.2,1), border-color .28s, box-shadow .28s, background .28s;
 }
 .dish-card:hover {
@@ -840,7 +838,7 @@ body{background:radial-gradient(ellipse at 6% 9%,rgba(207,164,104,.22),transpare
 .category-tab{min-height:40px;padding-inline:17px;border:1px solid var(--glass-border);background:var(--glass);box-shadow:inset 0 1px 0 var(--glass-highlight);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .category-tab.active{background:linear-gradient(135deg,#244f37,#173e2b);color:#fff}:root[data-theme="dark"] .category-tab.active{background:linear-gradient(135deg,#4a7955,#30583c)}
 .dish-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
-.dish-card{overflow:hidden;border:1px solid var(--glass-border);border-radius:25px;background:var(--glass);box-shadow:var(--glass-shadow);-webkit-backdrop-filter:blur(24px) saturate(155%);backdrop-filter:blur(24px) saturate(155%);transition:transform .32s,box-shadow .32s}
+.dish-card{overflow:hidden;border:1px solid var(--glass-border);border-radius:25px;background:var(--glass);box-shadow:var(--glass-shadow);transition:transform .32s,box-shadow .32s}
 .dish-card:hover{transform:translateY(-8px);border-color:var(--orange);background:var(--glass-strong);box-shadow:0 32px 78px rgba(21,43,29,.17)}
 .dish-image-wrap{height:250px;background:var(--paper-deep)}.dish-card:hover .dish-image{transform:scale(1.075)}
 .dish-favourite{width:37px;height:37px;border:1px solid rgba(255,255,255,.65);background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
@@ -1186,8 +1184,6 @@ h1 em,h2 em {
   border-radius: 21px;
   background: var(--glass);
   box-shadow: var(--glass-shadow);
-  -webkit-backdrop-filter: blur(20px) saturate(145%);
-  backdrop-filter: blur(20px) saturate(145%);
 }
 .dish-card:hover {
   transform: translateY(-4px);
