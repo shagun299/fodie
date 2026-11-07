@@ -1910,3 +1910,82 @@ button:disabled { opacity:.55!important;cursor:not-allowed!important; }
     max-height:230px!important;
   }
 }
+
+
+/* FOODIEHUB POPUP RENDERING V7: native-resolution dish photo + stable text raster */
+/* The dialog must render on the normal pixel grid, without translucent text layers. */
+.dish-detail-dialog,
+.dish-detail-dialog[open] {
+  transform:none!important;
+  animation:none!important;
+  filter:none!important;
+  opacity:1!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  contain:paint!important;
+  background:#f8faff!important;
+}
+.dish-detail-dialog > *,
+.dish-detail-dialog .customizer-hero,
+.dish-detail-dialog .customizer-hero-copy,
+.dish-detail-dialog .dish-customizer-form,
+.dish-detail-dialog .customizer-section,
+.dish-detail-dialog .customizer-footer {
+  transform:none!important;
+  animation:none!important;
+  filter:none!important;
+  opacity:1!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  mix-blend-mode:normal!important;
+}
+.dish-detail-dialog #customizerImage,
+.dish-detail-dialog .customizer-image-wrap img {
+  width:100%!important;
+  height:100%!important;
+  min-height:245px!important;
+  max-height:none!important;
+  display:block!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  image-rendering:auto!important;
+  filter:none!important;
+  opacity:1!important;
+  transform:none!important;
+  animation:none!important;
+  transition:none!important;
+  will-change:auto!important;
+}
+.dish-detail-dialog .customizer-hero-copy,
+.dish-detail-dialog .customizer-hero-copy h2,
+.dish-detail-dialog .customizer-hero-copy p,
+.dish-detail-dialog .customizer-starting-price,
+.dish-detail-dialog .customizer-section-heading,
+.dish-detail-dialog .customizer-section-heading strong,
+.dish-detail-dialog .customizer-section-heading small,
+.dish-detail-dialog .customizer-choice,
+.dish-detail-dialog .customizer-choice span,
+.dish-detail-dialog .customizer-choice small,
+.dish-detail-dialog .customizer-addon,
+.dish-detail-dialog .customizer-addon span,
+.dish-detail-dialog .customizer-preference,
+.dish-detail-dialog .customizer-note-label,
+.dish-detail-dialog .customizer-total-row {
+  -webkit-font-smoothing:antialiased!important;
+  text-rendering:geometricPrecision!important;
+  transform:none!important;
+  filter:none!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
+:root[data-theme="dark"] .dish-detail-dialog,
+:root[data-theme="dark"] .dish-detail-dialog[open] {
+  background:#191d27!important;
+}
+@media(max-width:760px) {
+  .dish-detail-dialog #customizerImage,
+  .dish-detail-dialog .customizer-image-wrap img {
+    min-height:190px!important;
+    max-height:230px!important;
+  }
+}
