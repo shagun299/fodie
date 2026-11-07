@@ -9,6 +9,7 @@ const Database = require("better-sqlite3");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const { verifyRazorpayCheckoutSignature, matchesRazorpayPayment } = require("./payment-security");
 
 const app = express();
 const ROOT = path.resolve(__dirname, "..");
@@ -33,7 +34,14 @@ if (!existingOrderColumns.has("gateway_order_id")) {
 if (!existingOrderColumns.has("address_json")) {
   db.exec("ALTER TABLE orders ADD COLUMN address_json TEXT");
 }
+if (!existingOrderColumns.has("idempotency_key")) {
+  db.exec("ALTER TABLE orders ADD COLUMN idempotency_key TEXT");
+}
+if (!existingOrderColumns.has("idempotency_fingerprint")) {
+  db.exec("ALTER TABLE orders ADD COLUMN idempotency_fingerprint TEXT");
+}
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_gateway_order_id ON orders(gateway_order_id) WHERE gateway_order_id IS NOT NULL");
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_idempotency_key ON orders(idempotency_key) WHERE idempotency_key IS NOT NULL");
 
 const MENU_PATH = path.join(ROOT, "data", "menu.json");
 const menu = JSON.parse(fs.readFileSync(MENU_PATH, "utf8"));
@@ -316,18 +324,54 @@ function razorpayEnabled() {
 async function razorpayRequest(endpoint, options = {}) {
   if (!razorpayEnabled()) { const error = new Error("Online payments are not configured on the FoodieHub backend."); error.status = 503; throw error; }
   const authorization = Buffer.from(process.env.RAZORPAY_KEY_ID + ":" + process.env.RAZORPAY_KEY_SECRET).toString("base64");
-  const response = await fetch("https://api.razorpay.com/v1" + endpoint, {
-    method: options.method || "GET",
-    headers: { Authorization: "Basic " + authorization, "Content-Type": "application/json" },
-    ...(options.body ? { body: JSON.stringify(options.body) } : {})
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload.error && payload.error.description || "The payment provider could not complete the request.");
-    error.status = response.status >= 500 ? 502 : 400;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch("https://api.razorpay.com/v1" + endpoint, {
+      method: options.method || "GET",
+      headers: { Authorization: "Basic " + authorization, "Content-Type": "application/json" },
+      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+      signal: controller.signal
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(payload.error && payload.error.description || "The payment provider could not complete the request.");
+      error.status = response.status >= 500 ? 502 : 400;
+      throw error;
+    }
+    return payload;
+  } catch (cause) {
+    if (controller.signal.aborted) {
+      const error = new Error("The payment provider took too long to respond. Check the order status before trying again.");
+      error.status = 504;
+      error.cause = cause;
+      throw error;
+    }
+    throw cause;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function readIdempotencyKey(req) {
+  const key = String(req.get("Idempotency-Key") || "").trim();
+  if (!key) return "";
+  if (!/^[A-Za-z0-9_-]{16,100}$/.test(key)) {
+    const error = new Error("The checkout request key is invalid. Please refresh checkout and try again.");
+    error.status = 400;
     throw error;
   }
-  return payload;
+  return key;
+}
+
+function checkoutFingerprint(customer, bill, paymentMethod) {
+  return crypto.createHash("sha256").update(JSON.stringify({
+    customer,
+    items: bill.items,
+    couponCode: bill.couponCode,
+    paymentMethod,
+    total: bill.total
+  })).digest("hex");
 }
 
 app.get("/api/payments/config", (req, res) => {
@@ -340,35 +384,84 @@ app.post("/api/payments/create-order", async (req, res, next) => {
     const body = req.body || {};
     const customer = validateCustomer(body.customer);
     const bill = calculateOrder(body.items, body.couponCode);
+    const paymentMethod = String(body.paymentMethod || "razorpay");
+    if (paymentMethod !== "razorpay") return res.status(400).json({ error: "This payment endpoint accepts online payment orders only." });
+    const idempotencyKey = readIdempotencyKey(req);
+    const fingerprint = checkoutFingerprint(customer, bill, paymentMethod);
+
+    if (idempotencyKey) {
+      const existing = db.prepare("SELECT order_number, gateway_order_id, total, payment_status, status, idempotency_fingerprint FROM orders WHERE idempotency_key = ?").get(idempotencyKey);
+      if (existing && existing.idempotency_fingerprint !== fingerprint) {
+        return res.status(409).json({ error: "This checkout request was already used with different order details. Close checkout and start again." });
+      }
+      if (existing && existing.status === "failed" && !existing.gateway_order_id) {
+        db.prepare("UPDATE orders SET idempotency_key = NULL, idempotency_fingerprint = NULL WHERE order_number = ?").run(existing.order_number);
+      } else if (existing && existing.payment_status === "paid") {
+        return res.json({
+          alreadyPaid: true, orderNumber: existing.order_number, status: "confirmed",
+          paymentStatus: "paid", paymentMethod: "razorpay", total: existing.total,
+          message: "This payment was already verified. Your order is confirmed."
+        });
+      } else if (existing && existing.status === "payment_pending" && existing.gateway_order_id) {
+        return res.json({
+          keyId: process.env.RAZORPAY_KEY_ID, razorpayOrderId: existing.gateway_order_id,
+          orderNumber: existing.order_number, amount: Math.round(Number(existing.total) * 100),
+          currency: "INR", total: existing.total
+        });
+      } else if (existing) {
+        return res.status(409).json({ error: "This payment attempt is still being prepared or has expired. Close checkout and start a fresh attempt." });
+      }
+    }
+
     const orderNumber = createOrderNumber();
     const createdAt = new Date().toISOString();
-    const gatewayOrder = await razorpayRequest("/orders", {
-      method: "POST",
-      body: { amount: Math.round(bill.total * 100), currency: "INR", receipt: orderNumber, notes: { foodiehub_order_number: orderNumber } }
-    });
-    if (!gatewayOrder.id || Number(gatewayOrder.amount) !== Math.round(bill.total * 100)) {
-      const error = new Error("The payment provider returned an invalid order. Please try again.");
-      error.status = 502;
-      throw error;
-    }
     const insertPendingOrder = db.prepare([
-      "INSERT INTO orders (order_number, customer_name, phone, email, address, address_json, items_json, subtotal, coupon_code, coupon_discount, delivery_fee, tax, total, payment_method, payment_status, status, created_at, gateway_order_id, user_id)",
-      "VALUES (@orderNumber, @name, @phone, @email, @address, @addressJson, @itemsJson, @subtotal, @couponCode, @couponDiscount, @deliveryFee, @tax, @total, 'razorpay', 'created', 'payment_pending', @createdAt, @gatewayOrderId, @userId)"
+      "INSERT INTO orders (order_number, customer_name, phone, email, address, address_json, items_json, subtotal, coupon_code, coupon_discount, delivery_fee, tax, total, payment_method, payment_status, status, created_at, gateway_order_id, user_id, idempotency_key, idempotency_fingerprint)",
+      "VALUES (@orderNumber, @name, @phone, @email, @address, @addressJson, @itemsJson, @subtotal, @couponCode, @couponDiscount, @deliveryFee, @tax, @total, 'razorpay', 'created', 'payment_creating', @createdAt, NULL, @userId, @idempotencyKey, @fingerprint)"
     ].join(" "));
-    const savePendingOrder = db.transaction(() => {
+    const reservePaymentOrder = db.transaction(() => {
       production.reserveInventory(orderNumber, bill.items, 20);
       insertPendingOrder.run({
-        orderNumber, ...customer, addressJson: JSON.stringify(customer.addressDetails), itemsJson: JSON.stringify(bill.items), subtotal: bill.subtotal,
-        couponCode: bill.couponCode, couponDiscount: bill.couponDiscount, deliveryFee: bill.deliveryFee,
-        tax: bill.tax, total: bill.total, createdAt, gatewayOrderId: gatewayOrder.id, userId: req.user ? req.user.id : null
+        orderNumber, ...customer, addressJson: JSON.stringify(customer.addressDetails), itemsJson: JSON.stringify(bill.items),
+        subtotal: bill.subtotal, couponCode: bill.couponCode, couponDiscount: bill.couponDiscount,
+        deliveryFee: bill.deliveryFee, tax: bill.tax, total: bill.total, createdAt,
+        userId: req.user ? req.user.id : null, idempotencyKey: idempotencyKey || null,
+        fingerprint: idempotencyKey ? fingerprint : null
       });
       production.claimCoupon(bill.couponCode, orderNumber);
     });
-    savePendingOrder();
-    return res.status(201).json({
-      keyId: process.env.RAZORPAY_KEY_ID, razorpayOrderId: gatewayOrder.id,
-      orderNumber, amount: gatewayOrder.amount, currency: gatewayOrder.currency || "INR", total: bill.total
-    });
+    reservePaymentOrder();
+
+    try {
+      const gatewayOrder = await razorpayRequest("/orders", {
+        method: "POST",
+        body: { amount: Math.round(bill.total * 100), currency: "INR", receipt: orderNumber, notes: { foodiehub_order_number: orderNumber } }
+      });
+      if (!gatewayOrder.id || Number(gatewayOrder.amount) !== Math.round(bill.total * 100) || String(gatewayOrder.currency || "").toUpperCase() !== "INR") {
+        const error = new Error("The payment provider returned an order with an unexpected amount or currency. No payment was opened.");
+        error.status = 502;
+        throw error;
+      }
+      const linked = db.prepare("UPDATE orders SET gateway_order_id = ?, status = 'payment_pending' WHERE order_number = ? AND status = 'payment_creating' AND payment_status = 'created'")
+        .run(gatewayOrder.id, orderNumber);
+      if (!linked.changes) {
+        const error = new Error("The secure payment order could not be attached to your checkout. Please contact support before retrying.");
+        error.status = 409;
+        throw error;
+      }
+      return res.status(201).json({
+        keyId: process.env.RAZORPAY_KEY_ID, razorpayOrderId: gatewayOrder.id,
+        orderNumber, amount: gatewayOrder.amount, currency: "INR", total: bill.total
+      });
+    } catch (error) {
+      const releaseFailedAttempt = db.transaction(() => {
+        production.releaseInventory(orderNumber);
+        production.releaseCoupon(orderNumber);
+        db.prepare("UPDATE orders SET payment_status = 'failed', status = 'failed' WHERE order_number = ? AND payment_status = 'created'").run(orderNumber);
+      });
+      releaseFailedAttempt();
+      throw error;
+    }
   } catch (error) { return next(error); }
 });
 
@@ -380,22 +473,21 @@ app.post("/api/payments/verify", async (req, res, next) => {
     const paymentId = String(body.razorpay_payment_id || "").trim();
     const signature = String(body.razorpay_signature || "").trim();
     if (!orderId || !paymentId || !/^[a-f0-9]{64}$/i.test(signature)) return res.status(400).json({ error: "The payment confirmation details are incomplete." });
-    const row = db.prepare("SELECT order_number, gateway_order_id, total, payment_status, status FROM orders WHERE gateway_order_id = ?").get(orderId);
+    const row = db.prepare("SELECT order_number, gateway_order_id, total, payment_status, status, razorpay_payment_id FROM orders WHERE gateway_order_id = ?").get(orderId);
     if (!row) return res.status(404).json({ error: "The FoodieHub order for this payment could not be found." });
-    if (row.payment_status === "paid") return res.json({
+    if (!verifyRazorpayCheckoutSignature(orderId, paymentId, signature, process.env.RAZORPAY_KEY_SECRET)) {
+      return res.status(400).json({ error: "Payment signature verification failed. The order has not been confirmed." });
+    }
+    if (row.payment_status === "paid" && row.razorpay_payment_id === paymentId) return res.json({
       orderNumber: row.order_number, status: "confirmed", total: row.total, paymentStatus: "paid",
       paymentMethod: "razorpay", message: "This payment was already verified."
     });
-    const expected = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(row.gateway_order_id + "|" + paymentId).digest("hex");
-    const expectedBuffer = Buffer.from(expected, "hex");
-    const receivedBuffer = Buffer.from(signature, "hex");
-    if (expectedBuffer.length !== receivedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)) {
-      return res.status(400).json({ error: "Payment signature verification failed. The order has not been confirmed." });
+    if (row.payment_status === "paid" && row.razorpay_payment_id && row.razorpay_payment_id !== paymentId) {
+      return res.status(409).json({ error: "A different payment is already recorded for this order. Please contact support before retrying." });
     }
     let payment = await razorpayRequest("/payments/" + encodeURIComponent(paymentId));
-    if (payment.order_id !== row.gateway_order_id || Number(payment.amount) !== Math.round(Number(row.total) * 100)) {
-      return res.status(400).json({ error: "The payment amount or order does not match this FoodieHub order." });
+    if (!matchesRazorpayPayment(payment, row)) {
+      return res.status(400).json({ error: "The payment amount, currency or order does not match this FoodieHub order." });
     }
     if (payment.status === "failed") {
       const failPayment = db.transaction(() => {
@@ -428,12 +520,40 @@ app.post("/api/payments/verify", async (req, res, next) => {
       payment = await razorpayRequest("/payments/" + encodeURIComponent(paymentId) + "/capture", {
         method: "POST", body: { amount: Math.round(Number(row.total) * 100), currency: "INR" }
       });
+      if (!matchesRazorpayPayment(payment, row)) {
+        return res.status(400).json({ error: "The captured payment does not match this FoodieHub order. Please contact support." });
+      }
     }
     if (payment.status !== "captured" && payment.captured !== true) {
       return res.status(409).json({ error: "Payment is authorised but not captured yet. The order is still pending; contact support before retrying." });
     }
     const confirmPayment = db.transaction(() => {
-      db.prepare("UPDATE orders SET payment_status = 'paid', status = 'confirmed', razorpay_payment_id = ? WHERE order_number = ?").run(paymentId, row.order_number);
+      const latest = db.prepare("SELECT payment_status, status, razorpay_payment_id FROM orders WHERE order_number = ?").get(row.order_number);
+      if (!latest) {
+        const error = new Error("The FoodieHub order could not be found during payment confirmation.");
+        error.status = 404;
+        throw error;
+      }
+      if (latest.payment_status === "paid") {
+        if (latest.razorpay_payment_id !== paymentId) {
+          const error = new Error("A different payment is already recorded for this order. Please contact support.");
+          error.status = 409;
+          throw error;
+        }
+        return;
+      }
+      if (["failed", "cancelled"].includes(latest.status)) {
+        const error = new Error("This order expired or was cancelled before payment confirmation. Please contact support.");
+        error.status = 409;
+        throw error;
+      }
+      const updated = db.prepare("UPDATE orders SET payment_status = 'paid', status = 'confirmed', razorpay_payment_id = ? WHERE order_number = ? AND payment_status != 'paid' AND status NOT IN ('failed','cancelled')")
+        .run(paymentId, row.order_number);
+      if (!updated.changes) {
+        const error = new Error("The order status changed before payment confirmation. Please check the order before retrying.");
+        error.status = 409;
+        throw error;
+      }
       production.consumeInventory(row.order_number);
     });
     confirmPayment();
@@ -457,11 +577,29 @@ app.post("/api/orders", (req, res, next) => {
     if (!["cod", "upi_at_door"].includes(paymentMethod)) return res.status(400).json({ error: "Choose a supported demo payment method." });
 
     const bill = calculateOrder(body.items, body.couponCode);
+    const idempotencyKey = readIdempotencyKey(req);
+    const fingerprint = checkoutFingerprint(customer, bill, paymentMethod);
+    if (idempotencyKey) {
+      const existing = db.prepare("SELECT order_number, total, payment_method, payment_status, status, created_at, items_json, subtotal, coupon_discount, delivery_fee, tax, idempotency_fingerprint FROM orders WHERE idempotency_key = ?").get(idempotencyKey);
+      if (existing) {
+        if (existing.idempotency_fingerprint !== fingerprint || existing.payment_method !== paymentMethod) {
+          return res.status(409).json({ error: "This checkout request was already used with different order details. Close checkout and start again." });
+        }
+        return res.json({
+          ...publicOrder({ order_number: existing.order_number, status: existing.status, total: existing.total, payment_method: existing.payment_method, payment_status: existing.payment_status, created_at: existing.created_at }),
+          items: JSON.parse(existing.items_json || "[]"),
+          subtotal: existing.subtotal, couponDiscount: existing.coupon_discount,
+          deliveryFee: existing.delivery_fee, tax: existing.tax,
+          message: "This order was already saved. No duplicate order was created."
+        });
+      }
+    }
+
     const orderNumber = createOrderNumber();
     const createdAt = new Date().toISOString();
     const insertDeliveryOrder = db.prepare([
-      "INSERT INTO orders (order_number, customer_name, phone, email, address, address_json, items_json, subtotal, coupon_code, coupon_discount, delivery_fee, tax, total, payment_method, payment_status, status, created_at, user_id)",
-      "VALUES (@orderNumber, @name, @phone, @email, @address, @addressJson, @itemsJson, @subtotal, @couponCode, @couponDiscount, @deliveryFee, @tax, @total, @paymentMethod, 'pending', 'confirmed', @createdAt, @userId)"
+      "INSERT INTO orders (order_number, customer_name, phone, email, address, address_json, items_json, subtotal, coupon_code, coupon_discount, delivery_fee, tax, total, payment_method, payment_status, status, created_at, user_id, idempotency_key, idempotency_fingerprint)",
+      "VALUES (@orderNumber, @name, @phone, @email, @address, @addressJson, @itemsJson, @subtotal, @couponCode, @couponDiscount, @deliveryFee, @tax, @total, @paymentMethod, 'pending', 'confirmed', @createdAt, @userId, @idempotencyKey, @fingerprint)"
     ].join(" "));
     const saveDeliveryOrder = db.transaction(() => {
       production.reserveInventory(orderNumber, bill.items, null);
@@ -469,7 +607,8 @@ app.post("/api/orders", (req, res, next) => {
         orderNumber, name, phone, email, address, addressJson: JSON.stringify(customer.addressDetails),
         itemsJson: JSON.stringify(bill.items), subtotal: bill.subtotal, couponCode: bill.couponCode,
         couponDiscount: bill.couponDiscount, deliveryFee: bill.deliveryFee, tax: bill.tax, total: bill.total,
-        paymentMethod, createdAt, userId: req.user ? req.user.id : null
+        paymentMethod, createdAt, userId: req.user ? req.user.id : null,
+        idempotencyKey: idempotencyKey || null, fingerprint: idempotencyKey ? fingerprint : null
       });
       production.claimCoupon(bill.couponCode, orderNumber);
       production.consumeInventory(orderNumber);
