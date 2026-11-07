@@ -18,23 +18,29 @@
     Featured:"https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=88",
     General:"https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1100&q=88"
   };
-  function getDetailFoodImageUrl(source){
+  function getOptimizedFoodImageUrl(source,purpose="card"){
     if(!source)return source;
     try{
       const url=new URL(source);
       const host=url.hostname.toLowerCase();
+      const mobile=window.matchMedia&&window.matchMedia("(max-width: 760px)").matches;
+      const width=purpose==="detail"?(mobile?820:1200):(mobile?480:900);
+      const quality=purpose==="detail"?(mobile?78:84):(mobile?72:80);
       if(host==="images.unsplash.com"){
         url.searchParams.set("auto","format");
         url.searchParams.set("fit","crop");
-        url.searchParams.set("w","1800");
-        url.searchParams.set("q","95");
+        url.searchParams.set("w",String(width));
+        url.searchParams.set("q",String(quality));
       }else if(host==="images.pexels.com"){
         url.searchParams.set("auto","compress");
         url.searchParams.set("cs","tinysrgb");
-        url.searchParams.set("w","1800");
+        url.searchParams.set("w",String(width));
       }
       return url.toString();
     }catch(_error){return source;}
+  }
+  function getDetailFoodImageUrl(source){
+    return getOptimizedFoodImageUrl(source,"detail");
   }
   function protectDetailFoodPhoto(image,item,preferredSource){
     const sources=[preferredSource||item.image,PHOTO_FALLBACKS[item.category]||PHOTO_FALLBACKS.Featured,PHOTO_FALLBACKS.General]
@@ -42,8 +48,8 @@
     let next=1;
     image.alt=item.name+" — "+item.description;
     image.loading="eager";
-    image.decoding="sync";
-    image.fetchPriority="high";
+    image.decoding="async";
+    image.fetchPriority="auto";
     image.onerror=()=>{
       if(next<sources.length){image.src=sources[next++];return;}
       image.onerror=null;
@@ -60,7 +66,7 @@
         const candidate=list[next++];
         if(candidate===image.src)continue;
         if(item.id)state.imageFallbacks[item.id]=candidate;
-        image.src=candidate;return;
+        image.src=getOptimizedFoodImageUrl(candidate);return;
       }
       image.onerror=null;image.removeAttribute("src");
       image.alt=(item.name||"Food")+" photo is temporarily unavailable";
@@ -342,7 +348,8 @@
       image.loading = "lazy";
       image.decoding = "async";
       protectFoodPhoto(image,item);
-      image.src = state.imageFallbacks[item.id] || item.image;
+      image.fetchPriority = "low";
+      image.src = getOptimizedFoodImageUrl(state.imageFallbacks[item.id] || item.image);
       $("[data-discount]", card).textContent = item.discountPercent + "% OFF";
       $("[data-diet-indicator]", card).classList.add(item.isVeg ? "diet-veg" : "diet-nonveg");
       $("[data-diet-indicator]", card).setAttribute("aria-label", item.isVeg ? "Vegetarian" : "Non-vegetarian");
@@ -649,7 +656,7 @@
     } else {
       container.innerHTML = bill.lines.map(item => (
         '<article class="cart-line">' +
-          '<img data-food-id="' + escapeHTML(item.id) + '" src="' + escapeHTML(state.imageFallbacks[item.id] || item.image) + '" alt="" loading="lazy">' +
+          '<img data-food-id="' + escapeHTML(item.id) + '" src="' + escapeHTML(getOptimizedFoodImageUrl(state.imageFallbacks[item.id] || item.image)) + '" alt="" loading="lazy" decoding="async">' +
           '<div class="cart-line-info"><strong>' + escapeHTML(item.name) + '</strong><small>' + money(item.price) + ' each</small>' +
             (item.customization && (item.customization.size || (item.customization.extras || []).length || (item.customization.preferences || []).length || item.customization.note) ? '<small class="cart-line-customization">' + escapeHTML([item.customization.size || "Regular", ...(item.customization.extras || []).map(extra => extra.name), ...(item.customization.preferences || []), item.customization.note].filter(Boolean).join(" · ")) + '</small>' : '') +
             '<div class="quantity-control"><button type="button" data-quantity="' + item.id + '" data-change="-1" aria-label="Remove one">−</button><span>' + item.quantity + '</span><button type="button" data-quantity="' + item.id + '" data-change="1" aria-label="Add one">+</button></div>' +
@@ -1200,7 +1207,7 @@
     container.innerHTML=SMART_COMBOS.map(combo=>{
       const items=combo.ids.map(findMenuItem).filter(Boolean);if(items.length!==3)return "";
       const subtotal=items.reduce((sum,item)=>sum+item.price,0),saving=Math.min(Math.round(subtotal*.1),150),hero=items[0];
-      return '<article class="combo-card" data-primary-dish="'+escapeHTML(hero.id)+'"><button type="button" class="combo-image combo-image-trigger" data-open-dish="'+escapeHTML(hero.id)+'" aria-label="View details for '+escapeHTML(hero.name)+'"><img src="'+escapeHTML(hero.image)+'" alt="'+escapeHTML(hero.name)+'" loading="lazy"><span>'+escapeHTML(combo.tag)+'</span><strong>'+money(subtotal)+'</strong></button><div class="combo-card-body"><h3><button type="button" class="combo-title-trigger" data-open-dish="'+escapeHTML(hero.id)+'">'+escapeHTML(combo.title)+'</button></h3><p>'+escapeHTML(combo.subtitle)+'</p><ul>'+items.map(item=>'<li><button type="button" class="combo-dish-trigger" data-open-dish="'+escapeHTML(item.id)+'">'+escapeHTML(item.name)+'</button><strong>'+money(item.price)+'</strong></li>').join("")+'</ul><div class="combo-card-footer"><span>Save up to '+money(saving)+' with COMBO10</span><button type="button" class="button button-outline" data-combo="'+combo.id+'">Add combo <span aria-hidden="true">＋</span></button></div></div></article>';
+      return '<article class="combo-card" data-primary-dish="'+escapeHTML(hero.id)+'"><button type="button" class="combo-image combo-image-trigger" data-open-dish="'+escapeHTML(hero.id)+'" aria-label="View details for '+escapeHTML(hero.name)+'"><img src="'+escapeHTML(getOptimizedFoodImageUrl(hero.image))+'" alt="'+escapeHTML(hero.name)+'" loading="lazy" decoding="async"><span>'+escapeHTML(combo.tag)+'</span><strong>'+money(subtotal)+'</strong></button><div class="combo-card-body"><h3><button type="button" class="combo-title-trigger" data-open-dish="'+escapeHTML(hero.id)+'">'+escapeHTML(combo.title)+'</button></h3><p>'+escapeHTML(combo.subtitle)+'</p><ul>'+items.map(item=>'<li><button type="button" class="combo-dish-trigger" data-open-dish="'+escapeHTML(item.id)+'">'+escapeHTML(item.name)+'</button><strong>'+money(item.price)+'</strong></li>').join("")+'</ul><div class="combo-card-footer"><span>Save up to '+money(saving)+' with COMBO10</span><button type="button" class="button button-outline" data-combo="'+combo.id+'">Add combo <span aria-hidden="true">＋</span></button></div></div></article>';
     }).join("");
     $$("#comboGrid img").forEach(img=>{const item=state.menu.find(entry=>entry.name===img.alt);if(item)protectFoodPhoto(img,item);});
   }
@@ -1225,7 +1232,7 @@
     const container=$("#recommendationGrid");if(!container||!state.menu.length)return;
     const items=getRecommendedItems($("#recommendationMood").value||"popular");
     if(!items.length){container.innerHTML='<p class="recommendation-empty">No matches in that mood yet. Try another pick.</p>';return;}
-    container.innerHTML=items.map(item=>'<article class="recommendation-card" data-primary-dish="'+escapeHTML(item.id)+'"><button type="button" class="recommendation-image-trigger" data-open-dish="'+escapeHTML(item.id)+'" aria-label="View details for '+escapeHTML(item.name)+'"><img src="'+escapeHTML(item.image)+'" alt="'+escapeHTML(item.name)+'" loading="lazy"></button><div class="recommendation-card-copy"><span>'+escapeHTML(item.category)+' · '+escapeHTML(String(item.prepTime||"—"))+' min</span><h3><button type="button" class="recommendation-title-trigger" data-open-dish="'+escapeHTML(item.id)+'">'+escapeHTML(item.name)+'</button></h3><p>'+escapeHTML(item.description)+'</p><div><strong>'+money(item.price)+'</strong><button type="button" class="button button-outline" data-recommend-add="'+escapeHTML(item.id)+'">Add <span aria-hidden="true">＋</span></button></div></div></article>').join("");
+    container.innerHTML=items.map(item=>'<article class="recommendation-card" data-primary-dish="'+escapeHTML(item.id)+'"><button type="button" class="recommendation-image-trigger" data-open-dish="'+escapeHTML(item.id)+'" aria-label="View details for '+escapeHTML(item.name)+'"><img src="'+escapeHTML(getOptimizedFoodImageUrl(item.image))+'" alt="'+escapeHTML(item.name)+'" loading="lazy" decoding="async"></button><div class="recommendation-card-copy"><span>'+escapeHTML(item.category)+' · '+escapeHTML(String(item.prepTime||"—"))+' min</span><h3><button type="button" class="recommendation-title-trigger" data-open-dish="'+escapeHTML(item.id)+'">'+escapeHTML(item.name)+'</button></h3><p>'+escapeHTML(item.description)+'</p><div><strong>'+money(item.price)+'</strong><button type="button" class="button button-outline" data-recommend-add="'+escapeHTML(item.id)+'">Add <span aria-hidden="true">＋</span></button></div></div></article>').join("");
     $$("#recommendationGrid img").forEach(img=>{const item=state.menu.find(entry=>entry.name===img.alt);if(item)protectFoodPhoto(img,item);});
   }
   function renderRewards(){
