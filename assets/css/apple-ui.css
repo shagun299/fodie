@@ -3093,3 +3093,31 @@ p {
 @media (prefers-reduced-motion: reduce) {
   .dish-card, .dish-image-wrap img, .button, .icon-button, .profile-trigger, .cart-trigger { transition: none !important; }
 }
+
+
+/* V27 mobile account form containment */
+@media (max-width: 760px) {
+  #profileDialog { width: min(100% - 16px, 620px); max-width: calc(100vw - 16px); }
+  #profileDialog .profile-form {
+    width: 100%; min-width: 0; max-width: 100%;
+    padding-right: 16px; padding-left: 16px;
+    box-sizing: border-box;
+  }
+  #profileDialog .form-grid,
+  #profileDialog .address-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100%; min-width: 0; gap: 10px;
+  }
+  #profileDialog .form-field,
+  #profileDialog .form-field-full {
+    display: flex !important; grid-column: 1 !important;
+    width: 100%; min-width: 0; max-width: 100%;
+  }
+  #profileDialog .form-field input,
+  #profileDialog .form-field select,
+  #profileDialog .form-field textarea {
+    width: 100%; min-width: 0; max-width: 100%;
+    box-sizing: border-box;
+  }
+}
