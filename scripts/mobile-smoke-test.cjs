@@ -286,6 +286,17 @@ async function runViewport(browser, viewport) {
         formFits: (() => {
           const form = document.querySelector("#profileForm");
           return !form || form.scrollWidth <= form.clientWidth + 1;
+        })(),
+        formGeometry: (() => {
+          const form = document.querySelector("#profileForm");
+          if (!form) return null;
+          const box = form.getBoundingClientRect();
+          const offenders = Array.from(form.querySelectorAll("input,select,textarea,.form-grid,.form-field"))
+            .map(el => ({ selector:el.id ? "#" + el.id : (el.name ? el.tagName.toLowerCase() + "[name=" + el.name + "]" : el.className || el.tagName.toLowerCase()),
+              left:Math.round(el.getBoundingClientRect().left), right:Math.round(el.getBoundingClientRect().right),
+              width:Math.round(el.getBoundingClientRect().width), scrollWidth:el.scrollWidth }))
+            .filter(item => item.right > box.right + 1 || item.left < box.left - 1);
+          return { scrollWidth:form.scrollWidth, clientWidth:form.clientWidth, rectWidth:Math.round(box.width), offenders };
         })()
       };
     });
