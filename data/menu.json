@@ -2,7 +2,7 @@
   {
     "id": "truffle-mushroom-burger",
     "name": "Truffle Mushroom Burger",
-    "description": "Grilled mushroom, smoked cheese, crisp lettuce and truffle mayo.",
+    "description": "Grilled mushrooms, smoked cheese, crisp lettuce and truffle mayonnaise.",
     "category": "Burgers",
     "price": 249,
     "originalPrice": 398,
@@ -10,7 +10,7 @@
     "prepTime": 18,
     "isVeg": true,
     "featured": true,
-    "badge": "A FoodieHub favourite",
+    "badge": "Mushroom · Smoked cheese",
     "tags": [
       "mushroom",
       "cheese",
@@ -21,7 +21,7 @@
   {
     "id": "double-smash-burger",
     "name": "Double Smash Burger",
-    "description": "Two juicy patties, cheddar, pickles and house-made burger sauce.",
+    "description": "Two seared patties with cheddar, pickles and house-made sauce.",
     "category": "Burgers",
     "price": 299,
     "originalPrice": 499,
@@ -29,7 +29,7 @@
     "prepTime": 20,
     "isVeg": false,
     "featured": true,
-    "badge": "Big flavour energy",
+    "badge": "Double patty",
     "tags": [
       "beef",
       "chicken",
@@ -41,7 +41,7 @@
   {
     "id": "peri-peri-paneer-burger",
     "name": "Peri Peri Paneer Burger",
-    "description": "Crispy paneer, spicy peri-peri glaze and creamy slaw.",
+    "description": "Crispy paneer, peri-peri seasoning and creamy slaw.",
     "category": "Burgers",
     "price": 179,
     "originalPrice": 299,
@@ -49,7 +49,7 @@
     "prepTime": 16,
     "isVeg": true,
     "featured": false,
-    "badge": "A little kick, a lot of joy",
+    "badge": "Vegetarian · Peri-peri",
     "tags": [
       "paneer",
       "spicy",
@@ -60,7 +60,7 @@
   {
     "id": "classic-margherita-pizza",
     "name": "Classic Margherita Pizza",
-    "description": "Slow tomato sauce, mozzarella and fragrant basil.",
+    "description": "Tomato sauce, mozzarella and fresh basil on a crisp pizza base.",
     "category": "Pizza",
     "price": 239,
     "originalPrice": 399,
@@ -68,7 +68,7 @@
     "prepTime": 22,
     "isVeg": true,
     "featured": true,
-    "badge": "Simple things, done well",
+    "badge": "Tomato · Mozzarella · Basil",
     "tags": [
       "pizza",
       "cheese",
@@ -79,7 +79,7 @@
   {
     "id": "fire-roasted-paneer-pizza",
     "name": "Fire-Roasted Paneer Pizza",
-    "description": "Tandoori paneer, peppers, onion and a smoky cheese pull.",
+    "description": "Tandoori paneer, peppers, red onion and melted cheese.",
     "category": "Pizza",
     "price": 329,
     "originalPrice": 549,
@@ -87,7 +87,7 @@
     "prepTime": 24,
     "isVeg": true,
     "featured": false,
-    "badge": "Tandoori with a twist",
+    "badge": "Tandoori paneer",
     "tags": [
       "pizza",
       "paneer",
@@ -98,7 +98,7 @@
   {
     "id": "smoky-bbq-chicken-pizza",
     "name": "Smoky BBQ Chicken Pizza",
-    "description": "BBQ chicken, red onion, mozzarella and a smoky finish.",
+    "description": "Barbecue chicken, red onion and mozzarella with a smoky finish.",
     "category": "Pizza",
     "price": 349,
     "originalPrice": 599,
@@ -106,7 +106,7 @@
     "prepTime": 25,
     "isVeg": false,
     "featured": true,
-    "badge": "For the bold-bite people",
+    "badge": "Barbecue chicken",
     "tags": [
       "pizza",
       "chicken",
@@ -117,7 +117,7 @@
   {
     "id": "creamy-pink-sauce-pasta",
     "name": "Creamy Pink Sauce Pasta",
-    "description": "Silky tomato-cream sauce, parmesan and fresh herbs.",
+    "description": "Tomato and cream sauce finished with parmesan and fresh herbs.",
     "category": "Pasta",
     "price": 229,
     "originalPrice": 379,
@@ -125,7 +125,7 @@
     "prepTime": 17,
     "isVeg": true,
     "featured": true,
-    "badge": "Comfort in every forkful",
+    "badge": "Tomato cream sauce",
     "tags": [
       "pasta",
       "cream",
@@ -136,7 +136,7 @@
   {
     "id": "basil-pesto-pasta",
     "name": "Basil Pesto Pasta",
-    "description": "Basil pesto, toasted nuts, parmesan and a little olive oil.",
+    "description": "Basil pesto, toasted nuts, parmesan and olive oil.",
     "category": "Pasta",
     "price": 249,
     "originalPrice": 399,
@@ -144,7 +144,7 @@
     "prepTime": 17,
     "isVeg": true,
     "featured": false,
-    "badge": "Green goodness",
+    "badge": "Basil pesto",
     "tags": [
       "pasta",
       "basil",
@@ -155,7 +155,7 @@
   {
     "id": "chicken-alfredo-pasta",
     "name": "Chicken Alfredo Pasta",
-    "description": "Tender chicken, parmesan cream sauce and cracked pepper.",
+    "description": "Chicken in a parmesan cream sauce with cracked black pepper.",
     "category": "Pasta",
     "price": 289,
     "originalPrice": 479,
@@ -163,7 +163,7 @@
     "prepTime": 19,
     "isVeg": false,
     "featured": false,
-    "badge": "Rich, cosy and lovely",
+    "badge": "Parmesan cream sauce",
     "tags": [
       "pasta",
       "chicken",
@@ -174,7 +174,7 @@
   {
     "id": "paneer-tikka-rice-bowl",
     "name": "Paneer Tikka Rice Bowl",
-    "description": "Charred paneer, fragrant rice, pickled onion and mint chutney.",
+    "description": "Paneer tikka with seasoned rice, pickled onion and mint chutney.",
     "category": "Bowls",
     "price": 219,
     "originalPrice": 349,
@@ -182,7 +182,7 @@
     "prepTime": 18,
     "isVeg": true,
     "featured": true,
-    "badge": "A complete little meal",
+    "badge": "Paneer tikka",
     "tags": [
       "rice",
       "paneer",
@@ -193,7 +193,7 @@
   {
     "id": "grilled-chicken-rice-bowl",
     "name": "Grilled Chicken Rice Bowl",
-    "description": "Herb-grilled chicken, rice, greens and a lemon dressing.",
+    "description": "Grilled chicken, rice, fresh greens and lemon dressing.",
     "category": "Bowls",
     "price": 269,
     "originalPrice": 449,
@@ -201,7 +201,7 @@
     "prepTime": 20,
     "isVeg": false,
     "featured": false,
-    "badge": "Fresh and filling",
+    "badge": "Grilled chicken",
     "tags": [
       "rice",
       "chicken",
@@ -212,7 +212,7 @@
   {
     "id": "falafel-crunch-bowl",
     "name": "Falafel Crunch Bowl",
-    "description": "Golden falafel, crunchy greens, hummus and tahini drizzle.",
+    "description": "Golden falafel with crisp greens, hummus and tahini.",
     "category": "Bowls",
     "price": 199,
     "originalPrice": 329,
@@ -220,7 +220,7 @@
     "prepTime": 16,
     "isVeg": true,
     "featured": false,
-    "badge": "A fresh little reset",
+    "badge": "Falafel · Hummus · Tahini",
     "tags": [
       "falafel",
       "hummus",
@@ -231,7 +231,7 @@
   {
     "id": "butter-paneer-bowl",
     "name": "Butter Paneer Rice Bowl",
-    "description": "Soft paneer in buttery tomato gravy with cumin rice.",
+    "description": "Paneer in buttery tomato gravy, served with cumin rice.",
     "category": "Indian",
     "price": 249,
     "originalPrice": 399,
@@ -239,7 +239,7 @@
     "prepTime": 19,
     "isVeg": true,
     "featured": true,
-    "badge": "Homestyle, with a glow-up",
+    "badge": "Paneer · Tomato gravy",
     "tags": [
       "paneer",
       "butter",
@@ -251,7 +251,7 @@
   {
     "id": "chicken-biryani-bowl",
     "name": "Dum Chicken Biryani",
-    "description": "Aromatic basmati, slow-cooked chicken and fragrant spices.",
+    "description": "Slow-cooked chicken biryani with basmati rice and whole spices.",
     "category": "Indian",
     "price": 279,
     "originalPrice": 459,
@@ -259,7 +259,7 @@
     "prepTime": 25,
     "isVeg": false,
     "featured": true,
-    "badge": "A proper classic",
+    "badge": "Basmati · Whole spices",
     "tags": [
       "biryani",
       "chicken",
@@ -271,7 +271,7 @@
   {
     "id": "loaded-peri-peri-fries",
     "name": "Loaded Peri Peri Fries",
-    "description": "Crisp fries, peri-peri dust, cheese sauce and herbs.",
+    "description": "Crisp fries with peri-peri seasoning, cheese sauce and herbs.",
     "category": "Sides",
     "price": 129,
     "originalPrice": 249,
@@ -279,7 +279,7 @@
     "prepTime": 12,
     "isVeg": true,
     "featured": false,
-    "badge": "Snack o'clock",
+    "badge": "Peri-peri · Cheese sauce",
     "tags": [
       "fries",
       "cheese",
@@ -290,7 +290,7 @@
   {
     "id": "classic-masala-fries",
     "name": "Classic Masala Fries",
-    "description": "Golden fries tossed in our signature tangy masala.",
+    "description": "Golden fries tossed in a tangy house-made masala.",
     "category": "Sides",
     "price": 99,
     "originalPrice": 198,
@@ -298,7 +298,7 @@
     "prepTime": 10,
     "isVeg": true,
     "featured": false,
-    "badge": "FLAT 50% OFF",
+    "badge": "House masala",
     "tags": [
       "fries",
       "potato",
@@ -309,7 +309,7 @@
   {
     "id": "crispy-chicken-popcorn",
     "name": "Crispy Chicken Popcorn",
-    "description": "Bite-sized chicken, crunchy coating and a smoky dip.",
+    "description": "Crispy chicken bites served with a smoky dipping sauce.",
     "category": "Sides",
     "price": 149,
     "originalPrice": 298,
@@ -317,7 +317,7 @@
     "prepTime": 14,
     "isVeg": false,
     "featured": false,
-    "badge": "FLAT 50% OFF",
+    "badge": "Smoky dip",
     "tags": [
       "chicken",
       "crispy",
@@ -328,7 +328,7 @@
   {
     "id": "chilli-garlic-momos",
     "name": "Chilli Garlic Momos",
-    "description": "Steamed dumplings tossed in a punchy chilli-garlic sauce.",
+    "description": "Steamed dumplings tossed in chilli-garlic sauce.",
     "category": "Sides",
     "price": 139,
     "originalPrice": 229,
@@ -336,7 +336,7 @@
     "prepTime": 15,
     "isVeg": true,
     "featured": false,
-    "badge": "A spicy little favourite",
+    "badge": "Chilli-garlic sauce",
     "tags": [
       "momos",
       "chilli",
@@ -347,7 +347,7 @@
   {
     "id": "dark-chocolate-lava-cake",
     "name": "Dark Chocolate Lava Cake",
-    "description": "Warm chocolate cake with a soft, flowing centre.",
+    "description": "Warm chocolate cake with a soft, molten centre.",
     "category": "Desserts",
     "price": 149,
     "originalPrice": 298,
@@ -355,7 +355,7 @@
     "prepTime": 12,
     "isVeg": true,
     "featured": true,
-    "badge": "FLAT 50% OFF",
+    "badge": "Molten chocolate centre",
     "tags": [
       "chocolate",
       "cake",
@@ -366,7 +366,7 @@
   {
     "id": "biscoff-cheesecake",
     "name": "Biscoff Cheesecake",
-    "description": "Creamy cheesecake, biscuit crumb and caramelised spread.",
+    "description": "Creamy cheesecake with biscuit crumb and Biscoff spread.",
     "category": "Desserts",
     "price": 199,
     "originalPrice": 329,
@@ -374,7 +374,7 @@
     "prepTime": 10,
     "isVeg": true,
     "featured": false,
-    "badge": "A sweet little moment",
+    "badge": "Biscoff · Biscuit crumb",
     "tags": [
       "cheesecake",
       "biscoff",
@@ -385,7 +385,7 @@
   {
     "id": "gulab-jamun-cheesecake",
     "name": "Gulab Jamun Cheesecake",
-    "description": "A playful Indian-meets-classic dessert with cardamom notes.",
+    "description": "Cheesecake topped with gulab jamun and finished with cardamom.",
     "category": "Desserts",
     "price": 179,
     "originalPrice": 299,
@@ -393,7 +393,7 @@
     "prepTime": 10,
     "isVeg": true,
     "featured": false,
-    "badge": "A desi sweet surprise",
+    "badge": "Gulab jamun · Cardamom",
     "tags": [
       "gulab jamun",
       "cheesecake",
@@ -404,7 +404,7 @@
   {
     "id": "mango-milkshake",
     "name": "Mango Milkshake",
-    "description": "Thick, chilled mango shake made for sunny-day cravings.",
+    "description": "Thick mango shake, blended and served chilled.",
     "category": "Drinks",
     "price": 119,
     "originalPrice": 199,
@@ -412,7 +412,7 @@
     "prepTime": 7,
     "isVeg": true,
     "featured": false,
-    "badge": "Seasonal sunshine",
+    "badge": "Mango · Chilled",
     "tags": [
       "mango",
       "milkshake",
@@ -423,7 +423,7 @@
   {
     "id": "iced-mocha",
     "name": "Iced Mocha",
-    "description": "Cold coffee, dark chocolate and a smooth milk finish.",
+    "description": "Cold coffee blended with dark chocolate and milk.",
     "category": "Drinks",
     "price": 119,
     "originalPrice": 238,
@@ -431,7 +431,7 @@
     "prepTime": 6,
     "isVeg": true,
     "featured": false,
-    "badge": "FLAT 50% OFF",
+    "badge": "Coffee · Dark chocolate",
     "tags": [
       "coffee",
       "mocha",
@@ -442,7 +442,7 @@
   {
     "id": "mint-lime-cooler",
     "name": "Mint Lime Cooler",
-    "description": "Fresh lime, mint and a sparkling, refreshing finish.",
+    "description": "Fresh lime and mint with a sparkling finish.",
     "category": "Drinks",
     "price": 89,
     "originalPrice": 149,
@@ -450,7 +450,7 @@
     "prepTime": 5,
     "isVeg": true,
     "featured": false,
-    "badge": "Freshen things up",
+    "badge": "Lime · Mint",
     "tags": [
       "lime",
       "mint",
