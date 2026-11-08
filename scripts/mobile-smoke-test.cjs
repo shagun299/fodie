@@ -90,6 +90,7 @@ async function runViewport(browser, viewport) {
     const introButton = page.locator("#skipWelcome");
     if (await introButton.isVisible().catch(() => false)) {
       await introButton.click({ timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(450);
     }
 
     if (viewport.width === 390) {
@@ -136,6 +137,9 @@ async function runViewport(browser, viewport) {
         return {
           bodyFont:body.fontFamily,
           bodySize:parseFloat(body.fontSize),
+          heroFont:hero ? getComputedStyle(hero).fontFamily : "",
+          menuHeadingFont:document.querySelector("#menuTitle") ? getComputedStyle(document.querySelector("#menuTitle")).fontFamily : "",
+          offerHeadingFont:document.querySelector(".offer-slide.is-active .offer-copy h2") ? getComputedStyle(document.querySelector(".offer-slide.is-active .offer-copy h2")).fontFamily : "",
           heroSize:hero ? parseFloat(getComputedStyle(hero).fontSize) : 0,
           heroDescriptionSize:heroDescription ? parseFloat(getComputedStyle(heroDescription).fontSize) : 0,
           dishDescriptionSize:dishDescription ? parseFloat(getComputedStyle(dishDescription).fontSize) : 0,
@@ -148,6 +152,11 @@ async function runViewport(browser, viewport) {
     check(pageGeometry.dockVisible, viewport, "mobile-dock-visible");
     check(pageGeometry.typography.bodyFont.includes("Manrope"), viewport, "brand-font-loaded",
       pageGeometry.typography.bodyFont);
+    check(pageGeometry.typography.heroFont.includes("Manrope") &&
+      pageGeometry.typography.menuHeadingFont.includes("Manrope") &&
+      pageGeometry.typography.offerHeadingFont.includes("Manrope"),
+      viewport, "all-display-headings-use-manrope",
+      JSON.stringify({hero:pageGeometry.typography.heroFont,menu:pageGeometry.typography.menuHeadingFont,offer:pageGeometry.typography.offerHeadingFont}));
     check(pageGeometry.typography.bodySize >= 14 && pageGeometry.typography.heroSize >= 38 &&
       pageGeometry.typography.heroDescriptionSize >= 12 && pageGeometry.typography.dishDescriptionSize >= 11,
       viewport, "mobile-text-sizes-readable", JSON.stringify(pageGeometry.typography));
