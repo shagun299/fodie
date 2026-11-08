@@ -127,11 +127,32 @@ async function runViewport(browser, viewport) {
         const style = getComputedStyle(element);
         return { width:r.width, height:r.height, display:style.display, direction:style.flexDirection,
           text:element.innerText.trim().replace(/\\s+/g," ") };
-      })
+      }),
+      typography: (() => {
+        const body = getComputedStyle(document.body);
+        const hero = document.querySelector("#heroTitle");
+        const heroDescription = document.querySelector(".hero-description");
+        const dishDescription = document.querySelector("#menuGrid .dish-description");
+        return {
+          bodyFont:body.fontFamily,
+          bodySize:parseFloat(body.fontSize),
+          heroSize:hero ? parseFloat(getComputedStyle(hero).fontSize) : 0,
+          heroDescriptionSize:heroDescription ? parseFloat(getComputedStyle(heroDescription).fontSize) : 0,
+          dishDescriptionSize:dishDescription ? parseFloat(getComputedStyle(dishDescription).fontSize) : 0,
+          heroText:hero ? hero.innerText.replace(/\\s+/g," ").trim() : ""
+        };
+      })()
     }));
     check(pageGeometry.documentWidth <= pageGeometry.viewportWidth + 1, viewport, "no-horizontal-page-overflow",
       "viewport=" + pageGeometry.viewportWidth + ", document=" + pageGeometry.documentWidth + ", body=" + pageGeometry.bodyWidth);
     check(pageGeometry.dockVisible, viewport, "mobile-dock-visible");
+    check(pageGeometry.typography.bodyFont.includes("Manrope"), viewport, "brand-font-loaded",
+      pageGeometry.typography.bodyFont);
+    check(pageGeometry.typography.bodySize >= 14 && pageGeometry.typography.heroSize >= 38 &&
+      pageGeometry.typography.heroDescriptionSize >= 12 && pageGeometry.typography.dishDescriptionSize >= 11,
+      viewport, "mobile-text-sizes-readable", JSON.stringify(pageGeometry.typography));
+    check(pageGeometry.typography.heroText === "Your favourites, made your way.", viewport, "hero-copy-updated",
+      pageGeometry.typography.heroText);
     check(Boolean(pageGeometry.heroButton) && pageGeometry.heroButton.height >= 40 &&
       pageGeometry.heroButton.height <= 60 && pageGeometry.heroButton.direction === "column",
       viewport, "hero-cta-has-normal-button-height", JSON.stringify(pageGeometry.heroButton));
