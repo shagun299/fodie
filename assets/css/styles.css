@@ -2064,26 +2064,6 @@ h1 em,h2 em {
 .offer-dots button[aria-pressed="true"]{background:var(--green-soft);color:var(--green)}
 .offer-slide-count{min-width:51px;color:var(--muted);font-size:9px;font-weight:800;text-align:center}
 .offer-slide-count i{padding:0 3px;color:var(--orange);font-style:normal}
-.welcome-intro[hidden]{display:none!important}
-.welcome-intro{position:fixed;inset:0;z-index:1400;display:grid;place-items:center;overflow:hidden;padding:24px;background:rgba(12,20,15,.86);-webkit-backdrop-filter:blur(20px) saturate(125%);backdrop-filter:blur(20px) saturate(125%);opacity:1;transition:opacity .35s ease,visibility .35s ease}
-.welcome-intro.is-leaving{opacity:0;visibility:hidden;pointer-events:none}
-body.welcome-open{overflow:hidden}
-.welcome-card{position:relative;z-index:1;width:min(470px,100%);padding:43px 35px 28px;border:1px solid rgba(255,255,255,.21);border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.055));box-shadow:0 35px 110px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.2);text-align:center;color:#fffdf7;animation:welcome-card-in .65s cubic-bezier(.2,.8,.2,1) both}
-.welcome-mark{display:grid;width:58px;height:58px;place-items:center;margin:0 auto 20px;border:1px solid rgba(242,206,158,.58);border-radius:19px;background:rgba(242,206,158,.12);color:#f2ce9e;font-size:28px;box-shadow:0 0 42px rgba(242,206,158,.2);animation:welcome-mark-glow 1.8s ease-in-out infinite alternate}
-.welcome-kicker{color:#f2ce9e;font-size:9px;font-weight:900;letter-spacing:.2em}
-.welcome-card h2{margin:13px 0 9px;font-family:var(--serif,"DM Serif Display",serif);font-size:clamp(34px,7vw,47px);font-weight:500;letter-spacing:-.045em;line-height:1.08}
-.welcome-card h2 em{color:#f2ce9e;font-weight:400}
-.welcome-card p{max-width:340px;margin:0 auto 22px;color:rgba(255,253,247,.78);font-size:12px;line-height:1.7}
-.welcome-card>button{min-height:42px;padding:0 17px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:#f2ce9e;color:#27352a;font:850 11px var(--sans);cursor:pointer;transition:transform .2s,filter .2s}
-.welcome-card>button:hover{transform:translateY(-2px);filter:brightness(1.05)}
-.welcome-progress{height:3px;margin-top:28px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.15)}
-.welcome-progress span{display:block;width:0;height:100%;border-radius:inherit;background:#f2ce9e;animation:welcome-progress-fill 2.6s linear forwards}
-.welcome-glow{position:absolute;width:360px;height:360px;border-radius:50%;filter:blur(42px);opacity:.17;pointer-events:none}
-.welcome-glow-one{top:-155px;left:-100px;background:#b5c78d}
-.welcome-glow-two{right:-130px;bottom:-180px;background:#d79a68}
-@keyframes welcome-card-in{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes welcome-mark-glow{from{transform:rotate(-7deg) scale(.97)}to{transform:rotate(7deg) scale(1.04)}}
-@keyframes welcome-progress-fill{to{width:100%}}
 .tracking-intro{margin:-2px 0 14px;padding:12px 14px;border:1px solid var(--glass-border);border-radius:12px;background:var(--glass-soft)}
 .tracking-intro p{margin:0;color:var(--muted);font-size:11px;line-height:1.6}
 .tracking-recent-wrap{display:grid;gap:6px;margin:0 0 2px;padding:12px;border:1px solid var(--glass-border);border-radius:13px;background:var(--green-soft)}
@@ -2134,5 +2114,5 @@ body.welcome-open{overflow:hidden}
  .offer-art-free>strong{font-size:32px}
 }
 @media(prefers-reduced-motion:reduce){
- .offer-slide,.offer-slide.is-active,.welcome-intro,.welcome-card,.welcome-mark,.welcome-progress span{transition:none!important;animation:none!important}
+ .offer-slide,.offer-slide.is-active{transition:none!important;animation:none!important}
 }
