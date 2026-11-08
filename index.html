@@ -15,10 +15,10 @@
   <link rel="preconnect" href="https://images.unsplash.com">
   <link rel="preconnect" href="https://images.pexels.com">
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/styles.css?v=brand-copy-v25-20261108">
-  <link rel="stylesheet" href="./assets/css/apple-ui.css?v=brand-copy-v25-20261108">
+  <link rel="stylesheet" href="./assets/css/styles.css?v=account-premium-v27-20261108">
+  <link rel="stylesheet" href="./assets/css/apple-ui.css?v=account-premium-v27-20261108">
   <script src="./assets/js/config.js"></script>
-  <script defer src="./assets/js/app.js?v=welcome-removed-v26-20261108"></script>
+  <script defer src="./assets/js/app.js?v=account-premium-v27-20261108"></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -379,22 +379,55 @@
 
   <dialog class="site-dialog profile-dialog" id="profileDialog" aria-labelledby="profileTitle">
     <div class="dialog-header">
-      <div><span class="drawer-kicker">PROFILE DETAILS</span><h2 id="profileTitle">Your profile</h2></div>
+      <div><span class="drawer-kicker">FOODIEHUB ACCOUNT</span><h2 id="profileTitle">Your profile</h2></div>
       <button class="close-button" type="button" data-close-dialog="profileDialog" aria-label="Close profile">×</button>
     </div>
+
+    <section class="account-auth-panel" id="accountAuthPanel" hidden>
+      <div class="account-auth-hero">
+        <span class="account-auth-mark" aria-hidden="true">F</span>
+        <div><span class="drawer-kicker">YOUR FOODIEHUB ACCOUNT</span><h3>Good to see you.</h3><p>Sign in to keep your details, addresses and orders together across devices.</p></div>
+      </div>
+      <div class="account-auth-tabs" role="tablist" aria-label="Account access">
+        <button class="account-auth-tab is-active" id="authSignInTab" type="button" role="tab" aria-selected="true">Sign in</button>
+        <button class="account-auth-tab" id="authRegisterTab" type="button" role="tab" aria-selected="false">Create account</button>
+      </div>
+      <form id="customerLoginForm" class="account-auth-form">
+        <label class="form-field">Email address<input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></label>
+        <label class="form-field">Password<input name="password" type="password" placeholder="Your password" autocomplete="current-password" required></label>
+        <button class="button button-primary account-auth-submit" type="submit">Sign in securely <span aria-hidden="true">→</span></button>
+      </form>
+      <form id="customerRegisterForm" class="account-auth-form" hidden>
+        <div class="form-grid">
+          <label class="form-field form-field-full">Full name<input name="name" type="text" placeholder="Your name" minlength="2" maxlength="80" autocomplete="name" required></label>
+          <label class="form-field form-field-full">Mobile number<input name="phone" type="tel" placeholder="10-digit Indian mobile number" inputmode="numeric" pattern="[6-9][0-9]{9}" minlength="10" maxlength="10" autocomplete="tel" required></label>
+          <label class="form-field form-field-full">Email address<input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></label>
+          <label class="form-field form-field-full">Create password<input name="password" type="password" placeholder="At least 10 characters" minlength="10" maxlength="200" autocomplete="new-password" required></label>
+        </div>
+        <button class="button button-primary account-auth-submit" type="submit">Create my account <span aria-hidden="true">→</span></button>
+        <p class="account-password-hint">Use at least 10 characters. Your password is securely hashed on the server.</p>
+      </form>
+      <p class="form-error account-auth-error" id="accountAuthError" role="alert" aria-live="polite"></p>
+    </section>
+
+    <div class="account-offline-note" id="accountOfflineNote" hidden>
+      <span aria-hidden="true">⌁</span>
+      <div><strong>Browser profile mode</strong><p>Customer accounts and cloud-saved addresses need the FoodieHub API connection. You can still save details on this device.</p></div>
+    </div>
+
     <form id="profileForm" class="checkout-form profile-form">
       <div class="profile-intro">
         <span class="profile-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4.8 21a7.2 7.2 0 0 1 14.4 0"></path></svg></span>
-        <div><strong>Your contact and delivery details.</strong><small>Save your details for a faster checkout next time.</small></div>
+        <div><strong id="profileIntroTitle">Your contact and delivery details.</strong><small id="profileIntroCopy">Save your details for a faster checkout next time.</small></div>
       </div>
-      <div class="form-intro"><span>01</span><div><strong>Personal details</strong><small>Your details are saved on this device.</small></div></div>
+      <div class="form-intro"><span>01</span><div><strong>Personal details</strong><small id="profilePersonalHint">Your details stay on this device in demo mode.</small></div></div>
       <div class="form-grid">
         <label class="form-field">Full name<input name="name" type="text" placeholder="Your name" minlength="2" autocomplete="name"></label>
         <label class="form-field">Mobile number<input name="phone" type="tel" placeholder="10-digit mobile number" inputmode="numeric" pattern="[6-9][0-9]{9}" minlength="10" maxlength="10" autocomplete="tel"></label>
-        <label class="form-field form-field-full">Email address <span class="optional-label">Optional</span><input name="email" type="email" placeholder="you@example.com" autocomplete="email"></label>
+        <label class="form-field form-field-full">Email address<input name="email" type="email" placeholder="you@example.com" autocomplete="email"></label>
       </div>
-      <div class="form-intro address-intro"><span>02</span><div><strong>Saved delivery address</strong><small>Use this address by default at checkout.</small></div></div>
-<div class="address-fields-intro"><span>DELIVERY ADDRESS</span><small>Enter a complete address to help the delivery partner locate you.</small></div>
+      <div class="form-intro address-intro"><span>02</span><div><strong>Delivery address</strong><small>Save an address to speed up your next order.</small></div></div>
+      <div class="address-fields-intro"><span>DELIVERY ADDRESS</span><small>Enter a complete address to help the delivery partner locate you.</small></div>
       <div class="form-grid address-grid">
         <label class="form-field">House / Flat number<input name="house" type="text" placeholder="e.g. 204, B-Block" maxlength="80" autocomplete="address-line1"></label>
         <label class="form-field">Building / Apartment <span class="optional-label">Optional</span><input name="building" type="text" placeholder="e.g. Green Residency" maxlength="100" autocomplete="organization"></label>
@@ -412,13 +445,24 @@
         </label>
         <label class="form-field">PIN code<input name="pincode" type="text" inputmode="numeric" pattern="[1-9][0-9]{5}" minlength="6" maxlength="6" placeholder="6-digit PIN" autocomplete="postal-code"></label>
       </div>
+      <div class="account-address-label-row">
+        <label class="form-field">Save this address as
+          <select name="addressLabel" id="profileAddressLabel"><option value="Home">Home</option><option value="Work">Work</option><option value="Other">Other</option></select>
+        </label>
+      </div>
       <div class="address-preview" id="profileAddressPreview" aria-live="polite">Your complete delivery address will appear here as you fill in the details.</div>
       <p class="address-legacy-note" id="profileLegacyAddress" hidden></p>
-      <p class="profile-storage-note"><span aria-hidden="true">⌂</span> Your profile and address are stored on this device only. This demo does not create an account.</p>
+      <p class="profile-storage-note" id="profileStorageNote"><span aria-hidden="true">⌂</span> Your profile and address are stored on this device only in demo mode.</p>
       <p class="form-error" id="profileError" role="alert"></p>
       <button class="button button-primary profile-save-button" type="submit">Save profile <span aria-hidden="true">✓</span></button>
       <p class="profile-message" id="profileMessage" aria-live="polite"></p>
     </form>
+
+    <section class="saved-addresses-panel" id="savedAddressesPanel" hidden>
+      <div class="saved-addresses-heading"><div><span class="drawer-kicker">YOUR PLACES</span><h3>Saved addresses</h3></div><span id="savedAddressesCount">0 saved</span></div>
+      <div class="saved-addresses-list" id="savedAddressesList" aria-live="polite"></div>
+      <button class="button button-quiet account-logout-button" id="accountLogoutButton" type="button">Sign out</button>
+    </section>
   </dialog>
 
 

@@ -79,7 +79,8 @@
     theme: "foodiehub.theme.v2",
     orders: "foodiehub.orders.v2",
     profile: "foodiehub.profile.v1",
-    rewards: "foodiehub.rewards.v1"
+    rewards: "foodiehub.rewards.v1",
+    auth: "foodiehub.auth.v1"
   };
 
   const state = {
@@ -88,6 +89,8 @@
     favourites: readStore(STORAGE.favourites, []),
     orders: readStore(STORAGE.orders, []),
     profile: readStore(STORAGE.profile, { name: "", phone: "", email: "", address: "" }),
+    auth: readStore(STORAGE.auth, { token: "", user: null, expiresAt: 0 }),
+    addresses: [],
     customizations: readStore("foodiehub.customizations.v1", {}),
     imageFallbacks: {},
     currentCustomizer: null,
@@ -142,13 +145,214 @@
   }
 
   async function request(path, options = {}) {
+    const authHeaders = state.auth && state.auth.token ? { Authorization: "Bearer " + state.auth.token } : {};
     const response = await fetch(API_BASE + path, {
       ...options,
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+      headers: { ...authHeaders, "Content-Type": "application/json", ...(options.headers || {}) }
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || payload.message || "Something went wrong.");
+    if (!response.ok) {
+      const error = new Error(payload.error || payload.message || "Something went wrong.");
+      error.status = response.status;
+      throw error;
+    }
     return payload;
+  }
+
+  function normalizeAccountUser(user) {
+    const source = user || {};
+    return {
+      id: String(source.id || ""),
+      name: String(source.name || ""),
+      email: String(source.email || ""),
+      phone: String(source.phone || ""),
+      createdAt: source.createdAt || source.created_at || ""
+    };
+  }
+
+  function setCustomerSession(payload) {
+    const expiresIn = Math.max(0, Number(payload && payload.expiresIn) || 604800);
+    state.auth = {
+      token: String(payload && payload.token || ""),
+      user: normalizeAccountUser(payload && payload.user),
+      expiresAt: Date.now() + expiresIn * 1000
+    };
+    if (!state.auth.token) throw new Error("The account server did not return a sign-in session.");
+    saveStore(STORAGE.auth, state.auth);
+  }
+
+  function clearCustomerSession() {
+    state.auth = { token: "", user: null, expiresAt: 0 };
+    state.addresses = [];
+    saveStore(STORAGE.auth, state.auth);
+    renderProfile();
+  }
+
+  function renderAccountUI() {
+    const signedIn = Boolean(state.auth && state.auth.token && state.auth.user);
+    const authPanel = $("#accountAuthPanel");
+    const offlineNote = $("#accountOfflineNote");
+    const profileForm = $("#profileForm");
+    const addressPanel = $("#savedAddressesPanel");
+    const logoutButton = $("#accountLogoutButton");
+    if (authPanel) authPanel.hidden = !state.backendOnline || signedIn;
+    if (offlineNote) {
+      offlineNote.hidden = Boolean(state.backendOnline);
+      const note = offlineNote.querySelector("p");
+      if (note) note.textContent = signedIn
+        ? "The account server is temporarily unavailable. Your saved account data is shown, but changes cannot sync right now."
+        : "Customer accounts and cloud-saved addresses need the FoodieHub API connection. You can still save details on this device.";
+    }
+    if (profileForm) profileForm.hidden = Boolean(state.backendOnline && !signedIn);
+    if (addressPanel) addressPanel.hidden = !signedIn;
+    if (logoutButton) logoutButton.hidden = !signedIn;
+    const emailInput = profileForm && profileForm.elements.namedItem("email");
+    if (emailInput) emailInput.readOnly = signedIn;
+    const storageNote = $("#profileStorageNote");
+    if (storageNote) storageNote.innerHTML = signedIn
+      ? '<span aria-hidden="true">✓</span> Your account details and saved addresses sync with FoodieHub.'
+      : '<span aria-hidden="true">⌂</span> Your profile and address are stored on this device only in demo mode.';
+    const personalHint = $("#profilePersonalHint");
+    if (personalHint) personalHint.textContent = signedIn ? "Your account details are synced securely." : "Your details stay on this device in demo mode.";
+    const introTitle = $("#profileIntroTitle");
+    if (introTitle) introTitle.textContent = signedIn ? "Your account details." : "Your contact and delivery details.";
+    const introCopy = $("#profileIntroCopy");
+    if (introCopy) introCopy.textContent = signedIn ? "Update your details and manage saved delivery addresses." : "Save your details for a faster checkout next time.";
+    const title = $("#profileTitle");
+    if (title) title.textContent = signedIn ? "Your account" : "Your profile";
+  }
+
+  function renderSavedAddresses() {
+    const list = $("#savedAddressesList");
+    const count = $("#savedAddressesCount");
+    if (!list || !count) return;
+    count.textContent = state.addresses.length + " saved";
+    if (!state.addresses.length) {
+      list.innerHTML = '<div class="saved-address-empty"><span aria-hidden="true">⌂</span><strong>No saved addresses yet</strong><p>Add a complete address above to make checkout faster.</p></div>';
+      return;
+    }
+    list.innerHTML = state.addresses.map(entry => {
+      const address = entry.address || {};
+      return '<article class="account-address-card"><div class="account-address-top"><strong>' + escapeHTML(entry.label || "Address") + '</strong><span>Saved</span></div><p>' + escapeHTML(formatDeliveryAddress(address)) + '</p><div class="account-address-actions"><button type="button" data-address-use="' + escapeHTML(entry.id) + '">Use for checkout</button><button type="button" data-address-delete="' + escapeHTML(entry.id) + '">Remove</button></div></article>';
+    }).join("");
+  }
+
+  async function syncCustomerAccount() {
+    const result = await request("/api/auth/me");
+    state.auth.user = normalizeAccountUser(result.user);
+    const [addressResult, orderResult] = await Promise.all([
+      request("/api/auth/addresses"),
+      request("/api/auth/orders")
+    ]);
+    state.addresses = Array.isArray(addressResult.addresses) ? addressResult.addresses : [];
+    state.orders = Array.isArray(orderResult.orders)
+      ? orderResult.orders.map(order => ({ ...order, phone: state.auth.user.phone }))
+      : [];
+    state.profile = {
+      ...state.profile,
+      name: state.auth.user.name,
+      phone: state.auth.user.phone,
+      email: state.auth.user.email
+    };
+    const hasAddress = state.profile.addressDetails &&
+      Object.values(state.profile.addressDetails).some(value => String(value || "").trim());
+    if (!hasAddress && state.addresses.length) {
+      state.profile.addressDetails = state.addresses[0].address;
+      state.profile.address = formatDeliveryAddress(state.addresses[0].address);
+    }
+    saveStore(STORAGE.profile, state.profile);
+    saveStore(STORAGE.auth, state.auth);
+    renderProfile();
+    renderCart();
+  }
+
+  async function restoreCustomerSession() {
+    if (!state.auth || !state.auth.token) {
+      renderAccountUI();
+      return;
+    }
+    if (state.auth.expiresAt && Number(state.auth.expiresAt) <= Date.now()) {
+      clearCustomerSession();
+      return;
+    }
+    if (!state.backendOnline) {
+      renderAccountUI();
+      return;
+    }
+    try {
+      await syncCustomerAccount();
+    } catch (error) {
+      if (error.status === 401) {
+        clearCustomerSession();
+        showToast("Your account session has expired. Please sign in again.", "error");
+      } else {
+        renderAccountUI();
+      }
+    }
+  }
+
+  function showAccountAuthMode(mode) {
+    const register = mode === "register";
+    $("#customerLoginForm").hidden = register;
+    $("#customerRegisterForm").hidden = !register;
+    $("#authSignInTab").classList.toggle("is-active", !register);
+    $("#authRegisterTab").classList.toggle("is-active", register);
+    $("#authSignInTab").setAttribute("aria-selected", String(!register));
+    $("#authRegisterTab").setAttribute("aria-selected", String(register));
+    $("#accountAuthError").textContent = "";
+  }
+
+  async function handleCustomerLogin(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const submit = form.querySelector('button[type="submit"]');
+    const values = Object.fromEntries(new FormData(form).entries());
+    submit.disabled = true;
+    submit.textContent = "Signing in…";
+    $("#accountAuthError").textContent = "";
+    try {
+      const session = await request("/api/auth/login", { method: "POST", body: JSON.stringify(values) });
+      setCustomerSession(session);
+      await syncCustomerAccount();
+      $("#profileMessage").textContent = "You are signed in. Your account details are synced.";
+      showToast("Welcome back to FoodieHub.");
+    } catch (error) {
+      $("#accountAuthError").textContent = error.message || "Sign in could not be completed.";
+    } finally {
+      submit.disabled = false;
+      submit.innerHTML = 'Sign in securely <span aria-hidden="true">→</span>';
+    }
+  }
+
+  async function handleCustomerRegister(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const submit = form.querySelector('button[type="submit"]');
+    const values = Object.fromEntries(new FormData(form).entries());
+    submit.disabled = true;
+    submit.textContent = "Creating account…";
+    $("#accountAuthError").textContent = "";
+    try {
+      const session = await request("/api/auth/register", { method: "POST", body: JSON.stringify(values) });
+      setCustomerSession(session);
+      await syncCustomerAccount();
+      form.reset();
+      $("#profileMessage").textContent = "Your FoodieHub account is ready.";
+      showToast("Your FoodieHub account has been created.");
+    } catch (error) {
+      $("#accountAuthError").textContent = error.message || "Account registration could not be completed.";
+    } finally {
+      submit.disabled = false;
+      submit.innerHTML = 'Create my account <span aria-hidden="true">→</span>';
+    }
+  }
+
+  async function handleCustomerLogout() {
+    try {
+      if (state.backendOnline && state.auth.token) await request("/api/auth/logout", { method: "POST" });
+    } catch (_) {}
+    clearCustomerSession();
+    showToast("You have signed out.");
   }
 
   async function checkBackend() {
@@ -250,46 +454,156 @@
 
   function renderProfile() {
     const name = String(state.profile.name || "").trim();
-    $("#profileTriggerLabel").textContent = name ? name.split(/\s+/)[0] : "Profile";
-    $("#openProfile").setAttribute("aria-label", name ? "Open profile for " + name : "Open your profile");
+    const signedIn = Boolean(state.auth && state.auth.token && state.auth.user);
+    $("#profileTriggerLabel").textContent = name ? name.split(/\s+/)[0] : (signedIn ? "Account" : "Profile");
+    $("#openProfile").setAttribute("aria-label", signedIn ? "Open your FoodieHub account" : (name ? "Open profile for " + name : "Open your profile"));
+    renderAccountUI();
+    renderSavedAddresses();
   }
 
   function openProfile() {
+    renderAccountUI();
     const form = $("#profileForm");
+    if (state.backendOnline && !(state.auth && state.auth.user)) {
+      showAccountAuthMode("login");
+      $("#accountAuthError").textContent = "";
+      openDialog("profileDialog");
+      return;
+    }
     ["name", "phone", "email"].forEach(field => {
       form.elements.namedItem(field).value = state.profile[field] || "";
     });
-    fillAddressFields(form,state.profile.addressDetails||{});
+    let addressDetails = state.profile.addressDetails || {};
+    if (!Object.values(addressDetails).some(value => String(value || "").trim()) && state.addresses.length) {
+      addressDetails = state.addresses[0].address || {};
+    }
+    fillAddressFields(form, addressDetails);
+    const labelInput = form.elements.namedItem("addressLabel");
+    if (labelInput) labelInput.value = state.addresses[0] ? (state.addresses[0].label || "Home") : "Home";
     showLegacyAddress("profileLegacyAddress",state.profile);
     updateAddressPreview("profileForm","profileAddressPreview");
     $("#profileError").textContent = "";
-    $("#profileMessage").textContent = state.profile.name || state.profile.address
-      ? "Your saved details are ready to edit."
-      : "Add your details and delivery address here.";
+    $("#profileMessage").textContent = state.auth && state.auth.user
+      ? "Your account details and saved addresses are ready."
+      : (state.profile.name || state.profile.address
+        ? "Your saved details are ready to edit."
+        : "Add your details and delivery address here.");
+    renderSavedAddresses();
     openDialog("profileDialog");
   }
 
-  function saveProfile(event) {
+  async function saveProfile(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const phone = String(form.get("phone") || "").replace(/\D/g, "").slice(-10);
+    const submit = $(".profile-save-button");
+    const values = new FormData(event.currentTarget);
+    const name = String(values.get("name") || "").trim();
+    const phone = String(values.get("phone") || "").replace(/\D/g, "").slice(-10);
+    const email = String(values.get("email") || "").trim();
+    const addressDetails = readAddressDetails(values);
+    const address = formatDeliveryAddress(addressDetails) || state.profile.address || "";
+
+    if (state.auth && state.auth.token) {
+      if (!state.backendOnline) {
+        $("#profileError").textContent = "The account server is unavailable. Your changes have not been synced.";
+        return;
+      }
+      if (name.length < 2) {
+        $("#profileError").textContent = "Enter your full name.";
+        return;
+      }
+      if (!/^[6-9]\d{9}$/.test(phone)) {
+        $("#profileError").textContent = "Enter a valid 10-digit Indian mobile number.";
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = "Saving account…";
+      $("#profileError").textContent = "";
+      try {
+        const updated = await request("/api/auth/me", {
+          method: "PATCH",
+          body: JSON.stringify({ name, phone })
+        });
+        state.auth.user = normalizeAccountUser(updated.user || { ...state.auth.user, name, phone });
+        state.profile = { name, phone, email: state.auth.user.email || email, addressDetails, address };
+        const requiredFields = ["house", "street", "area", "town", "city", "district", "state"];
+        const completeAddress = requiredFields.every(field => String(addressDetails[field] || "").trim()) &&
+          /^[1-9]\d{5}$/.test(String(addressDetails.pincode || ""));
+        let addressSaved = false;
+        if (completeAddress) {
+          const duplicate = state.addresses.some(entry => ADDRESS_FIELDS.every(field =>
+            String((entry.address || {})[field] || "").trim() === String(addressDetails[field] || "").trim()
+          ));
+          if (!duplicate) {
+            await request("/api/auth/addresses", {
+              method: "POST",
+              body: JSON.stringify({ label: String(values.get("addressLabel") || "Home"), address: addressDetails })
+            });
+          }
+          addressSaved = true;
+          const result = await request("/api/auth/addresses");
+          state.addresses = Array.isArray(result.addresses) ? result.addresses : [];
+        }
+        saveStore(STORAGE.profile, state.profile);
+        saveStore(STORAGE.auth, state.auth);
+        renderProfile();
+        updateAddressPreview("profileForm","profileAddressPreview");
+        $("#profileError").textContent = "";
+        $("#profileMessage").textContent = addressSaved
+          ? "Account updated and your delivery address is saved."
+          : "Account updated. Complete the address fields and save again to add a delivery address.";
+        showToast(addressSaved ? "Your account and address are saved." : "Your account details are saved.");
+      } catch (error) {
+        $("#profileError").textContent = error.message || "Your account could not be updated.";
+      } finally {
+        submit.disabled = false;
+        submit.innerHTML = 'Save profile <span aria-hidden="true">✓</span>';
+      }
+      return;
+    }
+
     if (phone && (phone.length !== 10 || !/^[6-9]/.test(phone))) {
       $("#profileError").textContent = "Enter a valid 10-digit Indian mobile number, or leave it blank.";
       return;
     }
-    const addressDetails=readAddressDetails(form);
-    state.profile = {
-      name: String(form.get("name") || "").trim(),
-      phone,
-      email: String(form.get("email") || "").trim(),
-      addressDetails,
-      address: formatDeliveryAddress(addressDetails) || state.profile.address || ""
-    };
+    state.profile = { name, phone, email, addressDetails, address };
     saveStore(STORAGE.profile, state.profile);
     renderProfile();
     $("#profileError").textContent = "";
-    $("#profileMessage").textContent = "Profile saved. Your next checkout can use these details.";
-    showToast("Your profile and delivery address have been saved.");
+    $("#profileMessage").textContent = "Profile saved on this device. Connect the account service to sync across devices.";
+    showToast("Your profile and delivery address have been saved on this device.");
+  }
+
+  async function handleSavedAddressClick(event) {
+    const useButton = event.target.closest("[data-address-use]");
+    const deleteButton = event.target.closest("[data-address-delete]");
+    if (useButton) {
+      const entry = state.addresses.find(item => item.id === useButton.dataset.addressUse);
+      if (!entry) return;
+      const form = $("#profileForm");
+      fillAddressFields(form, entry.address || {});
+      const label = form.elements.namedItem("addressLabel");
+      if (label) label.value = entry.label || "Home";
+      state.profile.addressDetails = entry.address || {};
+      state.profile.address = formatDeliveryAddress(entry.address || {});
+      saveStore(STORAGE.profile, state.profile);
+      updateAddressPreview("profileForm","profileAddressPreview");
+      showToast("This address is selected for your next checkout.");
+      return;
+    }
+    if (deleteButton) {
+      const entry = state.addresses.find(item => item.id === deleteButton.dataset.addressDelete);
+      if (!entry) return;
+      deleteButton.disabled = true;
+      try {
+        await request("/api/auth/addresses/" + encodeURIComponent(entry.id), { method: "DELETE" });
+        state.addresses = state.addresses.filter(item => item.id !== entry.id);
+        renderSavedAddresses();
+        showToast("Saved address removed.");
+      } catch (error) {
+        showToast(error.message || "The address could not be removed.", "error");
+        deleteButton.disabled = false;
+      }
+    }
   }
 
   function renderCategories() {
@@ -1371,8 +1685,11 @@
   function renderMyDashboard(){
     const phone=String(state.profile.phone||"").replace(/\D/g,"").slice(-10);
     const name=String(state.profile.name||"").trim();
+    const accountOrders=Boolean(state.auth && state.auth.token && state.auth.user && state.backendOnline);
     $("#myDashboardGreeting").textContent=name?"Hello, "+name.split(/\s+/)[0]+".":"Hello, foodie.";
-    const orders=phone?state.orders.filter(order=>String(order.phone||(order.customer&&order.customer.phone)||"").replace(/\D/g,"").slice(-10)===phone).slice().sort((a,b)=>new Date(b.createdAt||b.created_at||0).getTime()-new Date(a.createdAt||a.created_at||0).getTime()):[];
+    const orders=accountOrders
+      ? state.orders.slice().sort((a,b)=>new Date(b.createdAt||b.created_at||0).getTime()-new Date(a.createdAt||a.created_at||0).getTime())
+      : (phone?state.orders.filter(order=>String(order.phone||(order.customer&&order.customer.phone)||"").replace(/\D/g,"").slice(-10)===phone).slice().sort((a,b)=>new Date(b.createdAt||b.created_at||0).getTime()-new Date(a.createdAt||a.created_at||0).getTime()):[]);
     const activeOrders=orders.filter(order=>!["cancelled","payment_pending","failed"].includes(String(order.status||"").toLowerCase()));
     const totalValue=activeOrders.reduce((sum,order)=>sum+Math.max(0,Number(order.total||0)),0);
     const delivered=orders.filter(order=>String(order.status||"").toLowerCase()==="delivered").length;
@@ -1381,7 +1698,9 @@
     $("#myDeliveredCount").textContent=delivered.toLocaleString("en-IN");
     $("#myAverageOrder").textContent=money(activeOrders.length?totalValue/activeOrders.length:0);
     $("#myDashboardOrderRange").textContent=orders.length+" "+(orders.length===1?"order":"orders");
-    $("#myDashboardIntro").textContent=phone?"Showing orders matched to the mobile number ending in "+phone.slice(-4)+".":"Save the mobile number you use at checkout in your Profile to see your order history.";
+    $("#myDashboardIntro").textContent=accountOrders
+      ? "Your order history is synced to your FoodieHub account."
+      : (phone?"Showing orders matched to the mobile number ending in "+phone.slice(-4)+".":"Save the mobile number you use at checkout in your Profile to see your order history.");
     const list=$("#myOrdersList");
     if(!phone){
       list.innerHTML='<div class="my-orders-empty"><span aria-hidden="true">◉</span><h4>One quick profile step.</h4><p>Add the same mobile number you use at checkout. We use it to match your orders on this browser.</p><button class="button button-primary" type="button" data-edit-my-profile>Update my profile ↗</button></div>';
@@ -1396,9 +1715,20 @@
         return '<article class="my-order-card"><div class="my-order-top"><div><strong>'+escapeHTML(number)+'</strong><small>'+escapeHTML(customerOrderDate(order))+'</small></div><span class="my-order-status '+status.kind+'">'+escapeHTML(status.label)+'</span></div><div class="my-order-bottom"><div><strong>'+quantity+' '+(quantity===1?"item":"items")+'</strong><small>'+escapeHTML(preview+more)+'</small></div><strong class="my-order-value">'+money(order.total||0)+'</strong></div><div class="my-order-actions"><button type="button" data-track-my-order="'+escapeHTML(number)+'">Track this order <span aria-hidden="true">↗</span></button></div></article>';
       }).join("")+(orders.length>8?'<p class="my-orders-more">Showing the latest 8 of '+orders.length+' orders.</p>':"");
     }
-    $("#myDashboardNote").textContent="Demo history is matched against your saved mobile number and stays in this browser only. It is not synced across devices or accounts.";
+    $("#myDashboardNote").textContent=accountOrders
+      ? "Your account order history is stored by FoodieHub and available when you sign in on another device."
+      : "Demo history is matched against your saved mobile number and stays in this browser only. It is not synced across devices or accounts.";
   }
-  function openMyDashboard(){renderMyDashboard();openDialog("myDashboardDialog");}
+  async function openMyDashboard(){
+    if(state.backendOnline && state.auth && state.auth.user){
+      try{
+        const result=await request("/api/auth/orders");
+        state.orders=Array.isArray(result.orders)?result.orders.map(order=>({...order,phone:state.auth.user.phone})):[];
+      }catch(error){showToast(error.message||"Your order history could not be refreshed.","error");}
+    }
+    renderMyDashboard();
+    openDialog("myDashboardDialog");
+  }
   function handleMyDashboardAction(event){
     const edit=event.target.closest("[data-edit-my-profile]");
     if(edit){closeDialog("myDashboardDialog");openProfile();return;}
@@ -1555,6 +1885,12 @@
     if (mobileTrackOrder) mobileTrackOrder.addEventListener("click", () => openTracking());
     $("#openProfile").addEventListener("click", openProfile);
     $("#profileForm").addEventListener("submit", saveProfile);
+    $("#customerLoginForm").addEventListener("submit", handleCustomerLogin);
+    $("#customerRegisterForm").addEventListener("submit", handleCustomerRegister);
+    $("#authSignInTab").addEventListener("click",()=>showAccountAuthMode("login"));
+    $("#authRegisterTab").addEventListener("click",()=>showAccountAuthMode("register"));
+    $("#savedAddressesList").addEventListener("click",handleSavedAddressClick);
+    $("#accountLogoutButton").addEventListener("click",handleCustomerLogout);
     ["checkoutForm","profileForm"].forEach(formId=>{
       const form=$("#"+formId);
       const previewId=formId==="checkoutForm"?"checkoutAddressPreview":"profileAddressPreview";
@@ -1592,7 +1928,7 @@
       const order = state.orders.find(item => normalizeOrderNumber(item) === selected);
       $("#trackingForm").elements.namedItem("orderNumber").value = selected;
       $("#trackingForm").elements.namedItem("phone").value =
-        normalizeOrderPhone(order) || normalizeOrderPhone({ phone: state.profile.phone });
+        normalizeOrderPhone(order) || normalizeOrderPhone({ phone: state.profile.phone || (state.auth.user && state.auth.user.phone) });
       $("#trackingError").textContent = "";
       $("#trackingResult").hidden = true;
     });
@@ -1692,7 +2028,9 @@
     const storyImage=$(".story-image img");
     if(storyImage)protectFoodPhoto(storyImage,{name:"Fresh from the kitchen",category:"Indian"});
     try {
-      await Promise.all([checkBackend()]);
+      await checkBackend();
+      await restoreCustomerSession();
+      renderAccountUI();
       state.menu = await loadMenu();
       renderCart();
       renderCategories();

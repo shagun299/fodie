@@ -268,6 +268,33 @@ async function runViewport(browser, viewport) {
       await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-page.png") });
     }
 
+    await page.locator("#openProfile").click();
+    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
+    const accountUi = await page.evaluate(() => {
+      const dialog = document.querySelector("#profileDialog");
+      const rect = dialog.getBoundingClientRect();
+      return {
+        fitsViewport: rect.left >= -1 && rect.right <= window.innerWidth + 1,
+        dialogWidth: rect.width,
+        viewportWidth: window.innerWidth,
+        hasSignIn: Boolean(document.querySelector("#customerLoginForm input[name=email]") &&
+          document.querySelector("#customerLoginForm input[name=password]")),
+        hasRegistration: Boolean(document.querySelector("#customerRegisterForm input[name=name]") &&
+          document.querySelector("#customerRegisterForm input[name=phone]") &&
+          document.querySelector("#customerRegisterForm input[name=password]")),
+        hasSavedAddressList: Boolean(document.querySelector("#savedAddressesPanel #savedAddressesList")),
+        formFits: (() => {
+          const form = document.querySelector("#profileForm");
+          return !form || form.scrollWidth <= form.clientWidth + 1;
+        })()
+      };
+    });
+    check(accountUi.fitsViewport && accountUi.formFits, viewport, "account-dialog-fits-mobile", JSON.stringify(accountUi));
+    check(accountUi.hasSignIn && accountUi.hasRegistration && accountUi.hasSavedAddressList,
+      viewport, "customer-account-controls-render", JSON.stringify(accountUi));
+    if (viewport.width === 390) await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-account.png") });
+    await page.locator('[data-close-dialog="profileDialog"]').click();
+
     const scrollFrameMetrics = await page.evaluate(async () => {
       const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
       const start = performance.now();
