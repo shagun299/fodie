@@ -126,7 +126,7 @@ async function runViewport(browser, viewport) {
         const r = element.getBoundingClientRect();
         const style = getComputedStyle(element);
         return { width:r.width, height:r.height, display:style.display, direction:style.flexDirection,
-          text:element.innerText.trim().replace(/\\s+/g," ") };
+          text:element.innerText.trim().replace(/\s+/g," ") };
       }),
       typography: (() => {
         const body = getComputedStyle(document.body);
@@ -139,7 +139,7 @@ async function runViewport(browser, viewport) {
           heroSize:hero ? parseFloat(getComputedStyle(hero).fontSize) : 0,
           heroDescriptionSize:heroDescription ? parseFloat(getComputedStyle(heroDescription).fontSize) : 0,
           dishDescriptionSize:dishDescription ? parseFloat(getComputedStyle(dishDescription).fontSize) : 0,
-          heroText:hero ? hero.innerText.replace(/\\s+/g," ").trim() : ""
+          heroText:hero ? hero.innerText.replace(/\s+/g," ").trim() : ""
         };
       })()
     }));
