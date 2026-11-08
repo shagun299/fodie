@@ -244,7 +244,7 @@
     if(!form||!preview)return;
     const details=readAddressDetails(new FormData(form));
     const formatted=formatDeliveryAddress(details);
-    preview.textContent=formatted||"Your complete delivery address will appear here as you fill in the details.";
+    preview.textContent=formatted||"Your delivery address will appear here as you complete the form.";
     preview.classList.toggle("is-filled",Boolean(formatted));
   }
 
@@ -288,7 +288,7 @@
     saveStore(STORAGE.profile, state.profile);
     renderProfile();
     $("#profileError").textContent = "";
-    $("#profileMessage").textContent = "Saved on this browser. Your next checkout can use these details.";
+    $("#profileMessage").textContent = "Profile saved. Your next checkout can use these details.";
     showToast("Your profile and delivery address have been saved.");
   }
 
@@ -810,7 +810,7 @@
       ? "Your payment was verified securely and your order is confirmed."
       : (state.backendOnline
         ? "Your order has been saved by FoodieHub. Keep this number handy for updates."
-        : "This demo order is saved in this browser only. Connect the backend to save orders centrally.");
+        : "This demo order is stored on this device only. Connect the backend to share order data across devices.");
     $("#successMessage").textContent = (order.message || defaultMessage) + (pointsEarned ? " You earned " + pointsEarned + " Foodie Points!" : "");
     openDialog("successDialog");
   }
@@ -1336,7 +1336,7 @@
     state.adminKey="";state.adminSource="demo";
     state.adminOrders=state.orders.map(order=>({...order,customer_name:(order.customer&&order.customer.name)||"This browser",order_number:order.orderNumber,total:order.total}));
     state.adminAnalytics=buildDemoAdminAnalytics(state.adminOrders);
-    $("#adminConnection").textContent="Demo mode · analysing orders saved in this browser only. Connect the hosted backend to see the complete shared order history.";
+    $("#adminConnection").textContent="Demo mode · showing orders saved on this device only. Connect the hosted backend to view shared order history.";
     renderAdminDashboard();
   }
   async function updateAdminOrder(button){
@@ -1533,7 +1533,7 @@
       state.adminSource="demo";
       state.adminOrders=state.orders.map(order=>({...order,customer_name:(order.customer&&order.customer.name)||"This browser",order_number:order.orderNumber,total:order.total}));
       state.adminAnalytics=buildDemoAdminAnalytics(state.adminOrders);
-      $("#adminConnection").textContent="LOCAL DEMO · Showing orders saved in this browser only. Connect a hosted backend to see orders across all customers and devices.";
+      $("#adminConnection").textContent="LOCAL DEMO · Showing orders saved on this device only. Connect the hosted backend to view shared orders.";
       renderAdminDashboard();
     }
     openDialog("adminDialog");
@@ -1632,7 +1632,7 @@
         const firstCustomize=$("#menuGrid [data-customize]")[0];
         if(firstCustomize)firstCustomize.focus({preventScroll:true});
       },450);
-      showToast("Choose a dish, then select View details & customise to build your plate.");
+      showToast("Select a dish, then choose View details & customise to set your portion and add-ons.");
     });
     $("#openMyDashboard").addEventListener("click", openMyDashboard);
     $("#myDashboardEditProfile").addEventListener("click",()=>{closeDialog("myDashboardDialog");openProfile();});
