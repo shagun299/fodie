@@ -173,6 +173,23 @@ async function runViewport(browser, viewport) {
     check(pageGeometry.visibleBrandLogos === 1, viewport, "exactly-one-theme-logo-visible",
       String(pageGeometry.visibleBrandLogos));
     check(pageGeometry.headerCartBadgeContained, viewport, "header-cart-count-stays-inside-button");
+
+    await page.locator("#themeToggle").click();
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+    const darkThemeGeometry = await page.evaluate(() => ({
+      theme:document.documentElement.dataset.theme,
+      lightLogoDisplay:getComputedStyle(document.querySelector(".brand-logo-light")).display,
+      darkLogoDisplay:getComputedStyle(document.querySelector(".brand-logo-dark")).display,
+      dockVisible:getComputedStyle(document.querySelector("#mobileDock")).display !== "none"
+    }));
+    check(darkThemeGeometry.theme === "dark" && darkThemeGeometry.lightLogoDisplay === "none" &&
+      darkThemeGeometry.darkLogoDisplay !== "none" && darkThemeGeometry.dockVisible,
+      viewport, "dark-theme-shows-readable-logo-and-mobile-dock", JSON.stringify(darkThemeGeometry));
+    if (viewport.width === 390) {
+      await page.screenshot({ path:path.join(OUT_DIR,"mobile-390-dark-home.png") });
+    }
+    await page.locator("#themeToggle").click();
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
     check(pageGeometry.typography.bodyFont.includes("Manrope"), viewport, "brand-font-loaded",
       pageGeometry.typography.bodyFont);
     check(pageGeometry.typography.heroFont.includes("Manrope") &&
@@ -230,6 +247,9 @@ async function runViewport(browser, viewport) {
     });
     check(cardBadgeGeometry.contained, viewport, "discount-badge-contained-in-photo", JSON.stringify(cardBadgeGeometry));
     check(!cardBadgeGeometry.overlapsHeart, viewport, "discount-badge-does-not-hit-favourite", JSON.stringify(cardBadgeGeometry));
+    if (viewport.width === 390) {
+      await firstCard.screenshot({ path:path.join(OUT_DIR,"mobile-390-menu-card.png") });
+    }
 
     await page.locator("#menuGrid [data-add]").first().click();
     await page.locator("#mobileOpenCart").click();
