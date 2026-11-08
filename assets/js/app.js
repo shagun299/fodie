@@ -260,6 +260,15 @@
       state.profile.addressDetails = state.addresses[0].address;
       state.profile.address = formatDeliveryAddress(state.addresses[0].address);
     }
+    const profileForm = $("#profileForm");
+    if (profileForm) {
+      ["name", "phone", "email"].forEach(field => {
+        const control = profileForm.elements.namedItem(field);
+        if (control) control.value = state.profile[field] || "";
+      });
+      fillAddressFields(profileForm, state.profile.addressDetails || {});
+      updateAddressPreview("profileForm", "profileAddressPreview");
+    }
     saveStore(STORAGE.profile, state.profile);
     saveStore(STORAGE.auth, state.auth);
     renderProfile();
