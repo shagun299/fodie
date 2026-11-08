@@ -17,6 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./assets/css/styles.css?v=account-premium-v27-20261108">
   <link rel="stylesheet" href="./assets/css/apple-ui.css?v=account-premium-v27-1-20261108">
+  <link rel="stylesheet" href="./assets/css/mobile-experience.css?v=mobile-v28-20261108">
   <script src="./assets/js/config.js"></script>
   <script defer src="./assets/js/app.js?v=account-premium-v27-20261108"></script>
   <script type="application/ld+json">
@@ -40,7 +41,8 @@
   <header class="site-header">
     <div class="header-inner page-width">
       <a class="brand" href="#" aria-label="FoodieHub home">
-        <img src="./FoodieHub_Logo_Light.svg" alt="FoodieHub — Good food, good mood" width="210" height="52">
+        <img class="brand-logo-light" src="./FoodieHub_Logo_Light.svg" alt="FoodieHub — Good food, good mood" width="210" height="52">
+        <img class="brand-logo-dark" src="./FoodieHub_Logo_Dark.svg" alt="" width="210" height="52" aria-hidden="true">
       </a>
 
       <nav class="desktop-nav" aria-label="Main navigation">
@@ -71,26 +73,9 @@
     </div>
   </header>
 
+  <div class="mobile-page-scroll" id="mobilePageScroll">
   <main>
-    <section class="quick-access-strip page-width" id="quickAccess" aria-label="Your FoodieHub shortcuts">
-      <div class="quick-access-copy">
-        <span class="drawer-kicker">YOUR ORDERS</span>
-        <h2>Orders and delivery updates.</h2>
-        <p>Track a current order or review your order history.</p>
-      </div>
-      <div class="quick-access-actions">
-        <button class="quick-access-card quick-access-track" id="trackOrderHome" type="button">
-          <span class="quick-access-icon" aria-hidden="true">⌁</span>
-          <span class="quick-access-label"><strong>Track order</strong><small>View delivery status</small></span>
-          <span class="quick-access-arrow" aria-hidden="true">↗</span>
-        </button>
-        <button class="quick-access-card quick-access-my" id="openMyDashboard" type="button">
-          <span class="quick-access-icon" aria-hidden="true">◫</span>
-          <span class="quick-access-label"><strong>My Dashboard</strong><small>Order history and spending</small></span>
-          <span class="quick-access-arrow" aria-hidden="true">↗</span>
-        </button>
-      </div>
-    </section>
+
 
     <section class="hero-section page-width" aria-labelledby="heroTitle">
       <div class="hero-copy">
@@ -130,6 +115,26 @@
       <div><span class="promise-icon">♡</span><span>Quality ingredients</span></div>
       <div><span class="promise-icon">✦</span><span>Full of flavour</span></div>
       <div><span class="promise-icon">⌁</span><span>Simple checkout</span></div>
+    </section>
+
+    <section class="quick-access-strip page-width" id="quickAccess" aria-label="Your FoodieHub shortcuts">
+      <div class="quick-access-copy">
+        <span class="drawer-kicker">YOUR ORDERS</span>
+        <h2>Orders and delivery updates.</h2>
+        <p>Track a current order or review your order history.</p>
+      </div>
+      <div class="quick-access-actions">
+        <button class="quick-access-card quick-access-track" id="trackOrderHome" type="button">
+          <span class="quick-access-icon" aria-hidden="true">⌁</span>
+          <span class="quick-access-label"><strong>Track order</strong><small>View delivery status</small></span>
+          <span class="quick-access-arrow" aria-hidden="true">↗</span>
+        </button>
+        <button class="quick-access-card quick-access-my" id="openMyDashboard" type="button">
+          <span class="quick-access-icon" aria-hidden="true">◫</span>
+          <span class="quick-access-label"><strong>My Dashboard</strong><small>Order history and spending</small></span>
+          <span class="quick-access-arrow" aria-hidden="true">↗</span>
+        </button>
+      </div>
     </section>
 
     <section class="offer-section page-width" id="offers" aria-label="FoodieHub offers and deals">
@@ -272,7 +277,7 @@
   <footer class="site-footer">
     <div class="footer-main page-width">
       <div class="footer-brand">
-        <a href="#" aria-label="FoodieHub home"><img src="./FoodieHub_Logo_Light.svg" alt="FoodieHub" width="190" height="47"></a>
+        <a href="#" aria-label="FoodieHub home"><img class="footer-logo-light" src="./FoodieHub_Logo_Light.svg" alt="FoodieHub" width="190" height="47"><img class="footer-logo-dark" src="./FoodieHub_Logo_Dark.svg" alt="" width="190" height="47" aria-hidden="true"></a>
         <p>Explore the menu, customise your order and check out with clear pricing.</p>
       </div>
       <div class="footer-column"><h3>Explore</h3><a href="#menu">The menu</a><a href="#offers">Today's offers</a><a href="#about">Our story</a></div>
@@ -294,6 +299,7 @@
       <span class="footer-photo-credit">Food photography: <a href="https://unsplash.com/license" target="_blank" rel="noopener">Unsplash</a> &amp; <a href="https://www.pexels.com/license/" target="_blank" rel="noopener">Pexels</a></span>
     </div>
   </footer>
+  </div>
 
   <div class="cart-backdrop" id="cartBackdrop"></div>
   <aside class="cart-drawer" id="cartDrawer" aria-label="Your shopping bag" aria-hidden="true">
