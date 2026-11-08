@@ -116,6 +116,24 @@ async function runViewport(browser, viewport) {
       documentWidth: document.documentElement.scrollWidth,
       bodyWidth: document.body.scrollWidth,
       dockVisible: getComputedStyle(document.querySelector("#mobileDock")).display !== "none",
+      scrollShell: (() => {
+        const content = document.querySelector("#mobilePageScroll")?.getBoundingClientRect();
+        const dock = document.querySelector("#mobileDock")?.getBoundingClientRect();
+        return {
+          contentBottom:content ? Math.round(content.bottom) : null,
+          dockTop:dock ? Math.round(dock.top) : null,
+          contentHeight:content ? Math.round(content.height) : 0,
+          separated:Boolean(content && dock && Math.abs(content.bottom - dock.top) <= 1)
+        };
+      })(),
+      visibleBrandLogos: Array.from(document.querySelectorAll(".brand img"))
+        .filter(img => getComputedStyle(img).display !== "none").length,
+      headerCartBadgeContained: (() => {
+        const cart = document.querySelector("#openCart")?.getBoundingClientRect();
+        const badge = document.querySelector("#cartCount")?.getBoundingClientRect();
+        return Boolean(cart && badge && badge.width > 0 && badge.left >= cart.left - 1 &&
+          badge.right <= cart.right + 1 && badge.top >= cart.top - 1 && badge.bottom <= cart.bottom + 1);
+      })(),
       menuImage: document.querySelector("#menuGrid .dish-image")?.getAttribute("src") || "",
       heroButton: (() => {
         const button = document.querySelector(".hero-actions .button");
@@ -150,6 +168,11 @@ async function runViewport(browser, viewport) {
     check(pageGeometry.documentWidth <= pageGeometry.viewportWidth + 1, viewport, "no-horizontal-page-overflow",
       "viewport=" + pageGeometry.viewportWidth + ", document=" + pageGeometry.documentWidth + ", body=" + pageGeometry.bodyWidth);
     check(pageGeometry.dockVisible, viewport, "mobile-dock-visible");
+    check(pageGeometry.scrollShell.separated && pageGeometry.scrollShell.contentHeight > 200,
+      viewport, "mobile-dock-does-not-cover-page-content", JSON.stringify(pageGeometry.scrollShell));
+    check(pageGeometry.visibleBrandLogos === 1, viewport, "exactly-one-theme-logo-visible",
+      String(pageGeometry.visibleBrandLogos));
+    check(pageGeometry.headerCartBadgeContained, viewport, "header-cart-count-stays-inside-button");
     check(pageGeometry.typography.bodyFont.includes("Manrope"), viewport, "brand-font-loaded",
       pageGeometry.typography.bodyFont);
     check(pageGeometry.typography.heroFont.includes("Manrope") &&
@@ -195,13 +218,18 @@ async function runViewport(browser, viewport) {
     await page.waitForTimeout(250);
 
     const firstCard = page.locator("#menuGrid .dish-card").first();
-    const badgeInsideImage = await firstCard.evaluate(card => {
+    const cardBadgeGeometry = await firstCard.evaluate(card => {
       const image = card.querySelector(".dish-image-wrap")?.getBoundingClientRect();
       const badge = card.querySelector(".discount-badge")?.getBoundingClientRect();
-      return Boolean(image && badge && badge.left >= image.left - 1 && badge.right <= image.right + 1 &&
+      const heart = card.querySelector(".dish-favourite")?.getBoundingClientRect();
+      const contained = Boolean(image && badge && badge.left >= image.left - 1 && badge.right <= image.right + 1 &&
         badge.top >= image.top - 1 && badge.bottom <= image.bottom + 1);
+      const overlapsHeart = Boolean(badge && heart && badge.left < heart.right && badge.right > heart.left &&
+        badge.top < heart.bottom && badge.bottom > heart.top);
+      return { contained, overlapsHeart, badgeWidth:badge?.width || 0, imageWidth:image?.width || 0 };
     });
-    check(badgeInsideImage, viewport, "discount-badge-contained-in-photo");
+    check(cardBadgeGeometry.contained, viewport, "discount-badge-contained-in-photo", JSON.stringify(cardBadgeGeometry));
+    check(!cardBadgeGeometry.overlapsHeart, viewport, "discount-badge-does-not-hit-favourite", JSON.stringify(cardBadgeGeometry));
 
     await page.locator("#menuGrid [data-add]").first().click();
     await page.locator("#mobileOpenCart").click();
@@ -307,7 +335,8 @@ async function runViewport(browser, viewport) {
     await page.locator('[data-close-dialog="profileDialog"]').click();
 
     const scrollFrameMetrics = await page.evaluate(async () => {
-      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      const scroller = document.querySelector("#mobilePageScroll");
+      const maxScroll = scroller ? Math.max(0, scroller.scrollHeight - scroller.clientHeight) : 0;
       const start = performance.now();
       let last = start;
       const frames = [];
@@ -316,12 +345,13 @@ async function runViewport(browser, viewport) {
           frames.push(now - last);
           last = now;
           const progress = Math.min(1, (now - start) / 1200);
-          window.scrollTo(0, maxScroll * progress);
+          if (scroller) scroller.scrollTop = maxScroll * progress;
           if (progress < 1) requestAnimationFrame(tick);
           else {
             const sorted = frames.slice().sort((a,b) => a-b);
             resolve({
               frames:frames.length,
+              scrollRangePx:maxScroll,
               p95FrameMs:sorted.length ? Math.round(sorted[Math.floor((sorted.length - 1) * .95)] * 10) / 10 : null,
               maxFrameMs:sorted.length ? Math.round(sorted[sorted.length - 1] * 10) / 10 : null
             });
