@@ -1490,35 +1490,6 @@
       resumeOfferRotation();
     }
   }
-  function showWelcomeIntro(){
-    const overlay=$("#welcomeIntro");
-    if(!overlay)return;
-    try{
-      if(sessionStorage.getItem("foodiehub.welcome.seen")==="1")return;
-      sessionStorage.setItem("foodiehub.welcome.seen","1");
-    }catch(_){}
-    overlay.hidden=false;
-    overlay.setAttribute("aria-hidden","false");
-    document.body.classList.add("welcome-open");
-    let finished=false;
-    let timer=null;
-    const hide=()=>{
-      if(finished)return;
-      finished=true;
-      if(timer)window.clearTimeout(timer);
-      overlay.classList.add("is-leaving");
-      document.body.classList.remove("welcome-open");
-      window.setTimeout(()=>{
-        overlay.hidden=true;
-        overlay.setAttribute("aria-hidden","true");
-        overlay.classList.remove("is-leaving");
-      },360);
-    };
-    $("#skipWelcome").addEventListener("click",hide,{once:true});
-    const reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    timer=window.setTimeout(hide,reduced?1200:2600);
-  }
-
   function openTeamDashboard(){
     $("#adminError").textContent="";
     if(state.backendOnline){
@@ -1714,7 +1685,6 @@
     $("#currentYear").textContent = new Date().getFullYear();
     bindEvents();
     initOfferCarousel();
-    showWelcomeIntro();
     renderProfile();
     renderCart();
     const heroImage=$(".hero-image-frame img");
