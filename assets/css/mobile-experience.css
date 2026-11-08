@@ -1,0 +1,295 @@
+/* FoodieHub mobile experience V28
+   Native app-like viewport: content scrolls in its own lane, while header and
+   quick navigation stay in separate layout rows. No fixed overlay on content. */
+
+/* The original wordmark has different text contrast for light and dark themes. */
+.brand-logo-light,.footer-logo-light { display:block!important; }
+.brand-logo-dark,.footer-logo-dark { display:none!important; }
+:root[data-theme="dark"] .brand-logo-light,
+:root[data-theme="dark"] .footer-logo-light { display:none!important; }
+:root[data-theme="dark"] .brand-logo-dark,
+:root[data-theme="dark"] .footer-logo-dark { display:block!important; }
+
+@media (max-width:760px) {
+  html,body {
+    width:100%!important;
+    height:100%!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+  body {
+    display:flex!important;
+    flex-direction:column!important;
+    height:100vh!important;
+    height:100dvh!important;
+    min-height:0!important;
+    padding:0!important;
+  }
+
+  .announcement-bar { flex:0 0 auto!important; }
+  .site-header {
+    position:relative!important;
+    top:auto!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    z-index:30!important;
+  }
+
+  /* This is the only page scroll area. The dock occupies its own row below it. */
+  .mobile-page-scroll {
+    display:block!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+    width:100%!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    scroll-behavior:smooth;
+  }
+  .mobile-page-scroll::-webkit-scrollbar { display:none!important; }
+  .mobile-page-scroll>main { min-height:0!important; overflow:visible!important; padding-bottom:14px!important; }
+  .mobile-page-scroll>.site-footer { margin-top:12px!important; }
+  #menu,#offers { scroll-margin-top:16px!important; }
+
+  .header-inner {
+    display:flex!important;
+    align-items:center!important;
+    gap:7px!important;
+    min-height:62px!important;
+    padding:7px 11px!important;
+  }
+  .brand { flex:1 1 auto!important; min-width:0!important; display:flex!important; align-items:center!important; }
+  .brand img {
+    display:block;
+    width:clamp(90px,28vw,124px)!important;
+    max-width:100%!important;
+    height:auto!important;
+  }
+  .header-actions { display:flex!important; flex:0 0 auto!important; gap:4px!important; margin-left:auto!important; }
+  .icon-button,.profile-trigger,.cart-trigger {
+    display:grid!important;
+    flex:0 0 36px!important;
+    place-items:center!important;
+    width:36px!important;
+    min-width:36px!important;
+    height:38px!important;
+    min-height:38px!important;
+    padding:0!important;
+    border-radius:50%!important;
+  }
+  .profile-trigger-label,.cart-trigger-label { display:none!important; }
+  .cart-trigger { position:relative!important; overflow:visible!important; }
+  .cart-count {
+    position:absolute!important;
+    top:1px!important;
+    right:1px!important;
+    z-index:4!important;
+    min-width:16px!important;
+    height:16px!important;
+    padding:0 3px!important;
+    border:2px solid var(--card)!important;
+    border-radius:99px!important;
+    box-sizing:border-box!important;
+    font-size:8px!important;
+    line-height:1!important;
+  }
+
+  /* Offer content remains a clean vertical stack at phone widths. */
+  .offer-section { padding-top:34px!important; }
+  .offer-carousel,.offer-carousel-track { width:100%!important; min-width:0!important; }
+  .offer-panel {
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:16px!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:0!important;
+    padding:21px 17px!important;
+    overflow:hidden!important;
+  }
+  .offer-copy { width:100%!important; max-width:none!important; min-width:0!important; }
+  .offer-copy h2 { font-size:clamp(27px,7vw,35px)!important; line-height:1.12!important; overflow-wrap:anywhere!important; }
+  .offer-copy p { font-size:12px!important; line-height:1.6!important; }
+  .offer-art { align-self:center!important; flex:0 0 auto!important; margin:0 auto 3px!important; }
+
+  /* One readable menu card per row, with clear separation between photo and actions. */
+  .menu-section { padding-top:40px!important; }
+  .dish-grid {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:14px!important;
+  }
+  .dish-card {
+    display:grid!important;
+    grid-template-columns:minmax(98px,31%) minmax(0,1fr)!important;
+    align-items:stretch!important;
+    width:100%!important;
+    min-width:0!important;
+    overflow:hidden!important;
+    border-radius:19px!important;
+    gap:0!important;
+  }
+  .dish-image-wrap {
+    position:relative!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:178px!important;
+    align-self:stretch!important;
+    overflow:hidden!important;
+  }
+  .dish-image {
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+  }
+  .discount-badge {
+    position:absolute!important;
+    top:8px!important;
+    left:7px!important;
+    z-index:3!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:max-content!important;
+    max-width:calc(100% - 51px)!important;
+    min-width:0!important;
+    padding:4px 5px!important;
+    border-radius:999px!important;
+    box-sizing:border-box!important;
+    font-size:8px!important;
+    line-height:1.15!important;
+    letter-spacing:.025em!important;
+    text-align:center!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+  .dish-favourite {
+    position:absolute!important;
+    top:7px!important;
+    right:7px!important;
+    z-index:4!important;
+    width:34px!important;
+    min-width:34px!important;
+    height:34px!important;
+    padding:0!important;
+  }
+  .diet-indicator { z-index:2!important; }
+  .dish-content {
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:flex-start!important;
+    min-width:0!important;
+    gap:0!important;
+    padding:12px!important;
+  }
+  .dish-topline { display:flex!important; flex-wrap:wrap!important; align-items:center!important; gap:4px 8px!important; min-width:0!important; }
+  .dish-category,.dish-time { font-size:9px!important; line-height:1.3!important; }
+  .dish-content h3 {
+    min-width:0!important;
+    margin:7px 0 5px!important;
+    font-size:14px!important;
+    line-height:1.3!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+  .dish-description {
+    min-width:0!important;
+    min-height:0!important;
+    margin:0 0 8px!important;
+    font-size:11px!important;
+    line-height:1.45!important;
+    display:-webkit-box!important;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden!important;
+  }
+  .customize-link {
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:39px!important;
+    margin:0 0 8px!important;
+    padding:7px 9px!important;
+    border-radius:10px!important;
+    font-size:10px!important;
+    line-height:1.3!important;
+    white-space:normal!important;
+    text-align:left!important;
+  }
+  .dish-bottom {
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:7px!important;
+    width:100%!important;
+    min-width:0!important;
+    margin-top:auto!important;
+    padding-top:7px!important;
+  }
+  .dish-prices { display:flex!important; flex-wrap:wrap!important; align-items:baseline!important; gap:3px 6px!important; min-width:0!important; }
+  .dish-prices strong { font-size:15px!important; line-height:1.2!important; white-space:nowrap!important; }
+  .dish-prices del { font-size:10px!important; white-space:nowrap!important; }
+  .dish-card .add-button {
+    flex:0 0 auto!important;
+    min-width:70px!important;
+    min-height:40px!important;
+    padding:7px 10px!important;
+    border-radius:12px!important;
+    font-size:11px!important;
+    white-space:nowrap!important;
+  }
+  .dish-badge-line { margin-top:7px!important; font-size:9px!important; line-height:1.35!important; }
+
+  /* Bottom navigation is a real layout row, not a floating layer over the page. */
+  .mobile-dock {
+    position:relative!important;
+    inset:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    display:grid!important;
+    flex:0 0 auto!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    gap:4px!important;
+    width:100%!important;
+    max-width:none!important;
+    min-height:68px!important;
+    margin:0!important;
+    padding:6px 12px calc(6px + env(safe-area-inset-bottom))!important;
+    transform:none!important;
+    border-radius:17px 17px 0 0!important;
+    border-bottom:0!important;
+    background:var(--card)!important;
+    box-shadow:0 -8px 25px rgba(0,0,0,.18)!important;
+    z-index:80!important;
+    isolation:isolate!important;
+  }
+  .mobile-dock-item { min-width:0!important; min-height:54px!important; }
+  body.drawer-open .mobile-dock { pointer-events:none!important; }
+  body.drawer-open .mobile-page-scroll { overflow:hidden!important; }
+
+  .site-dialog[open] { max-width:calc(100vw - 16px)!important; }
+}
+
+@media (max-width:390px) {
+  .brand img { width:clamp(88px,27vw,104px)!important; }
+  .icon-button,.profile-trigger,.cart-trigger { flex-basis:34px!important; width:34px!important; min-width:34px!important; }
+  .dish-card { grid-template-columns:minmax(92px,31%) minmax(0,1fr)!important; }
+  .dish-content { padding:10px!important; }
+  .dish-card .add-button { min-width:64px!important; padding-inline:8px!important; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .mobile-page-scroll { scroll-behavior:auto!important; }
+}
