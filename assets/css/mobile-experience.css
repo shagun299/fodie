@@ -284,3 +284,75 @@
   html{scroll-behavior:auto!important}
   .dish-card,.dish-image,.mobile-dock-item,.offer-slide{transition:none!important;animation:none!important}
 }
+
+
+
+/* MOBILE QA REPAIR V31
+   Keep the scroll shell in the layout (not display:contents), place the dock
+   in its own bottom row, and win the logo cascade against .brand img. */
+@media(max-width:760px){
+  html,body{
+    width:100%!important;
+    height:100%!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+  body{
+    display:flex!important;
+    flex-direction:column!important;
+    height:100vh!important;
+    height:100dvh!important;
+    min-height:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  .announcement-bar{flex:0 0 auto!important}
+  .site-header{
+    position:relative!important;
+    top:auto!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+  }
+  .mobile-page-scroll{
+    display:block!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+    width:100%!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+    scrollbar-width:none!important;
+  }
+  .mobile-page-scroll::-webkit-scrollbar{display:none!important}
+  .mobile-page-scroll>main{min-height:0!important;overflow:visible!important;padding-bottom:14px!important}
+  .mobile-page-scroll>.site-footer{margin-top:12px!important}
+  .mobile-dock,#mobileDock{
+    position:relative!important;
+    inset:auto!important;
+    display:grid!important;
+    flex:0 0 auto!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    gap:4px!important;
+    width:100%!important;
+    max-width:none!important;
+    min-height:68px!important;
+    margin:0!important;
+    padding:6px 12px calc(6px + env(safe-area-inset-bottom))!important;
+    transform:none!important;
+    border-radius:17px 17px 0 0!important;
+    z-index:80!important;
+  }
+  .mobile-dock-item{min-width:0!important;min-height:54px!important}
+  body.drawer-open .mobile-dock,body.drawer-open #mobileDock{opacity:0!important;pointer-events:none!important}
+  body.drawer-open .mobile-page-scroll{overflow:hidden!important}
+  .brand img.brand-logo-light{display:block!important}
+  .brand img.brand-logo-dark{display:none!important}
+  :root[data-theme="dark"] .brand img.brand-logo-light{display:none!important}
+  :root[data-theme="dark"] .brand img.brand-logo-dark{display:block!important}
+  .dish-description{
+    font-size:11.5px!important;
+    line-height:1.4!important;
+  }
+}
