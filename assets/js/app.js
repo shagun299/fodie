@@ -331,7 +331,7 @@
     const grid = $("#menuGrid");
     const items = visibleMenu();
     $("#menuCount").textContent = items.length;
-    $("#menuStatus").textContent = state.onlyFavourites ? "Your saved favourites" : (state.query ? "Showing matches for “" + state.query + "”" : "A few good things to get you started");
+    $("#menuStatus").textContent = state.onlyFavourites ? "Your saved favourites" : (state.query ? "Results for “" + state.query + "”" : "Showing all menu items");
     $("#emptyMenu").hidden = items.length > 0;
 
     if (!items.length) {
@@ -429,7 +429,7 @@
   function customizerSizes(item) {
     const category = String(item.category || "").toLowerCase();
     const largePrice = category === "drinks" ? 30 : category === "desserts" ? 35 : category === "sides" ? 29 : 49;
-    return [{ name: "Regular", price: 0, note: "Classic portion" }, { name: category === "drinks" ? "Large" : category === "desserts" ? "Double treat" : "Large", price: largePrice, note: "A little more to love" }];
+    return [{ name: "Regular", price: 0, note: "Classic portion" }, { name: category === "drinks" ? "Large" : category === "desserts" ? "Double treat" : "Large", price: largePrice, note: "Larger portion" }];
   }
 
   function openDishDetails(id) {
@@ -508,7 +508,7 @@
       : [...state.favourites, id];
     saveStore(STORAGE.favourites, state.favourites);
     renderMenu();
-    showToast(state.favourites.includes(id) ? "Saved to your favourites." : "Removed from your favourites.");
+    showToast(state.favourites.includes(id) ? "Added to favourites." : "Removed from favourites.");
   }
 
   function addToCart(id, button) {
@@ -516,7 +516,7 @@
     saveStore(STORAGE.cart, state.cart);
     renderCart();
     animateAddToCart(button);
-    showToast("A delicious choice. Added to your bag!");
+    showToast("Item added to your bag.");
   }
 
   function animateAddToCart(button) {
@@ -642,16 +642,16 @@
     renderCheckoutReview(bill);
 
     if (bill.subtotal >= 499) {
-      $("#deliveryMessage").textContent = "Lovely. You've unlocked free delivery.";
+      $("#deliveryMessage").textContent = "Free delivery unlocked.";
       $("#deliveryProgress").classList.add("delivery-unlocked");
     } else {
-      $("#deliveryMessage").textContent = bill.subtotal ? "Add " + money(499 - bill.subtotal) + " more for free delivery." : "Add ₹499 worth of food for free delivery.";
+      $("#deliveryMessage").textContent = bill.subtotal ? "Add " + money(499 - bill.subtotal) + " more for free delivery." : "Add items worth ₹499 for free delivery.";
       $("#deliveryProgress").classList.remove("delivery-unlocked");
     }
 
     const container = $("#cartItems");
     if (!bill.lines.length) {
-      container.innerHTML = '<div class="cart-empty"><span class="cart-empty-icon">♡</span><h3>Your bag is taking a breather.</h3><p>Add something delicious and it will show up here.</p><button class="text-link" id="continueShopping" type="button">Explore the menu →</button></div>';
+      container.innerHTML = '<div class="cart-empty"><span class="cart-empty-icon">♡</span><h3>Your bag is empty.</h3><p>Add an item from the menu to get started.</p><button class="text-link" id="continueShopping" type="button">Browse menu →</button></div>';
       $("#continueShopping").addEventListener("click", closeCart);
     } else {
       container.innerHTML = bill.lines.map(item => (
@@ -706,7 +706,7 @@
     if (!coupons[code]) {
       state.pendingRewardRedemption = false;
       state.coupon = null;
-      $("#couponMessage").textContent = "That code doesn't look right. Try HUB50, FOOD25 or COMBO10, or redeem points in Rewards.";
+      $("#couponMessage").textContent = "Invalid offer code. Use HUB50, FOOD25 or COMBO10, or redeem your reward points.";
       $("#couponMessage").className = "coupon-message message-warning";
     } else if (calculateBill().subtotal < coupons[code].minimum) {
       state.pendingRewardRedemption = code === "REWARD25";
@@ -716,9 +716,9 @@
     } else {
       state.pendingRewardRedemption = code === "REWARD25";
       state.coupon = coupons[code];
-      $("#couponMessage").textContent = code + " applied. Your discount is ready.";
+      $("#couponMessage").textContent = code + " applied. Your order discount is active.";
       $("#couponMessage").className = "coupon-message message-success";
-      showToast("Offer applied. Enjoy the extra savings!");
+      showToast("Offer applied successfully.");
     }
     renderCart();
   }
@@ -727,11 +727,11 @@
     const button = $(".place-order-button");
     if (!button) return;
     const labels = {
-      razorpay: "Continue to secure payment →",
-      cod: "Place COD order →",
-      upi_at_door: "Place UPI-on-delivery order →"
+      razorpay: "Continue to secure payment",
+      cod: "Place COD order",
+      upi_at_door: "Place UPI on delivery order"
     };
-    button.textContent = labels[method] || "Choose a payment method →";
+    button.textContent = labels[method] || "Choose a payment method";
   }
 
   function renderPaymentAvailability() {
@@ -747,16 +747,16 @@
     if (onlineDescription) {
       onlineDescription.textContent = state.paymentGateway.enabled
         ? "UPI, cards, netbanking and more"
-        : "Not activated yet. Backend setup required.";
+        : "Unavailable. Complete the payment gateway setup on the server.";
     }
     note.textContent = state.paymentGateway.enabled
-      ? "Secure online checkout is active. Select Pay online securely to open the Razorpay payment window."
-      : "Online payment is not connected yet. COD and UPI on delivery place your order without opening a payment page.";
+      ? "Online payment is available. Select this option to continue to the secure payment window."
+      : "Online payment is unavailable. Choose Cash on Delivery or UPI on delivery to continue.";
   }
 
   function openCheckout() {
     if (!getCartLines().length) {
-      showToast("Your bag is empty. Add a dish before checkout.", "error");
+      showToast("Your bag is empty. Add an item before checkout.", "error");
       openCart();
       return;
     }
@@ -954,7 +954,7 @@
       paymentMethod
     };
     if (!payload.items.length) {
-      $("#checkoutError").textContent = "Your bag is empty. Add a dish before placing the order.";
+      $("#checkoutError").textContent = "Your bag is empty. Add an item before placing the order.";
       return;
     }
     const submit = $(".place-order-button");
@@ -1099,16 +1099,16 @@
       if (order && order.order) order = order.order;
       if (!order) {
         throw new Error(state.backendOnline
-          ? "No order matched those details. Check the order number and checkout mobile."
-          : "This order is not saved on this browser. Try the same browser and device used to place it.");
+          ? "No order matched those details. Check the order ID and mobile number."
+          : "This order is not saved on this device. Use the device where the order was placed.");
       }
 
       const canonicalNumber = normalizeOrderNumber(order) || orderNumber;
       const rawStatus = String(order.status || "confirmed").toLowerCase();
       const stages = [
         { key: "confirmed", label: "Order placed", detail: "We've received your order." },
-        { key: "preparing", label: "Preparing", detail: "The kitchen is working on it." },
-        { key: "out_for_delivery", label: "On the way", detail: "Your order is heading your way." },
+        { key: "preparing", label: "Preparing", detail: "Your order has been received and is being prepared." },
+        { key: "out_for_delivery", label: "On the way", detail: "Your order is out for delivery." },
         { key: "delivered", label: "Delivered", detail: "Enjoy every bite!" }
       ];
       const currentStage = rawStatus === "demo_saved" ? 0 : stages.findIndex(stage => stage.key === rawStatus);
@@ -1132,7 +1132,7 @@
         '<span class="tracking-status-dot' + (isCancelled ? ' is-cancelled' : '') + '"></span>' +
         '<span class="drawer-kicker">ORDER ' + escapeHTML(canonicalNumber) + '</span>' +
         '<h3>' + escapeHTML(statusLabel) + '</h3>' +
-        '<p>' + escapeHTML(order.message || "Your order details are up to date.") + '</p>' +
+        '<p>' + escapeHTML(order.message || "Order details updated.") + '</p>' +
         (isCancelled
           ? '<p class="tracking-cancelled">This order was cancelled. Please contact the team if you need help.</p>'
           : '<ol class="tracking-steps">' + stageMarkup + '</ol>') +
@@ -1155,9 +1155,9 @@
     try {
       if (state.backendOnline) {
         await request("/api/newsletter", { method: "POST", body: JSON.stringify({ email }) });
-        message.textContent = "You're on the list. Watch your inbox!";
+        message.textContent = "Thanks for your interest. Newsletter sign-ups are not stored in this demo.";
       } else {
-        message.textContent = "Thanks! This demo doesn't store newsletter sign-ups yet.";
+        message.textContent = "Newsletter sign-ups are unavailable in this demo.";
       }
       event.currentTarget.reset();
     } catch (error) {
@@ -1167,9 +1167,9 @@
 
 
   const SMART_COMBOS = [
-    { id:"house",title:"The House Favourite",subtitle:"A classic burger-night trio",ids:["truffle-mushroom-burger","classic-masala-fries","mint-lime-cooler"],tag:"BEST LOVED" },
-    { id:"fire",title:"The Fire & Crunch",subtitle:"A spicy, crispy little lineup",ids:["peri-peri-paneer-burger","loaded-peri-peri-fries","mango-milkshake"],tag:"SPICE PICK" },
-    { id:"slow",title:"The Slow Evening",subtitle:"Comfort food with a sweet finish",ids:["creamy-pink-sauce-pasta","dark-chocolate-lava-cake","iced-mocha"],tag:"COMFORT SET" }
+    { id:"house",title:"Burger Combo",subtitle:"Mushroom burger, masala fries and mint cooler.",ids:["truffle-mushroom-burger","classic-masala-fries","mint-lime-cooler"],tag:"POPULAR" },
+    { id:"fire",title:"Peri-Peri Combo",subtitle:"Paneer burger, peri-peri fries and mango shake.",ids:["peri-peri-paneer-burger","loaded-peri-peri-fries","mango-milkshake"],tag:"SPICY" },
+    { id:"slow",title:"Pasta & Dessert Combo",subtitle:"Pink sauce pasta, lava cake and iced mocha.",ids:["creamy-pink-sauce-pasta","dark-chocolate-lava-cake","iced-mocha"],tag:"PASTA & DESSERT" }
   ];
   function findMenuItem(id){return state.menu.find(item=>item.id===id);}
   function mealOptions(categories,veg){return state.menu.filter(item=>categories.includes(item.category)&&(!veg||item.isVeg));}
@@ -1191,16 +1191,16 @@
     $("#mealSummaryCount").textContent=picks.length+" / 3 picks";
     $("#mealBuilderTotal").textContent=money(total);
     $("#addMealBundle").disabled=!complete;
-    $("#mealBuilderSaving").textContent=!complete?"Choose a main, side and drink to see your total.":total>=199?"COMBO10 can save "+money(Math.min(Math.round(total*.1),150))+" on this eligible combo.":"Add a little more to reach the ₹199 COMBO10 minimum.";
+    $("#mealBuilderSaving").textContent=!complete?"Select a main, side and drink to calculate your total.":total>=199?"COMBO10 can save "+money(Math.min(Math.round(total*.1),150))+" on this eligible combo.":"Add items to reach the ₹199 minimum for COMBO10.";
   }
   function addMealBundle(){
     const picks=getMealSelection();if(picks.length!==3)return;
     picks.forEach(item=>{state.cart[item.id]=Math.min(20,(state.cart[item.id]||0)+1);});
     if(calculateBill().subtotal>=199){
       state.coupon={code:"COMBO10",percent:10,maximum:150,minimum:199};state.pendingRewardRedemption=false;
-      $("#couponInput").value="COMBO10";$("#couponMessage").textContent="COMBO10 added for 10% off eligible orders.";$("#couponMessage").className="coupon-message message-success";
+      $("#couponInput").value="COMBO10";$("#couponMessage").textContent="COMBO10 is active for eligible orders.";$("#couponMessage").className="coupon-message message-success";
     }
-    saveStore(STORAGE.cart,state.cart);renderCart();showToast("Your custom meal has been added to the bag.");
+    saveStore(STORAGE.cart,state.cart);renderCart();showToast("Meal added to your bag.");
   }
   function renderSmartCombos(){
     const container=$("#comboGrid");if(!container||!state.menu.length)return;
@@ -1216,7 +1216,7 @@
     const items=combo.ids.map(findMenuItem).filter(Boolean);if(items.length!==3)return;
     items.forEach(item=>{state.cart[item.id]=Math.min(20,(state.cart[item.id]||0)+1);});
     state.coupon={code:"COMBO10",percent:10,maximum:150,minimum:199};state.pendingRewardRedemption=false;
-    $("#couponInput").value="COMBO10";$("#couponMessage").textContent="COMBO10 added. Your eligible bag gets 10% off.";
+    $("#couponInput").value="COMBO10";$("#couponMessage").textContent="COMBO10 is active for eligible orders.";
     $("#couponMessage").className="coupon-message message-success";saveStore(STORAGE.cart,state.cart);renderCart();showToast(combo.title+" added. COMBO10 is ready in your bag.");
   }
   function getRecommendedItems(mood){
@@ -1351,7 +1351,7 @@
         const found=state.orders.find(order=>order.orderNumber===number);if(found)found.status=status;
         saveStore(STORAGE.orders,state.orders);state.adminOrders=state.orders.map(order=>({...order,customer_name:(order.customer&&order.customer.name)||"This browser",order_number:order.orderNumber,total:order.total}));
         state.adminAnalytics=buildDemoAdminAnalytics(state.adminOrders);
-        $("#adminConnection").textContent="Demo status saved on this browser only. It is not a live delivery update.";
+        $("#adminConnection").textContent="Demo status saved on this device. It is not a live delivery update.";
       }
       renderAdminDashboard();showToast("Order status updated.");
     }catch(error){$("#adminError").textContent=error.message||"The order status could not be updated.";}
@@ -1449,7 +1449,7 @@
     $("#couponInput").value=code;
     const subtotal=calculateBill().subtotal;
     $("#couponMessage").textContent=subtotal>=offer.minimum
-      ?code+" applied. Your discount is ready."
+      ?code+" applied. Your order discount is active."
       :" "+code+" saved. Add "+money(offer.minimum-subtotal)+" more to unlock this offer.";
     $("#couponMessage").className=subtotal>=offer.minimum?"coupon-message message-success":"coupon-message message-warning";
     renderCart();
@@ -1526,7 +1526,7 @@
       if(state.adminAnalytics)renderAdminDashboard();
       $("#adminConnection").textContent=state.adminKey
         ?"Your live dashboard is ready. Reconnect to refresh the latest data."
-        :"Enter your server admin key to load complete live order analytics.";
+        :"Enter the server admin key to load live order analytics.";
     }else{
       $("#adminLoginForm").hidden=true;
       state.adminKey="";
