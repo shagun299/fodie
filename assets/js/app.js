@@ -666,10 +666,12 @@
       const icon = getCategoryIcon(category);
       return '<button class="category-tab' + active + '" type="button" data-category="' + escapeHTML(category) + '"><span class="category-icon" aria-hidden="true">' + icon + '</span><small class="category-label">' + label + "</small></button>";
     }).join("");
-    $$("#categoryTabs [data-category]").forEach(button => {
+    $("#categoryTabs [data-category]").forEach(button => {
       button.addEventListener("click", () => {
         state.category = button.dataset.category;
-        renderCategories();
+        $("#categoryTabs [data-category]").forEach(tab => {
+          tab.classList.toggle("active", tab.dataset.category === state.category);
+        });
         renderMenu();
       });
     });
@@ -709,6 +711,8 @@
     return items;
   }
 
+  const menuCardCache = new Map();
+
   function renderMenu() {
     const grid = $("#menuGrid");
     const items = visibleMenu();
@@ -733,20 +737,30 @@
       return;
     }
     const template = $("#dishCardTemplate");
-    const fragment = document.createDocumentFragment();
+    const orderedCards = [];
     items.forEach(item => {
-      const card = template.content.firstElementChild.cloneNode(true);
+      let card = menuCardCache.get(item.id);
+      if (!card) {
+        card = template.content.firstElementChild.cloneNode(true);
+        menuCardCache.set(item.id, card);
+      }
       card.dataset.dishId = item.id;
       const image = $("[data-image]", card);
+      const requestedImage = state.imageFallbacks[item.id] || item.image;
       image.alt = item.name + " — " + item.description;
       image.loading = "lazy";
       image.decoding = "async";
-      protectFoodPhoto(image,item);
       image.fetchPriority = "low";
-      image.src = getOptimizedFoodImageUrl(state.imageFallbacks[item.id] || item.image);
+      if (image.dataset.requestedSource !== requestedImage || !image.getAttribute("src")) {
+        image.dataset.requestedSource = requestedImage;
+        protectFoodPhoto(image,item);
+        image.src = getOptimizedFoodImageUrl(requestedImage);
+      }
       $("[data-discount]", card).textContent = item.discountPercent + "% OFF";
-      $("[data-diet-indicator]", card).classList.add(item.isVeg ? "diet-veg" : "diet-nonveg");
-      $("[data-diet-indicator]", card).setAttribute("aria-label", item.isVeg ? "Vegetarian" : "Non-vegetarian");
+      const dietIndicator = $("[data-diet-indicator]", card);
+      dietIndicator.classList.toggle("diet-veg", Boolean(item.isVeg));
+      dietIndicator.classList.toggle("diet-nonveg", !item.isVeg);
+      dietIndicator.setAttribute("aria-label", item.isVeg ? "Vegetarian" : "Non-vegetarian");
       $("[data-category-label]", card).textContent = item.category;
       $("[data-prep]", card).textContent = item.prepTime + " min";
       $("[data-name]", card).textContent = item.name;
@@ -759,9 +773,23 @@
       favourite.classList.toggle("is-saved", saved);
       favourite.textContent = saved ? "♥" : "♡";
       favourite.setAttribute("aria-label", saved ? "Remove from favourites" : "Add to favourites");
-      fragment.appendChild(card);
+      orderedCards.push(card);
     });
-    grid.replaceChildren(fragment);
+    const currentCards = Array.from(grid.children);
+    const wantedCards = new Set(orderedCards);
+    currentCards.forEach(card => { if (!wantedCards.has(card)) card.remove(); });
+    let orderChanged = grid.children.length !== orderedCards.length;
+    orderedCards.forEach((card,index) => {
+      const current = grid.children[index];
+      if (current !== card) {
+        orderChanged = true;
+        grid.insertBefore(card,current || null);
+      }
+    });
+    if (orderChanged && typeof grid.animate === "function" &&
+        !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      grid.animate([{ opacity:.82 },{ opacity:1 }], { duration:150, easing:"cubic-bezier(.2,.7,.2,1)" });
+    }
   }
 
   let menuSearchTimer = null;
@@ -770,7 +798,7 @@
     menuSearchTimer = window.setTimeout(() => {
       menuSearchTimer = null;
       renderMenu();
-    }, 140);
+    }, 160);
   }
 
 
@@ -943,15 +971,17 @@
     const flight = flyer.animate([
       { transform: "translate3d(0,0,0) scale(1)", opacity: 1 },
       { transform: "translate3d(" + dx + "px," + dy + "px,0) scale(.18)", opacity: .15 }
-    ], { duration: 640, easing: "cubic-bezier(.22,.72,.28,1)" });
+    ], { duration: 440, easing: "cubic-bezier(.22,.72,.28,1)" });
     flight.onfinish = () => flyer.remove();
     cartButton.classList.remove("cart-bump");
     $("#cartCount").classList.remove("count-pop");
-    void cartButton.offsetWidth;
-    cartButton.classList.add("cart-bump");
-    $("#cartCount").classList.add("count-pop");
-    window.setTimeout(() => cartButton.classList.remove("cart-bump"), 520);
-    window.setTimeout(() => $("#cartCount").classList.remove("count-pop"), 460);
+    window.requestAnimationFrame(() => {
+      if (!cartButton.isConnected) return;
+      cartButton.classList.add("cart-bump");
+      $("#cartCount").classList.add("count-pop");
+      window.setTimeout(() => cartButton.classList.remove("cart-bump"), 420);
+      window.setTimeout(() => $("#cartCount").classList.remove("count-pop"), 380);
+    });
   }
 
   function changeQuantity(id, change) {

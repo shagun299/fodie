@@ -235,3 +235,51 @@
 @media(prefers-reduced-motion:reduce) {
   .site-dialog,.sort-control select,.category-tab,.category-icon { transition:none!important; }
 }
+
+
+/* Fluid interactions without paint-heavy blur/shadow animations. */
+@media(max-width:760px) {
+  .dish-card {
+    content-visibility:auto!important;
+    contain-intrinsic-size:auto 142px!important;
+  }
+  .app-veg-toggle,.diet-button,.category-tab,.category-icon,.sort-control select,
+  .mobile-dock-item,.icon-button,.profile-trigger,.cart-trigger,.add-button,
+  .button,.close-button,.dish-favourite,.offer-nav,.offer-dots button {
+    transition:
+      transform 150ms cubic-bezier(.2,.7,.2,1),
+      opacity 150ms ease,
+      color 140ms ease,
+      background-color 140ms ease,
+      border-color 140ms ease!important;
+  }
+  .app-veg-toggle:active,.diet-button:active,.category-tab:active,
+  .mobile-dock-item:active,.icon-button:active,.profile-trigger:active,
+  .cart-trigger:active,.add-button:active,.button:active,.close-button:active,
+  .dish-favourite:active,.offer-nav:active {
+    transform:scale(.97)!important;
+  }
+  .dish-grid { overflow-anchor:none; }
+  .dish-grid .dish-card { backface-visibility:hidden; }
+  .app-search-box input { caret-color:var(--green); }
+}
+@media(hover:hover) and (pointer:fine) {
+  .dish-image { transition:transform 220ms cubic-bezier(.2,.7,.2,1); }
+  .dish-card:hover .dish-image { transform:scale(1.025); }
+  .add-button,.button,.category-tab,.quick-access-card {
+    transition:
+      transform 170ms cubic-bezier(.2,.7,.2,1),
+      color 150ms ease,
+      background-color 150ms ease,
+      border-color 150ms ease!important;
+  }
+  .add-button:hover,.button:hover { transform:translateY(-1px); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .dish-card,.dish-image,.app-veg-toggle,.diet-button,.category-tab,.category-icon,
+  .sort-control select,.mobile-dock-item,.icon-button,.profile-trigger,.cart-trigger,
+  .add-button,.button,.close-button,.dish-favourite,.offer-nav,.offer-dots button {
+    transition:none!important;
+    animation:none!important;
+  }
+}

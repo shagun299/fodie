@@ -120,6 +120,10 @@ async function runViewport(browser, viewport) {
     check(categoryLabels.length >= 3 && categoryLabels.every(item => item.text && item.visible),
       viewport, "category-icons-have-visible-names", JSON.stringify(categoryLabels));
 
+    const menuIdentity = await page.locator("#menuGrid .dish-card").first().evaluate(card => {
+      window.__qaInitialMenuCard = card;
+      return card.dataset.dishId;
+    });
     const vegToggle = page.locator("#appVegToggle");
     if (await vegToggle.getAttribute("aria-pressed") === "true") {
       await vegToggle.click();
@@ -135,6 +139,20 @@ async function runViewport(browser, viewport) {
       JSON.stringify(vegResults));
     await vegToggle.click();
     await page.waitForFunction(() => document.querySelector("#appVegToggle")?.getAttribute("aria-pressed") === "false");
+    const reusedMenuNode = await page.evaluate(id => {
+      const card = document.querySelector('#menuGrid [data-dish-id="' + CSS.escape(id) + '"]');
+      return Boolean(card && card === window.__qaInitialMenuCard);
+    }, menuIdentity);
+    check(reusedMenuNode, viewport, "menu-filters-reuse-existing-card-nodes", menuIdentity);
+    const interactionMotion = await page.evaluate(() => ({
+      buttonTransition:getComputedStyle(document.querySelector("#appVegToggle")).transitionDuration,
+      categoryTransition:getComputedStyle(document.querySelector("#categoryTabs .category-tab")).transitionDuration,
+      offscreenRendering:getComputedStyle(document.querySelector("#menuGrid .dish-card")).contentVisibility
+    }));
+    check(interactionMotion.buttonTransition.split(",").some(value => parseFloat(value) > 0) &&
+      interactionMotion.categoryTransition.split(",").some(value => parseFloat(value) > 0) &&
+      interactionMotion.offscreenRendering === "auto",
+      viewport, "lightweight-mobile-interactions-enabled", JSON.stringify(interactionMotion));
 
     const sortMenu = page.locator("#sortMenu");
     await sortMenu.selectOption("price-low");
