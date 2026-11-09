@@ -54,9 +54,11 @@ function verifyToken(token, secret) {
     const parts = String(token || "").split(".");
     if (parts.length !== 3) return null;
     const input = parts[0] + "." + parts[1];
-    const expected = crypto.createHmac("sha256", secret).update(input).digest();
-    const received = Buffer.from(parts[2], "base64url");
-    if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) return null;
+    // HS256 signatures are 32 bytes encoded as 43 unpadded base64url characters.
+    // Compare the canonical encoded value so alternate encodings of the same bytes are rejected.
+    if (!/^[A-Za-z0-9_-]{43}$/.test(parts[2])) return null;
+    const expected = crypto.createHmac("sha256", secret).update(input).digest("base64url");
+    if (!safeEqual(expected, parts[2])) return null;
     const header = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
     const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
     if (header.alg !== "HS256" || !payload.exp || payload.exp <= Math.floor(Date.now() / 1000)) return null;
