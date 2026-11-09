@@ -356,3 +356,131 @@
     line-height:1.4!important;
   }
 }
+
+
+
+/* MOBILE PERFORMANCE + NATURAL SCROLL V32
+   Use the browser's document scroller on phones. Keep only the quick dock fixed,
+   and remove expensive always-on glass effects from the scrolling surface. */
+@media(max-width:760px){
+  html,body{
+    width:100%!important;
+    height:auto!important;
+    min-height:100%!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:auto!important;
+  }
+  html{scroll-behavior:smooth!important}
+  body{
+    display:block!important;
+    height:auto!important;
+    min-height:100svh!important;
+    padding:0 0 calc(104px + env(safe-area-inset-bottom))!important;
+    overflow:visible!important;
+    background:var(--paper)!important;
+    background-image:none!important;
+    background-attachment:scroll!important;
+    touch-action:pan-y pinch-zoom;
+  }
+  body::before{
+    display:none!important;
+    content:none!important;
+    filter:none!important;
+  }
+  .mobile-page-scroll{
+    display:block!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    flex:initial!important;
+    overflow:visible!important;
+    overscroll-behavior:auto!important;
+    -webkit-overflow-scrolling:auto!important;
+  }
+  .mobile-page-scroll>main{
+    min-height:0!important;
+    overflow:visible!important;
+    padding-bottom:12px!important;
+  }
+  .site-header{
+    position:sticky!important;
+    top:0!important;
+    z-index:70!important;
+    background:var(--card)!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    box-shadow:0 2px 8px rgba(20,28,22,.07)!important;
+  }
+  .mobile-dock,#mobileDock{
+    position:fixed!important;
+    inset:auto auto calc(8px + env(safe-area-inset-bottom)) 50%!important;
+    display:grid!important;
+    flex:initial!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    gap:4px!important;
+    width:calc(100% - 24px)!important;
+    max-width:460px!important;
+    min-height:62px!important;
+    margin:0!important;
+    padding:5px!important;
+    transform:translateX(-50%)!important;
+    border:1px solid var(--line)!important;
+    border-radius:17px!important;
+    background:var(--card)!important;
+    box-shadow:0 5px 16px rgba(18,26,22,.13)!important;
+    z-index:90!important;
+    isolation:isolate!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  .mobile-dock-item{min-height:50px!important}
+  body.drawer-open{overflow:hidden!important}
+  body.drawer-open .mobile-dock,body.drawer-open #mobileDock{
+    opacity:0!important;pointer-events:none!important
+  }
+
+  /* Avoid repainting fixed blur layers and large shadows while the page moves. */
+  .announcement-bar,.icon-button,.profile-trigger,.cart-trigger,
+  .search-box,.sort-control select,.diet-filters,.menu-count,
+  .category-tab,.close-button,.hero-image-frame,.floating-stamp,
+  .hero-side-note,.quick-access-card,.offer-panel,.offer-art,
+  .dish-favourite,.meal-builder-shell,.combo-card,.recommendation-card,
+  .rewards-panel,.story-image-tag,.closing-banner,.site-footer,
+  .toast,.cart-drawer,.cart-backdrop,.site-dialog,.site-dialog::backdrop{
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  .announcement-bar,.quick-access-card,.offer-panel,.offer-art,
+  .dish-card,.dish-favourite,.story-image img,.closing-banner,
+  .search-box,.sort-control select,.category-tab,.mobile-dock{
+    box-shadow:none!important;
+  }
+  .dish-card{
+    transform:none!important;
+    transition:none!important;
+    contain:layout paint;
+  }
+  .dish-image,.dish-favourite,.mobile-dock-item,
+  .quick-access-card,.offer-slide,.offer-nav,.offer-dots button,
+  .button,.icon-button,.profile-trigger,.cart-trigger{
+    transition:none!important;
+    animation:none!important;
+  }
+  .dish-card:hover,.quick-access-card:hover,.offer-nav:hover{
+    transform:none!important;
+    box-shadow:none!important;
+  }
+  .offer-slide,.offer-slide.is-active{
+    transform:none!important;
+    transition:opacity .12s linear!important;
+  }
+  .hero-image-frame,.story-image img{
+    box-shadow:none!important;
+  }
+  .toast-region{bottom:calc(82px + env(safe-area-inset-bottom))!important}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto!important}
+}
