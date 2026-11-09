@@ -1,0 +1,282 @@
+/* Theme visibility and contrast normalization.
+   Loaded last to prevent legacy CSS layers from hiding text and UI dividers. */
+
+:root {
+  --paper:#f5f7f2 !important;
+  --paper-deep:#eaf0e9 !important;
+  --card:#fffefa !important;
+  --ink:#20352a !important;
+  --muted:#56685b !important;
+  --line:rgba(35,66,48,.19) !important;
+  --orange:#c6a36b !important;
+  --orange-dark:#806238 !important;
+  --orange-soft:#f1eadc !important;
+  --green:#2b573c !important;
+  --green-soft:#e7efe7 !important;
+  --glass-border:rgba(49,78,57,.18) !important;
+  --glass-highlight:rgba(255,255,255,.86) !important;
+}
+:root[data-theme="dark"] {
+  --paper:#101a14 !important;
+  --paper-deep:#17271d !important;
+  --card:#1c2b21 !important;
+  --ink:#f0f3ed !important;
+  --muted:#b8c7bb !important;
+  --line:rgba(226,237,226,.22) !important;
+  --orange:#dfc38f !important;
+  --orange-dark:#edcf99 !important;
+  --orange-soft:rgba(210,181,129,.17) !important;
+  --green:#a8c9ad !important;
+  --green-soft:rgba(91,139,100,.2) !important;
+  --glass-border:rgba(224,237,224,.2) !important;
+  --glass-highlight:rgba(255,255,255,.08) !important;
+}
+
+/* Base copy and heading hierarchy. */
+body,main,.mobile-page-scroll { color:var(--ink) !important; }
+p,small,li,dd,dt,figcaption,legend,summary { color:var(--muted) !important; }
+h1,h2,h3,h4,h5,h6,strong,b { color:var(--ink) !important; }
+.section-heading h2,.feature-heading h2,.story-copy h2,
+.menu-heading h2,.recommendation-card-copy h3,
+.dish-content h3,.rewards-copy h2 { color:var(--ink) !important; }
+.section-heading h2 em,.feature-heading h2 em,
+.story-copy h2 em,.menu-heading h2 em { color:var(--green) !important; }
+.eyebrow,.drawer-kicker,.offer-kicker,.feature-index,
+.menu-count span,.menu-status,.sort-control,
+.dish-category,.dish-time,.recommendation-note,
+.recommendation-card-copy>span { color:var(--muted) !important; }
+.section-heading p,.feature-heading p,.story-copy>p,
+.story-points small,.menu-heading p,.dish-description,
+.quick-access-label small,.quick-access-copy p,
+.recommendation-card-copy p,.empty-menu p,
+.rewards-copy p,.footer-muted { color:var(--muted) !important; }
+
+/* Intentional dark feature panels keep their own high-contrast text. */
+.hero-copy .eyebrow,.hero-copy .eyebrow-line { color:#ead4a7 !important; }
+.hero-copy h1,.hero-copy h1 strong,.hero-copy .hero-note strong,
+.hero-image-caption strong,.offer-copy h2,.offer-copy h2 strong,
+.rewards-copy h2,.rewards-score,.rewards-score strong,
+.site-footer,.site-footer h1,.site-footer h2,.site-footer h3,
+.site-footer strong,.site-footer b { color:#fffdf7 !important; }
+.hero-copy h1 em,.offer-copy h2 em,.rewards-copy h2 em,
+.rewards-score strong { color:#e7cc98 !important; }
+.hero-description,.hero-note,.hero-note small,.hero-note strong,
+.hero-side-note,.hero-image-caption .caption-kicker,
+.offer-copy p,.offer-copy .offer-kicker,
+.rewards-copy p,.rewards-copy small,
+.rewards-progress-label,.footer-brand p,.footer-newsletter p,
+.footer-column a,.footer-action,.footer-muted,.footer-bottom,
+.footer-photo-credit { color:rgba(255,253,247,.86) !important; }
+:root[data-theme="dark"] .hero-copy h1,
+:root[data-theme="dark"] .offer-copy h2,
+:root[data-theme="dark"] .rewards-copy h2,
+:root[data-theme="dark"] .site-footer { color:#fffdf7 !important; }
+
+/* Product cards, category filters and quick-access surfaces. */
+.dish-card,.quick-access-card,.recommendation-card,
+.combo-card,.meal-builder-shell,.meal-builder-summary,
+.menu-count,.feature-index,.category-tab>.category-icon {
+  border-color:var(--line) !important;
+}
+.dish-card,.quick-access-card,.recommendation-card,
+.combo-card,.meal-builder-shell,.site-dialog[open] {
+  color:var(--ink) !important;
+  background-color:var(--card) !important;
+}
+.dish-content h3,.dish-prices strong,
+.quick-access-label strong,.recommendation-card-copy h3,
+.meal-summary-total strong,.feature-field span,
+.meal-summary-items,.meal-summary-total { color:var(--ink) !important; }
+.dish-description,.dish-category,.dish-time,
+.quick-access-label small,.recommendation-card-copy p,
+.menu-status,.recommendation-note { color:var(--muted) !important; }
+.add-button {
+  border-color:rgba(43,87,60,.38) !important;
+  background:var(--green-soft) !important;
+  color:var(--green) !important;
+}
+:root[data-theme="dark"] .add-button {
+  border-color:rgba(168,201,173,.48) !important;
+  background:#20382a !important;
+  color:#c1e0c5 !important;
+}
+.category-tab,.diet-button,.sort-control,
+.category-tab .category-label,
+.category-tab>small.category-label { color:var(--muted) !important; }
+.category-tab.active,.diet-button.active { color:var(--green) !important; }
+:root[data-theme="dark"] .category-tab.active,
+:root[data-theme="dark"] .diet-button.active { color:#fff !important; }
+.category-tab>.category-icon { background:var(--card) !important; }
+.category-tab.active>.category-icon { background:var(--green-soft) !important; }
+.sort-control select,.feature-field select,
+.recommendation-filter select,.admin-table select {
+  border-color:var(--line) !important;
+  background-color:var(--card) !important;
+  color:var(--ink) !important;
+}
+
+/* All form fields, helper text, placeholders, and dropdown options. */
+input,select,textarea {
+  color:var(--ink) !important;
+  caret-color:var(--green) !important;
+}
+input::placeholder,textarea::placeholder,
+.site-dialog input::placeholder,.site-dialog textarea::placeholder,
+.app-search-box input::placeholder {
+  color:var(--muted) !important;
+  opacity:1 !important;
+}
+select option { background:var(--card) !important; color:var(--ink) !important; }
+.form-field,.feature-field,.recommendation-filter,
+.site-dialog label,.site-dialog .form-field,
+.site-dialog .form-field>span:not(.optional-label),
+.customizer-section-heading strong { color:var(--ink) !important; }
+.form-field small,.optional-label,.form-help,
+.profile-storage-note,.tracking-helper,.customizer-footnote,
+.site-dialog p,.site-dialog small { color:var(--muted) !important; }
+.site-dialog[open],.site-dialog .dialog-header,
+.site-dialog .dialog-header h2,
+.site-dialog .dialog-body,.site-dialog .dialog-content {
+  background-color:var(--card) !important;
+  color:var(--ink) !important;
+  border-color:var(--line) !important;
+}
+.site-dialog input,.site-dialog select,.site-dialog textarea {
+  background:var(--paper) !important;
+  color:var(--ink) !important;
+  border-color:var(--line) !important;
+}
+:root[data-theme="dark"] .site-dialog input,
+:root[data-theme="dark"] .site-dialog select,
+:root[data-theme="dark"] .site-dialog textarea {
+  background:#142319 !important;
+  color:#f0f3ed !important;
+}
+:root[data-theme="dark"] .site-dialog input::placeholder,
+:root[data-theme="dark"] .site-dialog textarea::placeholder { color:#b8c7bb !important; opacity:1 !important; }
+
+/* Checkout, account, tracking and admin views. */
+.checkout-review,.checkout-review-items,
+.payment-choice,.payment-choice label,
+.account-auth-panel,.saved-addresses-panel,
+.customer-dashboard-content,.admin-analytics,
+.admin-table,.admin-table th,.admin-table td,
+.customer-dashboard-stats article,.my-order-card,
+.profile-intro,.account-address-card,
+.tracking-form,.tracking-intro {
+  color:var(--ink) !important;
+  border-color:var(--line) !important;
+}
+.checkout-review,.checkout-review-items,
+.account-auth-panel,.saved-addresses-panel,
+.customer-dashboard-stats article,.my-order-card,
+.profile-intro,.account-address-card,
+.admin-table,.admin-table th,.admin-table td {
+  background-color:var(--card) !important;
+}
+.payment-choice label,.payment-method-card,
+.account-auth-tab,.profile-tab,.tab-button {
+  color:var(--ink) !important;
+  border-color:var(--line) !important;
+}
+.account-auth-tab[aria-selected="true"],
+.profile-tab.active,.tab-button.active {
+  color:var(--green) !important;
+  background:var(--green-soft) !important;
+}
+.admin-table th,.admin-table td { border-color:var(--line) !important; }
+:root[data-theme="dark"] .checkout-review,
+:root[data-theme="dark"] .checkout-review-items,
+:root[data-theme="dark"] .payment-choice label,
+:root[data-theme="dark"] .account-auth-panel,
+:root[data-theme="dark"] .saved-addresses-panel,
+:root[data-theme="dark"] .customer-dashboard-stats article,
+:root[data-theme="dark"] .my-order-card,
+:root[data-theme="dark"] .profile-intro,
+:root[data-theme="dark"] .account-address-card,
+:root[data-theme="dark"] .admin-table,
+:root[data-theme="dark"] .admin-table th,
+:root[data-theme="dark"] .admin-table td {
+  background-color:var(--card) !important;
+  color:var(--ink) !important;
+  border-color:var(--line) !important;
+}
+
+/* Buttons, icons, links, focus, disabled controls and visible separators. */
+button,.button,.text-link,.footer-action,.close-button,
+.icon-button,.profile-trigger,.cart-trigger { color:inherit; }
+.text-link,.customize-link { color:var(--green) !important; }
+:root[data-theme="dark"] .text-link,
+:root[data-theme="dark"] .customize-link { color:#d8bd8b !important; }
+.icon-button,.profile-trigger,.cart-trigger {
+  border-color:var(--line) !important;
+  background:var(--card) !important;
+}
+:root[data-theme="dark"] .icon-button,
+:root[data-theme="dark"] .profile-trigger,
+:root[data-theme="dark"] .cart-trigger {
+  color:var(--ink) !important;
+  background:var(--card) !important;
+}
+.button-primary { background:var(--green) !important; color:#fff !important; }
+:root[data-theme="dark"] .button-primary { background:#376848 !important; color:#fff !important; }
+hr,.divider,.section-divider,.form-divider,
+.dialog-header,.footer-bottom,.dish-card,
+.quick-access-card,.meal-builder-shell,
+.feature-index,.site-dialog,.app-search-box,
+#mobileDock { border-color:var(--line) !important; }
+:focus-visible {
+  outline:3px solid rgba(128,98,56,.52) !important;
+  outline-offset:3px !important;
+}
+:root[data-theme="dark"] :focus-visible {
+  outline-color:rgba(223,195,143,.62) !important;
+}
+:disabled,[aria-disabled="true"] {
+  opacity:.72;
+}
+
+/* Keep labels and controls readable when the current theme is dark. */
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] main,
+:root[data-theme="dark"] p,
+:root[data-theme="dark"] small,
+:root[data-theme="dark"] label,
+:root[data-theme="dark"] li,
+:root[data-theme="dark"] dd,
+:root[data-theme="dark"] dt,
+:root[data-theme="dark"] figcaption,
+:root[data-theme="dark"] legend,
+:root[data-theme="dark"] summary { color:var(--muted) !important; }
+:root[data-theme="dark"] h1,
+:root[data-theme="dark"] h2,
+:root[data-theme="dark"] h3,
+:root[data-theme="dark"] h4,
+:root[data-theme="dark"] h5,
+:root[data-theme="dark"] h6,
+:root[data-theme="dark"] strong,
+:root[data-theme="dark"] b { color:var(--ink) !important; }
+:root[data-theme="dark"] .hero-copy h1,
+:root[data-theme="dark"] .offer-copy h2,
+:root[data-theme="dark"] .rewards-copy h2,
+:root[data-theme="dark"] .site-footer,
+:root[data-theme="dark"] .site-footer h3,
+:root[data-theme="dark"] .site-footer strong { color:#fffdf7 !important; }
+
+/* Respect saved address-field focus treatment while improving every other field. */
+:root[data-theme="dark"] .address-grid input:focus,
+:root[data-theme="dark"] .address-grid select:focus,
+:root[data-theme="dark"] .address-grid textarea:focus {
+  border-color:#9ab69e !important;
+  box-shadow:0 0 0 2px rgba(180,210,185,.2) !important;
+}
+
+@media(max-width:760px) {
+  .site-header { border-bottom-color:var(--line) !important; }
+  .app-location-copy small,.app-location-copy strong { color:var(--ink) !important; }
+  .mobile-dock,.mobile-dock-item { color:var(--muted) !important; }
+  .mobile-dock-item.active,.mobile-dock-item[aria-current="page"] { color:var(--green) !important; }
+  .category-tab .category-label { color:var(--muted) !important; }
+  .category-tab.active .category-label { color:var(--green) !important; }
+  :root[data-theme="dark"] .category-tab.active .category-label { color:#d9e8d9 !important; }
+}

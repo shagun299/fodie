@@ -1985,7 +1985,7 @@
     $("#themeToggle").setAttribute("title", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
     $("#themeToggle span").textContent = theme === "dark" ? "☀" : "☾";
     const themeMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeMeta) themeMeta.setAttribute("content", theme === "dark" ? "#171717" : "#ffffff");
+    if (themeMeta) themeMeta.setAttribute("content", theme === "dark" ? "#101a14" : "#f5f7f2");
   }
 
   function bindEvents() {

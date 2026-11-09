@@ -27,6 +27,150 @@ function check(condition, viewport, name, detail) {
   if (!condition) failures.push(result);
 }
 
+
+async function auditThemeContrast(page, viewport, themeName) {
+  const audit = await page.evaluate(() => {
+    function parseColor(value) {
+      const input = String(value || "").trim();
+      const hex = input.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+      if (hex) {
+        let value = hex[1];
+        if (value.length === 3) value = value.split("").map(char => char + char).join("");
+        return [0, 2, 4].map(index => parseInt(value.slice(index, index + 2), 16)).concat(1);
+      }
+      const rgb = input.match(/rgba?\(([^)]+)\)/i);
+      if (!rgb) return null;
+      const parts = rgb[1].replace(/\s*\/\s*/g, ",").split(",").map(part => Number.parseFloat(part.trim()));
+      if (parts.length < 3 || parts.slice(0, 3).some(number => !Number.isFinite(number))) return null;
+      return [parts[0], parts[1], parts[2], Number.isFinite(parts[3]) ? parts[3] : 1];
+    }
+    function blend(foreground, background) {
+      const alpha = foreground[3] ?? 1;
+      return [0,1,2].map(index => foreground[index] * alpha + background[index] * (1 - alpha)).concat(1);
+    }
+    function luminance(color) {
+      const linear = color.slice(0, 3).map(value => {
+        const channel = value / 255;
+        return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    }
+    function ratio(first, second) {
+      const a = luminance(first), b = luminance(second);
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    }
+    const root = getComputedStyle(document.documentElement);
+    const paper = parseColor(root.getPropertyValue("--paper").trim()) || [245,247,242,1];
+    const card = parseColor(root.getPropertyValue("--card").trim()) || [255,254,250,1];
+    const paperDeep = parseColor(root.getPropertyValue("--paper-deep").trim()) || paper;
+    const surfaces = {
+      paper, card, paperDeep,
+      forest:parseColor("#203d2e"),
+      forestDeep:parseColor("#172c21")
+    };
+    const specs = [
+      ["hero-headline","#heroTitle","forest"],
+      ["hero-highlight","#heroTitle em","forest"],
+      ["hero-description",".hero-description","forest"],
+      ["menu-heading","#menuTitle","paper"],
+      ["menu-description",".menu-heading p","paper"],
+      ["dish-name","#menuGrid .dish-content h3","card"],
+      ["dish-description","#menuGrid .dish-description","card"],
+      ["dish-category","#menuGrid .dish-category","card"],
+      ["dish-time","#menuGrid .dish-time","card"],
+      ["dish-price","#menuGrid .dish-prices strong","card"],
+      ["category-label","#categoryTabs .category-label","paper"],
+      ["diet-filter","#menu .diet-button","paper"],
+      ["location-label",".app-location-copy small","card"],
+      ["location-value","#appLocationText","card"],
+      ["search-text","#menuSearch","paperDeep"],
+      ["search-placeholder","#menuSearch","paperDeep","::placeholder"],
+      ["offer-heading",".offer-slide.is-active .offer-copy h2","forest"],
+      ["offer-highlight",".offer-slide.is-active .offer-copy h2 em","forest"],
+      ["offer-description",".offer-slide.is-active .offer-copy p","forest"],
+      ["offer-kicker",".offer-slide.is-active .offer-kicker","forest"],
+      ["feature-heading",".feature-heading h2","paper"],
+      ["feature-highlight",".feature-heading h2 em","paper"],
+      ["feature-description",".feature-heading p","paper"],
+      ["meal-field-label",".feature-field","card"],
+      ["meal-field-name",".feature-field span","card"],
+      ["meal-summary-note",".meal-builder-summary small","paperDeep"],
+      ["recommendation-name",".recommendation-card-copy h3","card"],
+      ["recommendation-description",".recommendation-card-copy p","card"],
+      ["rewards-heading",".rewards-copy h2","forest"],
+      ["rewards-highlight",".rewards-copy h2 em","forest"],
+      ["rewards-description",".rewards-copy p","forest"],
+      ["story-heading",".story-copy h2","paper"],
+      ["story-description",".story-copy > p","paper"],
+      ["footer-heading",".site-footer .footer-column h3","forestDeep"],
+      ["footer-link",".site-footer .footer-column a","forestDeep"],
+      ["footer-description",".site-footer .footer-brand p","forestDeep"],
+      ["footer-bottom",".site-footer .footer-bottom","forestDeep"],
+      ["mobile-dock-label","#mobileDock .mobile-dock-item","card"],
+      ["quick-access-title",".quick-access-label strong","card"],
+      ["quick-access-description",".quick-access-label small","card"],
+      ["sort-label",".sort-control","paper"],
+      ["menu-status","#menuStatus","paper"]
+    ];
+    const colors = [];
+    for (const [name, selector, surfaceName, pseudo] of specs) {
+      const element = document.querySelector(selector);
+      if (!element) continue;
+      const style = getComputedStyle(element, pseudo || null);
+      const display = getComputedStyle(element).display;
+      const visibility = getComputedStyle(element).visibility;
+      if (display === "none" || visibility === "hidden") continue;
+      const foreground = parseColor(style.color);
+      if (!foreground) {
+        colors.push({name,selector,pass:false,reason:"unreadable computed foreground",color:style.color});
+        continue;
+      }
+      const background = surfaces[surfaceName];
+      const composite = foreground[3] < 1 ? blend(foreground, background) : foreground;
+      const contrast = ratio(composite, background);
+      colors.push({
+        name,selector,color:style.color,background:surfaceName,
+        contrast:Number(contrast.toFixed(2)),pass:contrast >= 4.5
+      });
+    }
+    const borders = [];
+    for (const [name, selector, surfaceName] of [
+      ["dish-card-border","#menuGrid .dish-card","card"],
+      ["search-border",".app-search-box","paperDeep"],
+      ["meal-builder-border",".meal-builder-shell","card"],
+      ["quick-access-border",".quick-access-card","card"],
+      ["mobile-dock-border","#mobileDock","card"]
+    ]) {
+      const element = document.querySelector(selector);
+      if (!element || getComputedStyle(element).display === "none") continue;
+      const style = getComputedStyle(element);
+      const color = parseColor(style.borderTopColor);
+      const width = Number.parseFloat(style.borderTopWidth) || 0;
+      const background = surfaces[surfaceName];
+      if (!color || width === 0) {
+        borders.push({name,selector,pass:false,width,color:style.borderTopColor});
+        continue;
+      }
+      const visibleLine = blend(color, background);
+      const contrast = ratio(visibleLine, background);
+      borders.push({name,selector,width,contrast:Number(contrast.toFixed(2)),pass:contrast >= 1.2});
+    }
+    return {
+      theme:document.documentElement.dataset.theme,
+      colors,
+      borders,
+      failedColors:colors.filter(item => !item.pass),
+      failedBorders:borders.filter(item => !item.pass)
+    };
+  });
+  check(audit.theme === themeName && audit.colors.length >= 25 && audit.failedColors.length === 0,
+    viewport, themeName + "-theme-text-has-readable-contrast",
+    JSON.stringify({tested:audit.colors.length,failures:audit.failedColors}));
+  check(audit.borders.length >= 4 && audit.failedBorders.length === 0,
+    viewport, themeName + "-theme-ui-dividers-remain-visible",
+    JSON.stringify({tested:audit.borders.length,failures:audit.failedBorders}));
+}
+
 async function waitForSite(page) {
   const response = await page.goto(BASE_URL, {
     waitUntil: "domcontentloaded",
@@ -332,6 +476,7 @@ async function runViewport(browser, viewport) {
       viewport, "mobile-brand-wordmark-is-visible-in-light-theme",
       JSON.stringify(pageGeometry.mobileBrandLockup));
     check(pageGeometry.headerCartBadgeContained, viewport, "header-cart-count-stays-inside-button");
+    await auditThemeContrast(page, viewport, "light");
 
     await page.locator("#themeToggle").click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
@@ -358,6 +503,7 @@ async function runViewport(browser, viewport) {
       darkThemeGeometry.wordmark === "FoodieHub" && darkThemeGeometry.wordmarkBrightness >= 190 &&
       darkThemeGeometry.taglineBrightness >= 140 && darkThemeGeometry.dockVisible,
       viewport, "dark-theme-shows-high-contrast-mobile-wordmark-and-dock", JSON.stringify(darkThemeGeometry));
+    await auditThemeContrast(page, viewport, "dark");
     if (viewport.width === 390) {
       await page.screenshot({ path:path.join(OUT_DIR,"mobile-390-dark-home.png") });
     }
