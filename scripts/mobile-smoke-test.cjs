@@ -446,6 +446,40 @@ async function runViewport(browser, viewport) {
       await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-page.png") });
     }
 
+    const originalThemeForAddress = await page.evaluate(() => document.documentElement.dataset.theme || "light");
+    for (const theme of ["light", "dark"]) {
+      const activeTheme = await page.evaluate(() => document.documentElement.dataset.theme || "light");
+      if (activeTheme !== theme) {
+        await page.locator("#themeToggle").click();
+        await page.waitForFunction(expected => document.documentElement.dataset.theme === expected, theme);
+      }
+      await page.locator("#appLocationTrigger").click();
+      await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
+      const houseField = page.locator('#profileDialog .address-grid input[name="house"]');
+      await houseField.click();
+      const focusStyle = await houseField.evaluate(element => {
+        const style = getComputedStyle(element);
+        const rgb = style.borderTopColor.match(/\d+/g)?.map(Number) || [];
+        return {
+          theme:document.documentElement.dataset.theme || "light",
+          outlineStyle:style.outlineStyle,
+          outlineWidth:style.outlineWidth,
+          borderColor:style.borderTopColor,
+          borderLooksRed:rgb.length >= 3 && rgb[0] > rgb[1] * 1.25 && rgb[0] > rgb[2] * 1.25,
+          boxShadow:style.boxShadow
+        };
+      });
+      check(focusStyle.outlineStyle === "none" && focusStyle.outlineWidth === "0px" &&
+        !focusStyle.borderLooksRed,
+        viewport, "address-field-focus-is-calm-in-" + theme, JSON.stringify(focusStyle));
+      await page.locator('[data-close-dialog="profileDialog"]').click();
+    }
+    const currentThemeAfterAddress = await page.evaluate(() => document.documentElement.dataset.theme || "light");
+    if (currentThemeAfterAddress !== originalThemeForAddress) {
+      await page.locator("#themeToggle").click();
+      await page.waitForFunction(expected => document.documentElement.dataset.theme === expected, originalThemeForAddress);
+    }
+
     await page.locator("#openProfile").click();
     await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
     const accountUi = await page.evaluate(() => {

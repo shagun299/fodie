@@ -1,0 +1,44 @@
+/* Calm address-field focus treatment across desktop and mobile.
+   Keep a visible, theme-aware focus cue without the sharp red/orange ring. */
+:root {
+  --fh-address-focus-border: #78917c;
+  --fh-address-focus-ring: rgba(54, 92, 65, .14);
+}
+:root[data-theme="dark"] {
+  --fh-address-focus-border: #9ab69e;
+  --fh-address-focus-ring: rgba(180, 210, 185, .18);
+}
+
+.address-grid input:focus,
+.address-grid select:focus,
+.address-grid textarea:focus,
+#profileDialog .address-grid input:focus,
+#profileDialog .address-grid select:focus,
+#profileDialog .address-grid textarea:focus,
+#checkoutDialog .address-grid input:focus,
+#checkoutDialog .address-grid select:focus,
+#checkoutDialog .address-grid textarea:focus {
+  outline: 0 !important;
+  outline-offset: 0 !important;
+  border-color: var(--fh-address-focus-border) !important;
+  box-shadow: 0 0 0 2px var(--fh-address-focus-ring) !important;
+}
+
+/* The surrounding field label should not inherit a browser/theme focus frame. */
+.address-grid .form-field:focus-within {
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Explicit selectors keep this override ahead of theme-wide focus-visible rules. */
+#profileDialog .address-grid input:focus-visible,
+#profileDialog .address-grid select:focus-visible,
+#profileDialog .address-grid textarea:focus-visible,
+#checkoutDialog .address-grid input:focus-visible,
+#checkoutDialog .address-grid select:focus-visible,
+#checkoutDialog .address-grid textarea:focus-visible {
+  outline: 0 !important;
+  outline-offset: 0 !important;
+  border-color: var(--fh-address-focus-border) !important;
+  box-shadow: 0 0 0 2px var(--fh-address-focus-ring) !important;
+}
