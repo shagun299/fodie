@@ -147,6 +147,25 @@ async function runViewport(browser, viewport) {
           badge.right <= cart.right + 1 && badge.top >= cart.top - 1 && badge.bottom <= cart.bottom + 1);
       })(),
       menuImage: document.querySelector("#menuGrid .dish-image")?.getAttribute("src") || "",
+      appLocation: (() => {
+        const element = document.querySelector("#appLocationTrigger");
+        const rect = element?.getBoundingClientRect();
+        return { visible:Boolean(element && rect && rect.width > 0 && rect.height > 0),
+          width:rect ? rect.width : 0,height:rect ? rect.height : 0 };
+      })(),
+      appSearch: (() => {
+        const element = document.querySelector("#menuSearch");
+        const rect = element?.getBoundingClientRect();
+        return { visible:Boolean(element && rect && rect.width > 0 && rect.height > 0),
+          width:rect ? rect.width : 0,height:rect ? rect.height : 0 };
+      })(),
+      appVegToggleVisible: (() => {
+        const element = document.querySelector("#appVegToggle");
+        const rect = element?.getBoundingClientRect();
+        return Boolean(element && rect && rect.width > 0 && rect.height > 0);
+      })(),
+      categoryCount: document.querySelectorAll("#categoryTabs .category-tab").length,
+      appHomeTitle: document.querySelector("#menuTitle")?.innerText.replace(/\\s+/g," ").trim() || "",
       heroButton: (() => {
         const button = document.querySelector(".hero-actions .button");
         if (!button) return null;
@@ -209,14 +228,17 @@ async function runViewport(browser, viewport) {
       pageGeometry.typography.offerHeadingFont.includes("Manrope"),
       viewport, "all-display-headings-use-manrope",
       JSON.stringify({hero:pageGeometry.typography.heroFont,menu:pageGeometry.typography.menuHeadingFont,offer:pageGeometry.typography.offerHeadingFont}));
-    check(pageGeometry.typography.bodySize >= 14 && pageGeometry.typography.heroSize >= 38 &&
-      pageGeometry.typography.heroDescriptionSize >= 12 && pageGeometry.typography.dishDescriptionSize >= 11,
-      viewport, "mobile-text-sizes-readable", JSON.stringify(pageGeometry.typography));
-    check(pageGeometry.typography.heroText === "Your favourites, made your way.", viewport, "hero-copy-updated",
-      pageGeometry.typography.heroText);
-    check(Boolean(pageGeometry.heroButton) && pageGeometry.heroButton.height >= 40 &&
-      pageGeometry.heroButton.height <= 60 && pageGeometry.heroButton.direction === "column",
-      viewport, "hero-cta-has-normal-button-height", JSON.stringify(pageGeometry.heroButton));
+    check(pageGeometry.typography.bodySize >= 14 && pageGeometry.typography.dishDescriptionSize >= 11,
+      viewport, "app-text-sizes-readable", JSON.stringify(pageGeometry.typography));
+    check(pageGeometry.appLocation.visible && pageGeometry.appLocation.height >= 30,
+      viewport, "app-location-control-visible", JSON.stringify(pageGeometry.appLocation));
+    check(pageGeometry.appSearch.visible && pageGeometry.appSearch.width >= 260 && pageGeometry.appSearch.height >= 40,
+      viewport, "app-search-is-prominent", JSON.stringify(pageGeometry.appSearch));
+    check(pageGeometry.appVegToggleVisible, viewport, "app-veg-mode-control-visible");
+    check(pageGeometry.categoryCount >= 3, viewport, "food-category-icons-render",
+      "Rendered " + pageGeometry.categoryCount + " categories");
+    check(pageGeometry.appHomeTitle === "What are you craving?", viewport, "app-home-title-visible",
+      pageGeometry.appHomeTitle);
     check(pageGeometry.dockItems.length === 4 &&
       pageGeometry.dockItems.every(item => item.display === "flex" && item.direction === "column" && item.width >= 60 && item.height >= 46),
       viewport, "mobile-dock-buttons-are-stacked-and-tappable", JSON.stringify(pageGeometry.dockItems));

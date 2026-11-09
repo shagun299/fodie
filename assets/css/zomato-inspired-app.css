@@ -31,7 +31,7 @@ html { background:var(--paper)!important; scroll-padding-top:170px!important; }
 body {
   background:var(--paper)!important;
   color:var(--ink)!important;
-  font-family:Arial,Helvetica,sans-serif!important;
+  font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important;
   font-size:14px!important;
   line-height:1.5!important;
   background-image:none!important;
@@ -111,7 +111,7 @@ body {
   border:1px solid var(--line)!important; border-radius:14px!important;
   background:var(--card)!important; box-shadow:none!important;
 }
-.quick-access-copy h2 { margin:2px 0!important; font-size:15px!important; font-family:Arial,Helvetica,sans-serif!important; letter-spacing:-.02em!important; }
+.quick-access-copy h2 { margin:2px 0!important; font-size:15px!important; font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important; letter-spacing:-.02em!important; }
 .quick-access-copy p { margin:0!important; color:var(--muted)!important; font-size:11px!important; }
 .quick-access-actions { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:9px!important; }
 .quick-access-card {
@@ -135,8 +135,8 @@ body {
 }
 .offer-copy { max-width:62%!important; }
 .offer-kicker { color:rgba(255,255,255,.86)!important; font-size:9px!important; }
-.offer-copy h2 { color:#fff!important; font-family:Arial,Helvetica,sans-serif!important; font-size:clamp(28px,3.5vw,42px)!important; line-height:1.08!important; letter-spacing:-.055em!important; }
-.offer-copy h2 em { color:#fff!important; font-family:Arial,Helvetica,sans-serif!important; }
+.offer-copy h2 { color:#fff!important; font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important; font-size:clamp(28px,3.5vw,42px)!important; line-height:1.08!important; letter-spacing:-.055em!important; }
+.offer-copy h2 em { color:#fff!important; font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important; }
 .offer-copy p { max-width:440px!important; color:rgba(255,255,255,.9)!important; font-size:12px!important; line-height:1.55!important; }
 .button-light { color:#d9374c!important; background:#fff!important; border:0!important; }
 .offer-art { border:1px solid rgba(255,255,255,.36)!important; background:rgba(255,255,255,.12)!important; box-shadow:none!important; }
@@ -155,10 +155,10 @@ body {
 .menu-heading .eyebrow { display:none!important; }
 .section-heading h2,.menu-heading h2 {
   margin:0 0 4px!important; color:var(--ink)!important;
-  font-family:Arial,Helvetica,sans-serif!important; font-size:25px!important;
+  font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important; font-size:25px!important;
   line-height:1.2!important; font-weight:800!important; letter-spacing:-.045em!important;
 }
-.section-heading h2 em,.menu-heading h2 em { color:var(--ink)!important; font-family:Arial,Helvetica,sans-serif!important; }
+.section-heading h2 em,.menu-heading h2 em { color:var(--ink)!important; font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important; }
 .section-heading p,.menu-heading p { color:var(--muted)!important; font-size:12px!important; }
 .menu-count { border:0!important; background:var(--paper-deep)!important; border-radius:10px!important; }
 .menu-count strong { color:var(--ink)!important; }
@@ -216,7 +216,7 @@ body {
 .dish-topline { color:var(--muted)!important; }
 .dish-category { color:var(--muted)!important; font-size:9px!important; letter-spacing:.06em!important; text-transform:uppercase!important; }
 .dish-time { color:var(--muted)!important; font-size:10px!important; }
-.dish-content h3 { color:var(--ink)!important; font-family:Arial,Helvetica,sans-serif!important; font-size:15px!important; font-weight:800!important; letter-spacing:-.02em!important; }
+.dish-content h3 { color:var(--ink)!important; font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important; font-size:15px!important; font-weight:800!important; letter-spacing:-.02em!important; }
 .dish-description { color:var(--muted)!important; font-size:11px!important; line-height:1.45!important; }
 .customize-link { color:var(--orange-dark)!important; background:transparent!important; border-color:transparent!important; font-size:10px!important; }
 .dish-prices strong { color:var(--ink)!important; font-size:14px!important; }
@@ -317,7 +317,7 @@ body {
   .dish-content h3 { margin:3px 0!important; font-size:13px!important; line-height:1.25!important; }
   .dish-description {
     display:-webkit-box!important; -webkit-box-orient:vertical!important; -webkit-line-clamp:2!important;
-    overflow:hidden!important; margin:1px 0 4px!important; font-size:10px!important; line-height:1.35!important;
+    overflow:hidden!important; margin:1px 0 4px!important; font-size:11px!important; line-height:1.35!important;
   }
   .customize-link {
     align-self:flex-start!important; min-height:24px!important; margin:0 0 5px!important;
