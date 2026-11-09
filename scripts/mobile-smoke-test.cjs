@@ -133,6 +133,32 @@ async function auditThemeContrast(page, viewport, themeName) {
         contrast:Number(contrast.toFixed(2)),pass:contrast >= 4.5
       });
     }
+    const eyebrowElement = document.querySelector(".hero-copy > .eyebrow");
+    let eyebrowAudit = null;
+    if (eyebrowElement) {
+      const style = getComputedStyle(eyebrowElement);
+      const textColor = parseColor(style.color);
+      const pillColor = parseColor(style.backgroundColor);
+      const lineElement = eyebrowElement.querySelector(".eyebrow-line");
+      const lineStyle = lineElement ? getComputedStyle(lineElement) : null;
+      const lineColor = lineStyle ? parseColor(lineStyle.backgroundColor) : null;
+      const heroSurface = surfaces.forest;
+      const actualPill = pillColor ? blend(pillColor, heroSurface) : heroSurface;
+      const actualText = textColor ? (textColor[3] < 1 ? blend(textColor, actualPill) : textColor) : null;
+      const actualLine = lineColor ? blend(lineColor, actualPill) : null;
+      const rect = lineElement?.getBoundingClientRect();
+      eyebrowAudit = {
+        text:eyebrowElement.innerText.replace(/\\s+/g," ").trim(),
+        display:style.display,
+        visibility:style.visibility,
+        textContrast:actualText ? Number(ratio(actualText, actualPill).toFixed(2)) : 0,
+        lineContrast:actualLine ? Number(ratio(actualLine, actualPill).toFixed(2)) : 0,
+        lineWidth:rect ? rect.width : 0,
+        lineHeight:rect ? rect.height : 0,
+        background:style.backgroundColor,
+        textColor:style.color
+      };
+    }
     const borders = [];
     for (const [name, selector, surfaceName] of [
       ["dish-card-border","#menuGrid .dish-card","card"],
@@ -159,6 +185,7 @@ async function auditThemeContrast(page, viewport, themeName) {
       theme:document.documentElement.dataset.theme,
       colors,
       borders,
+      eyebrowAudit,
       failedColors:colors.filter(item => !item.pass),
       failedBorders:borders.filter(item => !item.pass)
     };
@@ -169,6 +196,11 @@ async function auditThemeContrast(page, viewport, themeName) {
   check(audit.borders.length >= 4 && audit.failedBorders.length === 0,
     viewport, themeName + "-theme-ui-dividers-remain-visible",
     JSON.stringify({tested:audit.borders.length,failures:audit.failedBorders}));
+  check(Boolean(audit.eyebrowAudit) && audit.eyebrowAudit.display !== "none" &&
+    audit.eyebrowAudit.visibility !== "hidden" && audit.eyebrowAudit.text === "A CLEAR MENU. AN EASY ORDER." &&
+    audit.eyebrowAudit.textContrast >= 4.5 && audit.eyebrowAudit.lineContrast >= 3 &&
+    audit.eyebrowAudit.lineWidth >= 20 && audit.eyebrowAudit.lineHeight >= 1,
+    viewport, themeName + "-hero-eyebrow-and-gold-line-visible", JSON.stringify(audit.eyebrowAudit));
 }
 
 async function waitForSite(page) {

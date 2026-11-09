@@ -280,3 +280,30 @@ hr,.divider,.section-divider,.form-divider,
   .category-tab.active .category-label { color:var(--green) !important; }
   :root[data-theme="dark"] .category-tab.active .category-label { color:#d9e8d9 !important; }
 }
+
+
+/* The hero eyebrow sits on a dark forest panel. Do not let the generic
+   glass-pill background turn its champagne lettering into low-contrast text. */
+.hero-copy > .eyebrow {
+  display:inline-flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  min-height:31px !important;
+  padding:7px 13px !important;
+  border:1px solid rgba(231,211,169,.34) !important;
+  border-radius:999px !important;
+  background:rgba(8,22,14,.58) !important;
+  color:#f0d8aa !important;
+  opacity:1 !important;
+  visibility:visible !important;
+  text-shadow:0 1px 1px rgba(0,0,0,.22) !important;
+}
+.hero-copy > .eyebrow .eyebrow-line {
+  display:inline-block !important;
+  flex:0 0 25px !important;
+  width:25px !important;
+  height:2px !important;
+  border-radius:99px !important;
+  background:#e7cc98 !important;
+  opacity:1 !important;
+}
