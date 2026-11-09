@@ -111,6 +111,46 @@ async function runViewport(browser, viewport) {
     const menuCount = await page.locator("#menuGrid .dish-card").count();
     check(menuCount >= 20, viewport, "menu-rendered", "Found " + menuCount + " menu cards");
 
+    const categoryLabels = await page.locator("#categoryTabs .category-label").evaluateAll(nodes =>
+      nodes.map(node => ({
+        text:node.textContent.trim(),
+        visible:getComputedStyle(node).display !== "none" && node.getBoundingClientRect().height > 0
+      }))
+    );
+    check(categoryLabels.length >= 3 && categoryLabels.every(item => item.text && item.visible),
+      viewport, "category-icons-have-visible-names", JSON.stringify(categoryLabels));
+
+    const vegToggle = page.locator("#appVegToggle");
+    if (await vegToggle.getAttribute("aria-pressed") === "true") {
+      await vegToggle.click();
+      await page.waitForFunction(() => document.querySelector("#appVegToggle")?.getAttribute("aria-pressed") === "false");
+    }
+    await vegToggle.click();
+    await page.waitForFunction(() => document.querySelector("#appVegToggle")?.getAttribute("aria-pressed") === "true");
+    const vegResults = await page.locator("#menuGrid .dish-card").evaluateAll(cards => ({
+      count:cards.length,
+      onlyVegetarian:cards.every(card => card.querySelector("[data-diet-indicator]")?.classList.contains("diet-veg"))
+    }));
+    check(vegResults.count > 0 && vegResults.onlyVegetarian, viewport, "veg-mode-filters-menu",
+      JSON.stringify(vegResults));
+    await vegToggle.click();
+    await page.waitForFunction(() => document.querySelector("#appVegToggle")?.getAttribute("aria-pressed") === "false");
+
+    const sortMenu = page.locator("#sortMenu");
+    await sortMenu.selectOption("price-low");
+    const ascendingPrices = await page.locator("#menuGrid [data-price]").evaluateAll(nodes =>
+      nodes.map(node => Number(node.textContent.replace(/[^\d.]/g, ""))).filter(Number.isFinite)
+    );
+    check(ascendingPrices.length >= 2 && ascendingPrices.every((value,index) => index === 0 || ascendingPrices[index-1] <= value),
+      viewport, "sort-low-to-high-orders-prices", JSON.stringify(ascendingPrices));
+    await sortMenu.selectOption("price-high");
+    const descendingPrices = await page.locator("#menuGrid [data-price]").evaluateAll(nodes =>
+      nodes.map(node => Number(node.textContent.replace(/[^\d.]/g, ""))).filter(Number.isFinite)
+    );
+    check(descendingPrices.length >= 2 && descendingPrices.every((value,index) => index === 0 || descendingPrices[index-1] >= value),
+      viewport, "sort-high-to-low-orders-prices", JSON.stringify(descendingPrices));
+    await sortMenu.selectOption("recommended");
+
     const pageGeometry = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
       documentWidth: document.documentElement.scrollWidth,

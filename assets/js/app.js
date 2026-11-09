@@ -98,7 +98,7 @@
     currentCustomizer: null,
     customizerQuantity: 1,
     category: "All",
-    diet: readStore(STORAGE.diet, "all") === "veg" ? "veg" : "all",
+    diet: ["all", "veg", "nonveg"].includes(readStore(STORAGE.diet, "all")) ? readStore(STORAGE.diet, "all") : "all",
     query: "",
     sort: ["recommended", "price-low", "price-high", "discount", "name"].includes(readStore(STORAGE.sort, "recommended")) ? readStore(STORAGE.sort, "recommended") : "recommended",
     onlyFavourites: false,
@@ -679,7 +679,7 @@
     const allowed = ["all", "veg", "nonveg"];
     state.diet = allowed.includes(diet) ? diet : "all";
     saveStore(STORAGE.diet, state.diet);
-    $(".diet-button").forEach(button => {
+    $$(".diet-button").forEach(button => {
       button.classList.toggle("active", button.dataset.diet === state.diet);
     });
     if (shouldRender) renderMenu();
@@ -712,7 +712,7 @@
   function renderMenu() {
     const grid = $("#menuGrid");
     const items = visibleMenu();
-    $(".diet-button").forEach(button => {
+    $$(".diet-button").forEach(button => {
       button.classList.toggle("active", button.dataset.diet === state.diet);
     });
     const sortControl = $("#sortMenu");
@@ -2074,7 +2074,7 @@
       saveStore(STORAGE.sort, state.sort);
       renderMenu();
     });
-    $(".diet-button").forEach(button => button.addEventListener("click", () => {
+    $$(".diet-button").forEach(button => button.addEventListener("click", () => {
       setDietFilter(button.dataset.diet);
     }));
     $("#clearFilters").addEventListener("click", () => {
