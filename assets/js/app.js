@@ -80,7 +80,9 @@
     orders: "foodiehub.orders.v2",
     profile: "foodiehub.profile.v1",
     rewards: "foodiehub.rewards.v1",
-    auth: "foodiehub.auth.v1"
+    auth: "foodiehub.auth.v1",
+    diet: "foodiehub.menuDiet.v1",
+    sort: "foodiehub.menuSort.v1"
   };
 
   const state = {
@@ -96,9 +98,9 @@
     currentCustomizer: null,
     customizerQuantity: 1,
     category: "All",
-    diet: "all",
+    diet: readStore(STORAGE.diet, "all") === "veg" ? "veg" : "all",
     query: "",
-    sort: "recommended",
+    sort: ["recommended", "price-low", "price-high", "discount", "name"].includes(readStore(STORAGE.sort, "recommended")) ? readStore(STORAGE.sort, "recommended") : "recommended",
     onlyFavourites: false,
     coupon: null,
     backendOnline: false,
@@ -477,15 +479,29 @@
     renderSavedAddresses();
   }
 
-  function openProfile() {
+  function openProfile(options = {}) {
     renderAccountUI();
     const form = $("#profileForm");
     if (state.backendOnline && !(state.auth && state.auth.user)) {
+      $("#profileDialog").classList.remove("address-focus-mode");
       showAccountAuthMode("login");
       $("#accountAuthError").textContent = "";
       openDialog("profileDialog");
       return;
     }
+    const addressOnly = Boolean(options.addressOnly);
+    const profileDialog = $("#profileDialog");
+    profileDialog.classList.toggle("address-focus-mode", addressOnly);
+    const profileKicker = $(".dialog-header .drawer-kicker", profileDialog);
+    if (profileKicker) profileKicker.textContent = addressOnly ? "DELIVERY DETAILS" : "FOODIEHUB ACCOUNT";
+    const profileTitle = $("#profileTitle");
+    if (profileTitle) profileTitle.textContent = addressOnly ? "Delivery address" : (state.auth && state.auth.user ? "Your account" : "Your profile");
+    const addressIntroNumber = $(".address-intro > span", profileDialog);
+    if (addressIntroNumber) addressIntroNumber.textContent = addressOnly ? "01" : "02";
+    const saveButton = $(".profile-save-button", profileDialog);
+    if (saveButton) saveButton.innerHTML = addressOnly
+      ? 'Save delivery address <span aria-hidden="true">✓</span>'
+      : 'Save profile <span aria-hidden="true">✓</span>';
     ["name", "phone", "email"].forEach(field => {
       form.elements.namedItem(field).value = state.profile[field] || "";
     });
@@ -572,7 +588,9 @@
         $("#profileError").textContent = error.message || "Your account could not be updated.";
       } finally {
         submit.disabled = false;
-        submit.innerHTML = 'Save profile <span aria-hidden="true">✓</span>';
+        submit.innerHTML = $("#profileDialog").classList.contains("address-focus-mode")
+          ? 'Save delivery address <span aria-hidden="true">✓</span>'
+          : 'Save profile <span aria-hidden="true">✓</span>';
       }
       return;
     }
@@ -646,7 +664,7 @@
       const active = state.category === category ? " active" : "";
       const label = category === "All" ? "All" : escapeHTML(category);
       const icon = getCategoryIcon(category);
-      return '<button class="category-tab' + active + '" type="button" data-category="' + escapeHTML(category) + '"><span class="category-icon" aria-hidden="true">' + icon + '</span><span class="category-label">' + label + "</span></button>";
+      return '<button class="category-tab' + active + '" type="button" data-category="' + escapeHTML(category) + '"><span class="category-icon" aria-hidden="true">' + icon + '</span><small class="category-label">' + label + "</small></button>";
     }).join("");
     $$("#categoryTabs [data-category]").forEach(button => {
       button.addEventListener("click", () => {
@@ -655,6 +673,16 @@
         renderMenu();
       });
     });
+  }
+
+  function setDietFilter(diet, shouldRender = true) {
+    const allowed = ["all", "veg", "nonveg"];
+    state.diet = allowed.includes(diet) ? diet : "all";
+    saveStore(STORAGE.diet, state.diet);
+    $(".diet-button").forEach(button => {
+      button.classList.toggle("active", button.dataset.diet === state.diet);
+    });
+    if (shouldRender) renderMenu();
   }
 
   function visibleMenu() {
@@ -667,17 +695,28 @@
       return matchesCategory && matchesDiet && matchesSearch && matchesFavourite;
     });
 
-    if (state.sort === "price-low") items.sort((a, b) => a.price - b.price);
-    if (state.sort === "price-high") items.sort((a, b) => b.price - a.price);
-    if (state.sort === "discount") items.sort((a, b) => b.discountPercent - a.discountPercent);
-    if (state.sort === "name") items.sort((a, b) => a.name.localeCompare(b.name));
-    if (state.sort === "recommended") items.sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)));
+    const originalOrder = new Map(state.menu.map((item, index) => [item.id, index]));
+    const tieBreak = (a, b) => (originalOrder.get(a.id) ?? 0) - (originalOrder.get(b.id) ?? 0);
+    const comparators = {
+      "price-low": (a, b) => Number(a.price || 0) - Number(b.price || 0),
+      "price-high": (a, b) => Number(b.price || 0) - Number(a.price || 0),
+      discount: (a, b) => Number(b.discountPercent || 0) - Number(a.discountPercent || 0),
+      name: (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "en", { sensitivity: "base", numeric: true }),
+      recommended: (a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured))
+    };
+    const compare = comparators[state.sort] || comparators.recommended;
+    items.sort((a, b) => compare(a, b) || tieBreak(a, b));
     return items;
   }
 
   function renderMenu() {
     const grid = $("#menuGrid");
     const items = visibleMenu();
+    $(".diet-button").forEach(button => {
+      button.classList.toggle("active", button.dataset.diet === state.diet);
+    });
+    const sortControl = $("#sortMenu");
+    if (sortControl && sortControl.value !== state.sort) sortControl.value = state.sort;
     const appVegToggle = $("#appVegToggle");
     if (appVegToggle) {
       const vegEnabled = state.diet === "veg";
@@ -1926,11 +1965,9 @@
     const mobileTrackOrder = $("#mobileTrackOrder");
     if (mobileTrackOrder) mobileTrackOrder.addEventListener("click", () => openTracking());
     $("#openProfile").addEventListener("click", openProfile);
-    $("#appLocationTrigger").addEventListener("click", openProfile);
+    $("#appLocationTrigger").addEventListener("click", () => openProfile({ addressOnly: true }));
     $("#appVegToggle").addEventListener("click", () => {
-      state.diet = state.diet === "veg" ? "all" : "veg";
-      $(".diet-button").forEach(button => button.classList.toggle("active", button.dataset.diet === state.diet));
-      renderMenu();
+      setDietFilter(state.diet === "veg" ? "all" : "veg");
     });
     $("#profileForm").addEventListener("submit", saveProfile);
     $("#customerLoginForm").addEventListener("submit", handleCustomerLogin);
@@ -2005,8 +2042,7 @@
       $("#favouritesToggle").classList.toggle("is-active", state.onlyFavourites);
       $("#favouritesToggle").setAttribute("aria-label", state.onlyFavourites ? "Show all dishes" : "Show favourites");
       state.category = "All";
-      state.diet = "all";
-      $$(".diet-button").forEach(button => button.classList.toggle("active", button.dataset.diet === "all"));
+      setDietFilter("all", false);
       renderCategories();
       renderMenu();
       document.getElementById("menu").scrollIntoView({ behavior: "smooth" });
@@ -2032,15 +2068,18 @@
       state.query = event.target.value;
       scheduleMenuRender();
     });
-    $("#sortMenu").addEventListener("change", event => { state.sort = event.target.value; renderMenu(); });
-    $$(".diet-button").forEach(button => button.addEventListener("click", () => {
-      state.diet = button.dataset.diet;
-      $$(".diet-button").forEach(item => item.classList.toggle("active", item === button));
+    $("#sortMenu").addEventListener("change", event => {
+      const nextSort = event.target.value;
+      state.sort = ["recommended", "price-low", "price-high", "discount", "name"].includes(nextSort) ? nextSort : "recommended";
+      saveStore(STORAGE.sort, state.sort);
       renderMenu();
+    });
+    $(".diet-button").forEach(button => button.addEventListener("click", () => {
+      setDietFilter(button.dataset.diet);
     }));
     $("#clearFilters").addEventListener("click", () => {
       state.category = "All";
-      state.diet = "all";
+      setDietFilter("all", false);
       state.query = "";
       state.onlyFavourites = false;
       $("#menuSearch").value = "";
