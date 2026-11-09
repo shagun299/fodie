@@ -154,7 +154,7 @@ async function runViewport(browser, viewport) {
           width:rect ? rect.width : 0,height:rect ? rect.height : 0 };
       })(),
       appSearch: (() => {
-        const element = document.querySelector("#menuSearch");
+        const element = document.querySelector(".app-search-box");
         const rect = element?.getBoundingClientRect();
         return { visible:Boolean(element && rect && rect.width > 0 && rect.height > 0),
           width:rect ? rect.width : 0,height:rect ? rect.height : 0 };
