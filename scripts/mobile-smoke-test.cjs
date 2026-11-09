@@ -28,24 +28,28 @@ function check(condition, viewport, name, detail) {
 }
 
 async function waitForSite(page) {
-  let lastError;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    try {
-      const response = await page.goto(BASE_URL, {
-        waitUntil: "domcontentloaded",
-        timeout: 45000
-      });
-      if (response && response.status() >= 400) {
-        throw new Error("Site returned HTTP " + response.status());
-      }
-      await page.waitForSelector("#menuGrid .dish-card", { timeout: 45000 });
-      return;
-    } catch (error) {
-      lastError = error;
-      await page.waitForTimeout(2500);
-    }
+  const response = await page.goto(BASE_URL, {
+    waitUntil: "domcontentloaded",
+    timeout: 45000
+  });
+  if (response && response.status() >= 400) {
+    throw new Error("Site returned HTTP " + response.status());
   }
-  throw lastError || new Error("Site did not become ready");
+  try {
+    await page.waitForFunction(() => {
+      const count = document.querySelectorAll("#menuGrid .dish-card").length;
+      const status = document.querySelector("#menuStatus")?.textContent?.trim() || "";
+      return count > 0 || (status && status !== "Loading menu...");
+    }, { timeout: 30000 });
+  } catch (_) {}
+  const state = await page.evaluate(() => ({
+    cards: document.querySelectorAll("#menuGrid .dish-card").length,
+    status: document.querySelector("#menuStatus")?.textContent?.trim() || "",
+    script: document.querySelector('script[src*="assets/js/app.js"]')?.src || "",
+    categories: document.querySelectorAll("#categoryTabs .category-tab").length,
+    readyState: document.readyState
+  }));
+  if (!state.cards) throw new Error("Menu initialization did not render cards: " + JSON.stringify(state));
 }
 
 async function runViewport(browser, viewport) {
@@ -60,6 +64,7 @@ async function runViewport(browser, viewport) {
   const cdp = await context.newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate:3 });
   const pageErrors = [];
+  const consoleErrors = [];
   const firstPartyFailures = [];
 
   await page.addInitScript(() => {
@@ -77,6 +82,9 @@ async function runViewport(browser, viewport) {
   });
 
   page.on("pageerror", error => pageErrors.push(error.message));
+  page.on("console", message => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
   page.on("requestfailed", request => {
     const url = request.url();
     if (url.includes("shagun299.github.io") || url.includes("images.unsplash.com") || url.includes("images.pexels.com")) {
@@ -204,6 +212,30 @@ async function runViewport(browser, viewport) {
         return Boolean(cart && badge && badge.width > 0 && badge.left >= cart.left - 1 &&
           badge.right <= cart.right + 1 && badge.top >= cart.top - 1 && badge.bottom <= cart.bottom + 1);
       })(),
+      contentAlignment: (() => {
+        const selectors = ["#quickAccess", "#offers", "#menu", "#meal-studio", "#smart-combos"];
+        const boxes = selectors.map(selector => {
+          const element = document.querySelector(selector);
+          const rect = element?.getBoundingClientRect();
+          return { selector, left:rect ? Math.round(rect.left) : null, right:rect ? Math.round(rect.right) : null,
+            width:rect ? Math.round(rect.width) : 0 };
+        }).filter(item => item.width > 0);
+        const lefts = boxes.map(item => item.left);
+        const rights = boxes.map(item => item.right);
+        return { boxes, aligned:lefts.length >= 4 &&
+          Math.max(...lefts)-Math.min(...lefts) <= 2 &&
+          Math.max(...rights)-Math.min(...rights) <= 2 };
+      })(),
+      dishCardAlignment: (() => {
+        const card = document.querySelector("#menuGrid .dish-card");
+        if (!card) return { valid:false };
+        const cardRect = card.getBoundingClientRect();
+        const imageRect = card.querySelector(".dish-image-wrap")?.getBoundingClientRect();
+        const contentRect = card.querySelector(".dish-content")?.getBoundingClientRect();
+        return { valid:Boolean(imageRect && contentRect) &&
+          imageRect.left >= cardRect.left-1 && imageRect.right <= contentRect.left+2 &&
+          contentRect.right <= cardRect.right+1 && contentRect.left < contentRect.right };
+      })(),
       menuImage: document.querySelector("#menuGrid .dish-image")?.getAttribute("src") || "",
       appLocation: (() => {
         const element = document.querySelector("#appLocationTrigger");
@@ -256,6 +288,10 @@ async function runViewport(browser, viewport) {
     }));
     check(pageGeometry.documentWidth <= pageGeometry.viewportWidth + 1, viewport, "no-horizontal-page-overflow",
       "viewport=" + pageGeometry.viewportWidth + ", document=" + pageGeometry.documentWidth + ", body=" + pageGeometry.bodyWidth);
+    check(pageGeometry.contentAlignment.aligned, viewport, "main-sections-share-one-content-grid",
+      JSON.stringify(pageGeometry.contentAlignment.boxes));
+    check(pageGeometry.dishCardAlignment.valid, viewport, "dish-card-image-and-content-align-without-overlap",
+      JSON.stringify(pageGeometry.dishCardAlignment));
     check(pageGeometry.dockVisible, viewport, "mobile-dock-visible");
     check(pageGeometry.scrollShell.separated && pageGeometry.scrollShell.contentHeight > 200,
       viewport, "mobile-dock-does-not-cover-page-content", JSON.stringify(pageGeometry.scrollShell));
@@ -488,6 +524,7 @@ async function runViewport(browser, viewport) {
     });
     performance.scrollFrameMetrics = scrollFrameMetrics;
     check(pageErrors.length === 0, viewport, "no-page-javascript-errors", JSON.stringify(pageErrors));
+    check(consoleErrors.length === 0, viewport, "no-browser-console-errors", JSON.stringify(consoleErrors));
     check(firstPartyFailures.length === 0, viewport, "no-site-or-food-image-request-failures", JSON.stringify(firstPartyFailures));
     reports.push({ viewport:sizeName(viewport), name:"performance-observation", pass:true, detail:performance });
   } catch (error) {

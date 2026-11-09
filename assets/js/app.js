@@ -666,10 +666,10 @@
       const icon = getCategoryIcon(category);
       return '<button class="category-tab' + active + '" type="button" data-category="' + escapeHTML(category) + '"><span class="category-icon" aria-hidden="true">' + icon + '</span><small class="category-label">' + label + "</small></button>";
     }).join("");
-    $("#categoryTabs [data-category]").forEach(button => {
+    $$("#categoryTabs [data-category]").forEach(button => {
       button.addEventListener("click", () => {
         state.category = button.dataset.category;
-        $("#categoryTabs [data-category]").forEach(tab => {
+        $$("#categoryTabs [data-category]").forEach(tab => {
           tab.classList.toggle("active", tab.dataset.category === state.category);
         });
         renderMenu();
