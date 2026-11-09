@@ -117,13 +117,25 @@ async function runViewport(browser, viewport) {
       bodyWidth: document.body.scrollWidth,
       dockVisible: getComputedStyle(document.querySelector("#mobileDock")).display !== "none",
       scrollShell: (() => {
-        const content = document.querySelector("#mobilePageScroll")?.getBoundingClientRect();
-        const dock = document.querySelector("#mobileDock")?.getBoundingClientRect();
+        const content = document.querySelector("#mobilePageScroll");
+        const dock = document.querySelector("#mobileDock");
+        const dockRect = dock?.getBoundingClientRect();
+        const bodyPadding = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+        const dockPosition = dock ? getComputedStyle(dock).position : "missing";
+        const pageScroller = document.scrollingElement;
+        const scrollRange = pageScroller ? pageScroller.scrollHeight - pageScroller.clientHeight : 0;
+        const dockHeight = dockRect ? dockRect.height : 0;
         return {
-          contentBottom:content ? Math.round(content.bottom) : null,
-          dockTop:dock ? Math.round(dock.top) : null,
-          contentHeight:content ? Math.round(content.height) : 0,
-          separated:Boolean(content && dock && Math.abs(content.bottom - dock.top) <= 1)
+          contentBottom:content ? Math.round(content.getBoundingClientRect().bottom) : null,
+          dockTop:dockRect ? Math.round(dockRect.top) : null,
+          contentHeight:pageScroller ? pageScroller.scrollHeight : 0,
+          bodyPadding,
+          dockHeight,
+          dockPosition,
+          scrollRange:Math.round(scrollRange),
+          separated:Boolean(content && dock && dockPosition === "fixed" &&
+            bodyPadding >= dockHeight + 24 && scrollRange > 200 &&
+            getComputedStyle(content).overflowY === "visible")
         };
       })(),
       visibleBrandLogos: Array.from(document.querySelectorAll(".brand img"))
@@ -355,7 +367,7 @@ async function runViewport(browser, viewport) {
     await page.locator('[data-close-dialog="profileDialog"]').click();
 
     const scrollFrameMetrics = await page.evaluate(async () => {
-      const scroller = document.querySelector("#mobilePageScroll");
+      const scroller = document.scrollingElement;
       const maxScroll = scroller ? Math.max(0, scroller.scrollHeight - scroller.clientHeight) : 0;
       const start = performance.now();
       let last = start;
