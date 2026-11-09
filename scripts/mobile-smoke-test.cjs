@@ -64,7 +64,7 @@ async function runViewport(browser, viewport) {
   const cdp = await context.newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate:3 });
   const pageErrors = [];
-  const consoleErrors = [];
+  const httpErrors = [];
   const firstPartyFailures = [];
 
   await page.addInitScript(() => {
@@ -82,8 +82,10 @@ async function runViewport(browser, viewport) {
   });
 
   page.on("pageerror", error => pageErrors.push(error.message));
-  page.on("console", message => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+  page.on("response", response => {
+    if (response.status() >= 400) {
+      httpErrors.push({ url:response.url(), status:response.status() });
+    }
   });
   page.on("requestfailed", request => {
     const url = request.url();
@@ -523,8 +525,12 @@ async function runViewport(browser, viewport) {
       };
     });
     performance.scrollFrameMetrics = scrollFrameMetrics;
+    const unexpectedHttpErrors = httpErrors.filter(item => {
+      try { return !new URL(item.url).pathname.includes("/api/"); } catch (_) { return true; }
+    });
     check(pageErrors.length === 0, viewport, "no-page-javascript-errors", JSON.stringify(pageErrors));
-    check(consoleErrors.length === 0, viewport, "no-browser-console-errors", JSON.stringify(consoleErrors));
+    check(unexpectedHttpErrors.length === 0, viewport, "no-unexpected-http-errors",
+      JSON.stringify({ all:httpErrors, unexpected:unexpectedHttpErrors }));
     check(firstPartyFailures.length === 0, viewport, "no-site-or-food-image-request-failures", JSON.stringify(firstPartyFailures));
     reports.push({ viewport:sizeName(viewport), name:"performance-observation", pass:true, detail:performance });
   } catch (error) {

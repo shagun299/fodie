@@ -45,7 +45,8 @@
     align-items:center!important; gap:10px!important; min-height:43px!important; padding:0 0 9px!important;
   }
   .app-location-trigger {
-    display:flex!important; align-items:center!important; width:100%!important; min-width:0!important; gap:7px!important;
+    display:flex!important; align-items:center!important; width:100%!important; min-width:0!important;
+    min-height:34px!important; gap:7px!important;
   }
   .app-location-pin { flex:0 0 auto!important; font-size:21px!important; }
   .app-location-copy { flex:1 1 auto!important; min-width:0!important; }
