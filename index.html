@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="./assets/css/styles.css?v=account-premium-v27-20261108">
   <link rel="stylesheet" href="./assets/css/apple-ui.css?v=account-premium-v27-1-20261108">
   <link rel="stylesheet" href="./assets/css/mobile-experience.css?v=mobile-v32-natural-scroll-20261109">
+  <link rel="stylesheet" href="./assets/css/zomato-inspired-app.css?v=app-home-v1-20261109">
   <script src="./assets/js/config.js"></script>
   <script defer src="./assets/js/app.js?v=account-premium-v27-20261108"></script>
   <script type="application/ld+json">
@@ -69,6 +70,24 @@
           <span class="cart-trigger-label">Your bag</span>
           <span class="cart-count" id="cartCount">0</span>
         </button>
+      </div>
+    </div>
+    <div class="app-location-row page-width">
+      <button class="app-location-trigger" id="appLocationTrigger" type="button" aria-label="Add your delivery address">
+        <span class="app-location-pin" aria-hidden="true">⌖</span>
+        <span class="app-location-copy"><small>DELIVER TO</small><strong id="appLocationText">Add delivery address</strong></span>
+        <span class="app-location-chevron" aria-hidden="true">⌄</span>
+      </button>
+      <button class="app-veg-toggle" id="appVegToggle" type="button" aria-pressed="false">
+        <span class="app-veg-mark" aria-hidden="true"></span><span>Veg mode</span><strong id="appVegState">Off</strong>
+      </button>
+    </div>
+    <div class="app-search-row page-width">
+      <div class="search-box app-search-box">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <label class="visually-hidden" for="menuSearch">Search dishes and ingredients</label>
+        <input id="menuSearch" type="search" placeholder="Search for dishes, cuisines..." autocomplete="off">
+        <kbd>⌘ K</kbd>
       </div>
     </div>
   </header>
@@ -174,20 +193,14 @@
     <section class="menu-section page-width" id="menu" aria-labelledby="menuTitle">
       <div class="section-heading menu-heading">
         <div>
-          <div class="eyebrow"><span class="eyebrow-line"></span> EXPLORE THE MENU</div>
-          <h2 id="menuTitle">Explore the <em>menu.</em></h2>
-          <p>Browse by category, filter by dietary preference or search by dish and ingredient.</p>
+          <div class="eyebrow"><span class="eyebrow-line"></span> ORDER YOUR FAVOURITES</div>
+          <h2 id="menuTitle">What are you <em>craving?</em></h2>
+          <p>Fresh picks, familiar favourites and something new to try.</p>
         </div>
         <div class="menu-count"><strong id="menuCount">24</strong><span>menu<br>items</span></div>
       </div>
 
       <div class="menu-toolbar">
-        <div class="search-box">
-          <span class="search-icon" aria-hidden="true">⌕</span>
-          <label class="visually-hidden" for="menuSearch">Search the menu</label>
-          <input id="menuSearch" type="search" placeholder="Search dishes or ingredients..." autocomplete="off">
-          <kbd>⌘ K</kbd>
-        </div>
         <label class="sort-control">
           <span>Sort by</span>
           <select id="sortMenu" aria-label="Sort menu">

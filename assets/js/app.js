@@ -466,6 +466,13 @@
     const signedIn = Boolean(state.auth && state.auth.token && state.auth.user);
     $("#profileTriggerLabel").textContent = name ? name.split(/\s+/)[0] : (signedIn ? "Account" : "Profile");
     $("#openProfile").setAttribute("aria-label", signedIn ? "Open your FoodieHub account" : (name ? "Open profile for " + name : "Open your profile"));
+    const savedAddress = String(state.profile.address || "").trim();
+    $("#appLocationText").textContent = savedAddress
+      ? savedAddress.split(",").slice(0, 2).join(",").trim()
+      : "Add delivery address";
+    $("#appLocationTrigger").setAttribute("aria-label", savedAddress
+      ? "Delivery address: " + savedAddress + ". Edit delivery address"
+      : "Add your delivery address");
     renderAccountUI();
     renderSavedAddresses();
   }
@@ -615,13 +622,31 @@
     }
   }
 
+  function getCategoryIcon(category) {
+    const name = String(category || "").toLowerCase();
+    const icons = [
+      [/all|everything|popular|trending/, "🍽️"],
+      [/pizza/, "🍕"],
+      [/burger/, "🍔"],
+      [/biryani|rice|pulao/, "🍛"],
+      [/dessert|cake|sweet|ice cream/, "🍰"],
+      [/drink|beverage|juice|shake|coffee/, "🥤"],
+      [/sandwich|wrap|roll/, "🌯"],
+      [/pasta|noodle/, "🍝"],
+      [/indian|north|south|thali/, "🥘"],
+      [/snack|starter|momo|fries/, "🥟"]
+    ];
+    const match = icons.find(([pattern]) => pattern.test(name));
+    return match ? match[1] : "🍴";
+  }
+
   function renderCategories() {
     const categories = ["All", ...new Set(state.menu.map(item => item.category))];
     $("#categoryTabs").innerHTML = categories.map(category => {
       const active = state.category === category ? " active" : "";
-      const label = category === "All" ? "Everything" : escapeHTML(category);
-      const mark = category === "All" ? " <span>✦</span>" : "";
-      return '<button class="category-tab' + active + '" type="button" data-category="' + escapeHTML(category) + '">' + label + mark + "</button>";
+      const label = category === "All" ? "All" : escapeHTML(category);
+      const icon = getCategoryIcon(category);
+      return '<button class="category-tab' + active + '" type="button" data-category="' + escapeHTML(category) + '"><span class="category-icon" aria-hidden="true">' + icon + '</span><span class="category-label">' + label + "</span></button>";
     }).join("");
     $$("#categoryTabs [data-category]").forEach(button => {
       button.addEventListener("click", () => {
@@ -653,6 +678,13 @@
   function renderMenu() {
     const grid = $("#menuGrid");
     const items = visibleMenu();
+    const appVegToggle = $("#appVegToggle");
+    if (appVegToggle) {
+      const vegEnabled = state.diet === "veg";
+      appVegToggle.classList.toggle("is-active", vegEnabled);
+      appVegToggle.setAttribute("aria-pressed", String(vegEnabled));
+      $("#appVegState").textContent = vegEnabled ? "On" : "Off";
+    }
     $("#menuCount").textContent = items.length;
     $("#menuStatus").textContent = state.onlyFavourites ? "Your saved favourites" : (state.query ? "Results for “" + state.query + "”" : "Showing all menu items");
     $("#emptyMenu").hidden = items.length > 0;
@@ -1884,7 +1916,7 @@
     $("#themeToggle").setAttribute("title", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
     $("#themeToggle span").textContent = theme === "dark" ? "☀" : "☾";
     const themeMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeMeta) themeMeta.setAttribute("content", theme === "dark" ? "#111914" : "#f3f5ef");
+    if (themeMeta) themeMeta.setAttribute("content", theme === "dark" ? "#171717" : "#ffffff");
   }
 
   function bindEvents() {
@@ -1894,6 +1926,12 @@
     const mobileTrackOrder = $("#mobileTrackOrder");
     if (mobileTrackOrder) mobileTrackOrder.addEventListener("click", () => openTracking());
     $("#openProfile").addEventListener("click", openProfile);
+    $("#appLocationTrigger").addEventListener("click", openProfile);
+    $("#appVegToggle").addEventListener("click", () => {
+      state.diet = state.diet === "veg" ? "all" : "veg";
+      $(".diet-button").forEach(button => button.classList.toggle("active", button.dataset.diet === state.diet));
+      renderMenu();
+    });
     $("#profileForm").addEventListener("submit", saveProfile);
     $("#customerLoginForm").addEventListener("submit", handleCustomerLogin);
     $("#customerRegisterForm").addEventListener("submit", handleCustomerRegister);
