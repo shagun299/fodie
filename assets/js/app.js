@@ -1772,7 +1772,8 @@
   function resumeOfferRotation(){
     pauseOfferRotation();
     const reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if(reduced||document.hidden||!offerIsInView)return;
+    const mobile=window.matchMedia&&window.matchMedia('(max-width: 760px)').matches;
+    if(reduced||mobile||document.hidden||!offerIsInView)return;
     offerRotationTimer=window.setInterval(()=>renderOfferSlide(offerSlideIndex+1),4800);
   }
   function applyOfferCode(code){
