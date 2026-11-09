@@ -221,12 +221,12 @@ async function runViewport(browser, viewport) {
         const visible = Boolean(lockup && getComputedStyle(lockup).display !== "none" &&
           lockup.getBoundingClientRect().width > 0 && lockup.getBoundingClientRect().height > 0);
         const brightness = color => {
-          const rgb = String(color || "").match(/\\d+/g)?.slice(0,3).map(Number) || [];
+          const rgb = String(color || "").match(/\d+/g)?.slice(0,3).map(Number) || [];
           return rgb.length === 3 ? Math.round((rgb[0]+rgb[1]+rgb[2])/3) : 0;
         };
         return {
           visible,
-          wordmark:name ? name.innerText.replace(/\\s+/g,"") : "",
+          wordmark:name ? name.innerText.replace(/\s+/g,"") : "",
           wordmarkColor:name ? getComputedStyle(name).color : "",
           wordmarkBrightness:name ? brightness(getComputedStyle(name).color) : 0,
           taglineColor:tagline ? getComputedStyle(tagline).color : "",
@@ -339,7 +339,7 @@ async function runViewport(browser, viewport) {
       const name = document.querySelector(".mobile-brand-name");
       const tagline = document.querySelector(".mobile-brand-tagline");
       const brightness = color => {
-        const rgb = String(color || "").match(/\\d+/g)?.slice(0,3).map(Number) || [];
+        const rgb = String(color || "").match(/\d+/g)?.slice(0,3).map(Number) || [];
         return rgb.length === 3 ? Math.round((rgb[0]+rgb[1]+rgb[2])/3) : 0;
       };
       const lockup = document.querySelector(".mobile-brand-lockup");
@@ -347,7 +347,7 @@ async function runViewport(browser, viewport) {
         theme:document.documentElement.dataset.theme,
         lockupVisible:Boolean(lockup && getComputedStyle(lockup).display !== "none" &&
           lockup.getBoundingClientRect().width > 0 && lockup.getBoundingClientRect().height > 0),
-        wordmark:name ? name.innerText.replace(/\\s+/g,"") : "",
+        wordmark:name ? name.innerText.replace(/\s+/g,"") : "",
         wordmarkColor:name ? getComputedStyle(name).color : "",
         wordmarkBrightness:name ? brightness(getComputedStyle(name).color) : 0,
         taglineBrightness:tagline ? brightness(getComputedStyle(tagline).color) : 0,
@@ -365,7 +365,7 @@ async function runViewport(browser, viewport) {
     await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
     const lightBrandAfterToggle = await page.evaluate(() => ({
       visible:getComputedStyle(document.querySelector(".mobile-brand-lockup")).display !== "none",
-      text:document.querySelector(".mobile-brand-name")?.innerText.replace(/\\s+/g,"") || "",
+      text:document.querySelector(".mobile-brand-name")?.innerText.replace(/\s+/g,"") || "",
       color:getComputedStyle(document.querySelector(".mobile-brand-name")).color
     }));
     check(lightBrandAfterToggle.visible && lightBrandAfterToggle.text === "FoodieHub" &&
