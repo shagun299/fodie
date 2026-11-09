@@ -206,8 +206,34 @@ async function runViewport(browser, viewport) {
             getComputedStyle(content).overflowY === "visible")
         };
       })(),
-      visibleBrandLogos: Array.from(document.querySelectorAll(".brand img"))
-        .filter(img => getComputedStyle(img).display !== "none").length,
+      visibleBrandLogos: (() => {
+        const visibleImages = Array.from(document.querySelectorAll(".brand img"))
+          .filter(img => getComputedStyle(img).display !== "none").length;
+        const lockup = document.querySelector(".mobile-brand-lockup");
+        const rect = lockup?.getBoundingClientRect();
+        const lockupVisible = Boolean(lockup && getComputedStyle(lockup).display !== "none" && rect && rect.width > 0 && rect.height > 0);
+        return visibleImages + (lockupVisible ? 1 : 0);
+      })(),
+      mobileBrandLockup: (() => {
+        const lockup = document.querySelector(".mobile-brand-lockup");
+        const name = lockup?.querySelector(".mobile-brand-name");
+        const tagline = lockup?.querySelector(".mobile-brand-tagline");
+        const visible = Boolean(lockup && getComputedStyle(lockup).display !== "none" &&
+          lockup.getBoundingClientRect().width > 0 && lockup.getBoundingClientRect().height > 0);
+        const brightness = color => {
+          const rgb = String(color || "").match(/\\d+/g)?.slice(0,3).map(Number) || [];
+          return rgb.length === 3 ? Math.round((rgb[0]+rgb[1]+rgb[2])/3) : 0;
+        };
+        return {
+          visible,
+          wordmark:name ? name.innerText.replace(/\\s+/g,"") : "",
+          wordmarkColor:name ? getComputedStyle(name).color : "",
+          wordmarkBrightness:name ? brightness(getComputedStyle(name).color) : 0,
+          taglineColor:tagline ? getComputedStyle(tagline).color : "",
+          taglineBrightness:tagline ? brightness(getComputedStyle(tagline).color) : 0,
+          markWidth:lockup?.querySelector(".mobile-brand-mark")?.getBoundingClientRect().width || 0
+        };
+      })(),
       headerCartBadgeContained: (() => {
         const cart = document.querySelector("#openCart")?.getBoundingClientRect();
         const badge = document.querySelector("#cartCount")?.getBoundingClientRect();
@@ -299,24 +325,52 @@ async function runViewport(browser, viewport) {
       viewport, "mobile-dock-does-not-cover-page-content", JSON.stringify(pageGeometry.scrollShell));
     check(pageGeometry.visibleBrandLogos === 1, viewport, "exactly-one-theme-logo-visible",
       String(pageGeometry.visibleBrandLogos));
+    check(pageGeometry.mobileBrandLockup.visible &&
+      pageGeometry.mobileBrandLockup.wordmark === "FoodieHub" &&
+      pageGeometry.mobileBrandLockup.wordmarkBrightness < 150 &&
+      pageGeometry.mobileBrandLockup.markWidth >= 32,
+      viewport, "mobile-brand-wordmark-is-visible-in-light-theme",
+      JSON.stringify(pageGeometry.mobileBrandLockup));
     check(pageGeometry.headerCartBadgeContained, viewport, "header-cart-count-stays-inside-button");
 
     await page.locator("#themeToggle").click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
-    const darkThemeGeometry = await page.evaluate(() => ({
-      theme:document.documentElement.dataset.theme,
-      lightLogoDisplay:getComputedStyle(document.querySelector(".brand-logo-light")).display,
-      darkLogoDisplay:getComputedStyle(document.querySelector(".brand-logo-dark")).display,
-      dockVisible:getComputedStyle(document.querySelector("#mobileDock")).display !== "none"
-    }));
-    check(darkThemeGeometry.theme === "dark" && darkThemeGeometry.lightLogoDisplay === "none" &&
-      darkThemeGeometry.darkLogoDisplay !== "none" && darkThemeGeometry.dockVisible,
-      viewport, "dark-theme-shows-readable-logo-and-mobile-dock", JSON.stringify(darkThemeGeometry));
+    const darkThemeGeometry = await page.evaluate(() => {
+      const name = document.querySelector(".mobile-brand-name");
+      const tagline = document.querySelector(".mobile-brand-tagline");
+      const brightness = color => {
+        const rgb = String(color || "").match(/\\d+/g)?.slice(0,3).map(Number) || [];
+        return rgb.length === 3 ? Math.round((rgb[0]+rgb[1]+rgb[2])/3) : 0;
+      };
+      const lockup = document.querySelector(".mobile-brand-lockup");
+      return {
+        theme:document.documentElement.dataset.theme,
+        lockupVisible:Boolean(lockup && getComputedStyle(lockup).display !== "none" &&
+          lockup.getBoundingClientRect().width > 0 && lockup.getBoundingClientRect().height > 0),
+        wordmark:name ? name.innerText.replace(/\\s+/g,"") : "",
+        wordmarkColor:name ? getComputedStyle(name).color : "",
+        wordmarkBrightness:name ? brightness(getComputedStyle(name).color) : 0,
+        taglineBrightness:tagline ? brightness(getComputedStyle(tagline).color) : 0,
+        dockVisible:getComputedStyle(document.querySelector("#mobileDock")).display !== "none"
+      };
+    });
+    check(darkThemeGeometry.theme === "dark" && darkThemeGeometry.lockupVisible &&
+      darkThemeGeometry.wordmark === "FoodieHub" && darkThemeGeometry.wordmarkBrightness >= 190 &&
+      darkThemeGeometry.taglineBrightness >= 140 && darkThemeGeometry.dockVisible,
+      viewport, "dark-theme-shows-high-contrast-mobile-wordmark-and-dock", JSON.stringify(darkThemeGeometry));
     if (viewport.width === 390) {
       await page.screenshot({ path:path.join(OUT_DIR,"mobile-390-dark-home.png") });
     }
     await page.locator("#themeToggle").click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
+    const lightBrandAfterToggle = await page.evaluate(() => ({
+      visible:getComputedStyle(document.querySelector(".mobile-brand-lockup")).display !== "none",
+      text:document.querySelector(".mobile-brand-name")?.innerText.replace(/\\s+/g,"") || "",
+      color:getComputedStyle(document.querySelector(".mobile-brand-name")).color
+    }));
+    check(lightBrandAfterToggle.visible && lightBrandAfterToggle.text === "FoodieHub" &&
+      lightBrandAfterToggle.color === "rgb(32, 61, 46)",
+      viewport, "light-theme-keeps-mobile-wordmark-readable", JSON.stringify(lightBrandAfterToggle));
     check(pageGeometry.typography.bodyFont.includes("Manrope"), viewport, "brand-font-loaded",
       pageGeometry.typography.bodyFont);
     check(pageGeometry.typography.heroFont.includes("Manrope") &&
@@ -355,6 +409,32 @@ async function runViewport(browser, viewport) {
     });
     check(Boolean(offer) && !offer.overlap, viewport, "offer-copy-and-discount-do-not-overlap",
       offer ? JSON.stringify(offer) : "Offer elements not found");
+    const compactOfferChecks = [];
+    for (let slide=0; slide<4; slide += 1) {
+      await page.locator('#offerCarousel [data-offer-dot="' + slide + '"]').click();
+      await page.waitForFunction(index =>
+        document.querySelector('#offerCarousel [data-offer-dot="' + index + '"]')?.getAttribute("aria-pressed") === "true", slide);
+      compactOfferChecks.push(await page.locator("#offerCarousel .offer-slide.is-active").evaluate(panel => {
+        const panelRect = panel.getBoundingClientRect();
+        const copy = panel.querySelector(".offer-copy")?.getBoundingClientRect();
+        const art = panel.querySelector(".offer-art");
+        const button = panel.querySelector(".offer-copy .button")?.getBoundingClientRect();
+        return {
+          height:Math.round(panelRect.height),
+          artDisplay:art ? getComputedStyle(art).display : "missing",
+          copyWidth:copy ? Math.round(copy.width) : 0,
+          panelWidth:Math.round(panelRect.width),
+          ctaVisible:Boolean(button && button.width > 0 && button.height >= 30 &&
+            button.left >= panelRect.left && button.right <= panelRect.right)
+        };
+      }));
+    }
+    check(compactOfferChecks.length === 4 && compactOfferChecks.every(item =>
+      item.height <= 190 && item.artDisplay === "none" && item.copyWidth >= item.panelWidth - 36 && item.ctaVisible),
+      viewport, "mobile-offers-use-compact-text-first-layout", JSON.stringify(compactOfferChecks));
+    await page.locator('#offerCarousel [data-offer-dot="0"]').click();
+    await page.waitForFunction(() =>
+      document.querySelector('#offerCarousel [data-offer-dot="0"]')?.getAttribute("aria-pressed") === "true");
 
     await page.locator("#menu").scrollIntoViewIfNeeded();
     await page.locator("#menuSearch").fill("burger");
