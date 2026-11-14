@@ -424,3 +424,16 @@ hr,.divider,.section-divider,.form-divider,
 .hero-visual .hero-side-note .side-note-dot {
   background:#f0d8aa !important;
 }
+
+
+/* Veg toggle: keep both idle and selected labels legible in light mode. */
+:root:not([data-theme="dark"]) #appVegToggle:not([aria-pressed="true"]) {
+  color:#1f4d32 !important;
+  background:#e7efe7 !important;
+  border-color:rgba(31,77,50,.48) !important;
+}
+:root:not([data-theme="dark"]) #appVegToggle[aria-pressed="true"] {
+  color:#fffdf7 !important;
+  background:#245a3d !important;
+  border-color:#245a3d !important;
+}
