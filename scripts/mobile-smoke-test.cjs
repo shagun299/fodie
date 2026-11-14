@@ -980,6 +980,8 @@ async function runViewport(browser, viewport) {
       viewport, "mobile-brand-wordmark-is-visible-in-light-theme",
       JSON.stringify(pageGeometry.mobileBrandLockup));
     check(pageGeometry.headerCartBadgeContained, viewport, "header-cart-count-stays-inside-button");
+    await waitForThemeTransition(page);
+    await page.waitForTimeout(800);
     await auditThemeContrast(page, viewport, "light");
 
     await page.locator("#themeToggle").click();
