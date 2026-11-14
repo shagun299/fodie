@@ -544,6 +544,8 @@ async function auditMobileLayout(page, viewport, themeName) {
         const rect = element.getBoundingClientRect();
         const offenders = Array.from(element.querySelectorAll("*")).map(child => {
           const childRect = child.getBoundingClientRect();
+          if (getComputedStyle(child).display === "none" ||
+              getComputedStyle(child).visibility === "hidden") return null;
           return childRect.right > rect.right + 1 || childRect.left < rect.left - 1
             ? {tag:child.tagName,className:String(child.className || ""),id:child.id,
               left:Math.round(childRect.left),right:Math.round(childRect.right)}

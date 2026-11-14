@@ -489,3 +489,12 @@
   border-color:#6d8974!important;
   background-color:#6d8974!important;
 }
+
+
+/* The oversized decorative orbit is desktop-only; it created phone-width overflow. */
+@media (max-width:760px) {
+  .hero-section::before {
+    display:none!important;
+    content:none!important;
+  }
+}
