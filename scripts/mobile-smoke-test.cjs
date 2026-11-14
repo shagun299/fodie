@@ -380,14 +380,22 @@ async function runDesktopHeroThemeAudit(browser) {
     await page.locator("#themeToggle").click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
     await waitForThemeTransition(page);
-    const darkToggleState = await page.evaluate(() => ({
-      theme:document.documentElement.dataset.theme,
-      revealOriginX:getComputedStyle(document.documentElement).getPropertyValue("--theme-reveal-x").trim(),
-      revealOriginY:getComputedStyle(document.documentElement).getPropertyValue("--theme-reveal-y").trim(),
-      viewTransitionsSupported:typeof document.startViewTransition === "function"
-    }));
-    check(darkToggleState.theme === "dark" && Boolean(darkToggleState.revealOriginX) &&
-      Boolean(darkToggleState.revealOriginY), viewport, "theme-toggle-click-changes-theme",
+    const darkToggleState = await page.evaluate(async () => {
+      const link = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+        .find(item => item.href.includes("theme-visibility-v1.css"));
+      const stylesheet = link ? await fetch(link.href).then(response => response.text()) : "";
+      return {
+        theme:document.documentElement.dataset.theme,
+        viewTransitionsSupported:typeof document.startViewTransition === "function",
+        softCrossfadePresent:stylesheet.includes("theme-crossfade-in") &&
+          stylesheet.includes("theme-crossfade-out"),
+        circularRevealPresent:/clip-path\\s*:\\s*circle/i.test(stylesheet),
+        revealOriginProperties:stylesheet.includes("--theme-reveal-")
+      };
+    });
+    check(darkToggleState.theme === "dark" && darkToggleState.softCrossfadePresent &&
+      !darkToggleState.circularRevealPresent && !darkToggleState.revealOriginProperties,
+      viewport, "theme-toggle-uses-soft-crossfade",
       JSON.stringify(darkToggleState));
     await auditThemeContrast(page, viewport, "dark", true);
     await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-dark.png") });

@@ -1971,37 +1971,37 @@
     const button = $("#themeToggle");
     const root = document.documentElement;
     const nextTheme = root.dataset.theme === "dark" ? "light" : "dark";
-    const rect = button ? button.getBoundingClientRect() : null;
-    const originX = rect && rect.width ? rect.left + rect.width / 2 : window.innerWidth - 48;
-    const originY = rect && rect.height ? rect.top + rect.height / 2 : 32;
-    root.style.setProperty("--theme-reveal-x", originX + "px");
-    root.style.setProperty("--theme-reveal-y", originY + "px");
-
     const reducedMotion = window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const applyTheme = () => setTheme(nextTheme);
+
     if (reducedMotion) {
       applyTheme();
       return;
     }
 
+    const cleanup = () => {
+      if (button) button.classList.remove("is-theme-switching");
+    };
+
     if (typeof document.startViewTransition === "function") {
       if (button) button.classList.add("is-theme-switching");
       try {
         const transition = document.startViewTransition(applyTheme);
-        const cleanup = () => {
-          if (button) button.classList.remove("is-theme-switching");
-        };
         transition.finished.then(cleanup, cleanup);
         return;
       } catch (_) {
-        if (button) button.classList.remove("is-theme-switching");
+        cleanup();
       }
     }
 
     root.classList.add("theme-transition-fallback");
+    if (button) button.classList.add("is-theme-switching");
     applyTheme();
-    window.setTimeout(() => root.classList.remove("theme-transition-fallback"), 820);
+    window.setTimeout(() => {
+      root.classList.remove("theme-transition-fallback");
+      cleanup();
+    }, 520);
   }
 
   function bindEvents() {
