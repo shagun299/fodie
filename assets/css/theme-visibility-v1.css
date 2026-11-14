@@ -490,3 +490,26 @@ hr,.divider,.section-divider,.form-divider,
   ::view-transition-new(root) { animation:none !important; }
   .theme-button span { transition:none !important; }
 }
+
+
+/* Higher-specificity dark-theme overrides for legacy App UI selectors. */
+:root[data-theme="dark"] #menuGrid .dish-content h3 {
+  color:var(--ink) !important;
+}
+:root[data-theme="dark"] #menu .diet-button {
+  color:var(--muted) !important;
+}
+:root[data-theme="dark"] #menu .diet-button.active {
+  color:#fffdf7 !important;
+}
+:root[data-theme="dark"] #mobileDock .mobile-dock-item {
+  color:var(--muted) !important;
+}
+:root[data-theme="dark"] #mobileDock .mobile-dock-item.active,
+:root[data-theme="dark"] #mobileDock .mobile-dock-item[aria-current="page"] {
+  color:#e1c48c !important;
+}
+:root[data-theme="dark"] #menuGrid .dish-card,
+:root[data-theme="dark"] .quick-access-card {
+  border-color:var(--line) !important;
+}

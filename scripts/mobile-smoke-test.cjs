@@ -352,6 +352,30 @@ async function runDesktopHeroThemeAudit(browser) {
   try {
     await waitForSite(page);
     await auditThemeContrast(page, viewport, "light");
+
+    await page.locator("#favouritesToggle").click();
+    await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show all dishes");
+    const favouritesOn = await page.locator("#favouritesToggle").evaluate(button => button.classList.contains("is-active"));
+    await page.locator("#favouritesToggle").click();
+    await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show favourites");
+    const favouritesOff = await page.locator("#favouritesToggle").evaluate(button => !button.classList.contains("is-active"));
+    check(favouritesOn && favouritesOff, viewport, "desktop-header-favourites-toggle-works",
+      JSON.stringify({favouritesOn,favouritesOff}));
+
+    await page.locator("#openProfile").click();
+    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
+    await page.locator('[data-close-dialog="profileDialog"]').click();
+    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === false);
+    check(await page.locator("#profileDialog").evaluate(dialog => !dialog.open),
+      viewport, "desktop-profile-close-button-works");
+
+    await page.locator("#openProfile").click();
+    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === false);
+    check(await page.locator("#profileDialog").evaluate(dialog => !dialog.open),
+      viewport, "desktop-profile-escape-close-works");
+
     await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-light.png") });
     await page.locator("#themeToggle").click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
@@ -714,17 +738,6 @@ async function runViewport(browser, viewport) {
     check(lightBrandAfterToggle.visible && lightBrandAfterToggle.text === "FoodieHub" &&
       lightBrandAfterToggle.color === "rgb(32, 61, 46)",
       viewport, "light-theme-keeps-mobile-wordmark-readable", JSON.stringify(lightBrandAfterToggle));
-    await page.evaluate(() => window.scrollTo({ top:0, behavior:"instant" }));
-    await page.waitForTimeout(250);
-    await page.locator("#favouritesToggle").waitFor({ state:"visible", timeout:5000 });
-    await page.locator("#favouritesToggle").click();
-    await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show all dishes");
-    const favouritesOn = await page.locator("#favouritesToggle").evaluate(button => button.classList.contains("is-active"));
-    await page.locator("#favouritesToggle").click();
-    await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show favourites");
-    const favouritesOff = await page.locator("#favouritesToggle").evaluate(button => !button.classList.contains("is-active"));
-    check(favouritesOn && favouritesOff, viewport, "header-favourites-toggle-filters-and-restores-menu",
-      JSON.stringify({favouritesOn,favouritesOff}));
     check(pageGeometry.typography.bodyFont.includes("Manrope"), viewport, "brand-font-loaded",
       pageGeometry.typography.bodyFont);
     check(pageGeometry.typography.heroFont.includes("Manrope") &&
