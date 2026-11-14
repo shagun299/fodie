@@ -378,7 +378,7 @@ hr,.divider,.section-divider,.form-divider,
 /* Hero cards sit on the permanent forest panel, so their glass treatment
    must stay forest-toned in both site themes instead of using pale glass. */
 :root[data-theme] .hero-copy .hero-note,
-:root[data-theme] :root[data-theme] .hero-copy .hero-note-action {
+:root[data-theme] .hero-copy .hero-note-action {
   color:#fffdf7 !important;
   background:#193826 !important;
   border:1px solid rgba(231,211,169,.52) !important;
@@ -390,22 +390,22 @@ hr,.divider,.section-divider,.form-divider,
   backdrop-filter:blur(12px) saturate(125%) !important;
 }
 :root[data-theme] .hero-copy .hero-note strong,
-:root[data-theme] :root[data-theme] .hero-copy .hero-note-action strong {
+:root[data-theme] .hero-copy .hero-note-action strong {
   color:#fffdf7 !important;
   opacity:1 !important;
 }
 :root[data-theme] .hero-copy .hero-note small,
-:root[data-theme] :root[data-theme] .hero-copy .hero-note-action small {
+:root[data-theme] .hero-copy .hero-note-action small {
   color:#f1eadb !important;
   opacity:1 !important;
 }
 :root[data-theme] .hero-copy .hero-note .note-icon,
-:root[data-theme] :root[data-theme] .hero-copy .hero-note-action .note-icon {
+:root[data-theme] .hero-copy .hero-note-action .note-icon {
   background:rgba(231,211,169,.16) !important;
   color:#f0d8aa !important;
 }
-:root[data-theme] :root[data-theme] .hero-copy .hero-note-action:hover,
-:root[data-theme] :root[data-theme] .hero-copy .hero-note-action:focus-visible {
+:root[data-theme] .hero-copy .hero-note-action:hover,
+:root[data-theme] .hero-copy .hero-note-action:focus-visible {
   color:#fffdf7 !important;
   background:#214632 !important;
   border-color:rgba(240,216,170,.82) !important;
