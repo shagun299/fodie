@@ -219,7 +219,8 @@ button:not(:disabled):active,
 .toast {
   transition:opacity 240ms var(--fh-motion-curve),transform 300ms var(--fh-motion-curve) !important;
 }
-.offer-slide {
+.offer-slide,
+.offer-slide.is-active {
   transition:opacity 420ms var(--fh-motion-curve),transform 420ms var(--fh-motion-curve),visibility 0s linear 420ms !important;
 }
 .offer-slide.is-active { transition-delay:0s !important; }
@@ -273,9 +274,20 @@ button:not(:disabled):active,
   .site-dialog::backdrop,
   .toast,
   .offer-slide,
+  .offer-slide.is-active,
   .dish-image-wrap img,
   .story-image img,
-  .hero-image-frame img {
+  .hero-image-frame img,
+  #themeToggle,
+  #categoryTabs .category-tab,
+  #menu .diet-button,
+  #mobileDock .mobile-dock-item,
+  #menuGrid .add-button,
+  #menuGrid .dish-card,
+  #cartDrawer,
+  #profileDialog,
+  #offerCarousel .offer-slide,
+  #menuSearch {
     animation:none !important;
     transition:none !important;
     transform:none !important;
