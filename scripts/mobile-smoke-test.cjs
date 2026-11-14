@@ -940,6 +940,7 @@ async function runViewport(browser, viewport) {
 
     await page.locator("#themeToggle").click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+    await waitForThemeTransition(page);
     const darkThemeGeometry = await page.evaluate(() => {
       const name = document.querySelector(".mobile-brand-name");
       const tagline = document.querySelector(".mobile-brand-tagline");

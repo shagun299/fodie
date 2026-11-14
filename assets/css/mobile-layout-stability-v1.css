@@ -316,3 +316,40 @@
     transform:none!important;
   }
 }
+
+
+/* Stack the hero proof points on phones so their text never competes for one row. */
+@media (max-width:760px) {
+  .hero-notes {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    align-items:start!important;
+    gap:12px!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  .hero-notes .note-divider { display:none!important; width:0!important; }
+  .hero-notes .hero-note,
+  .hero-notes .hero-note-action {
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+  }
+  .hero-notes .hero-note>span { min-width:0!important; max-width:100%!important; }
+  .hero-notes .hero-note strong,
+  .hero-notes .hero-note small { overflow-wrap:anywhere!important; }
+}
+
+/* Explicit high-contrast veg control in the light palette, in both states. */
+:root:not([data-theme="dark"]) #appVegToggle {
+  color:#1f4d32!important;
+  background:#e7efe7!important;
+  border-color:rgba(31,77,50,.58)!important;
+}
+:root:not([data-theme="dark"]) #appVegToggle[aria-pressed="true"],
+:root:not([data-theme="dark"]) #appVegToggle.is-active {
+  color:#fffdf7!important;
+  background:#245a3d!important;
+  border-color:#245a3d!important;
+}
