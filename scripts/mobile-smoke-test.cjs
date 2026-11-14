@@ -66,6 +66,7 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
     const surfaces = {
       paper, card, paperDeep,
       greenSoft:parseColor(root.getPropertyValue("--green-soft").trim()) || [231,239,231,1],
+      green:parseColor(root.getPropertyValue("--green").trim()) || [43,87,60,1],
       forest:parseColor("#203d2e"),
       heroNote:parseColor("#193826"),
       forestDeep:parseColor("#172c21")
@@ -182,7 +183,12 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
       ["quick-access-button",".quick-access-card","card"],
       ["account-tab",".account-auth-tab","card"],
       ["profile-tab",".profile-tab","card"],
-      ["payment-method",".payment-method-card","card"]
+      ["payment-method",".payment-method-card","card"],
+      ["hero-primary-cta",".hero-actions .button-primary","forest"],
+      ["dish-customise-link","#menuGrid .customize-link","card"],
+      ["offer-previous-button","#offerPrevious","card"],
+      ["offer-next-button","#offerNext","card"],
+      ["clear-filters-button","#clearFilters","card"]
     ]) {
       const element = document.querySelector(selector);
       if (!element || getComputedStyle(element).display === "none") continue;
@@ -290,10 +296,9 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
   check(audit.theme === themeName && audit.colors.length >= 25 && audit.failedColors.length === 0,
     viewport, themeName + "-theme-text-has-readable-contrast",
     JSON.stringify({tested:audit.colors.length,failures:audit.failedColors}));
-  check(themeName !== "light" || (audit.controls.length >= 8 && audit.failedControls.length === 0),
+  check(audit.controls.length >= 8 && audit.failedControls.length === 0,
     viewport, themeName + "-theme-control-contrast",
-    JSON.stringify({tested:audit.controls.length,failures:themeName === "light" ? audit.failedControls : [],
-      darkThemeControlAudit:"not targeted by this light-theme fix"}));
+    JSON.stringify({tested:audit.controls.length,failures:audit.failedControls}));
   }
   check(audit.heroNoteAudit.length === 2 && audit.failedHeroNotes.length === 0 &&
     !audit.failedSideNote && !audit.failedNoteDivider,
@@ -373,6 +378,89 @@ async function auditInteractionMotion(page, viewport, label) {
   check(reducedMotionApplied, viewport, label + "-reduced-motion-setting-disables-interaction-transitions",
     JSON.stringify(reduced));
   await page.emulateMedia({ reducedMotion:"no-preference" });
+}
+
+async function auditMobileLayout(page, viewport, themeName) {
+  const audit = await page.evaluate(() => {
+    const sectionSelectors = [
+      ".hero-section",".promise-strip","#quickAccess","#offers","#menu",
+      "#meal-studio","#smart-combos","#rewards",".story-section",".closing-banner"
+    ];
+    const sections = sectionSelectors.map(selector => {
+      const element = document.querySelector(selector);
+      const rect = element?.getBoundingClientRect();
+      if (!element || !rect || rect.width <= 0 || getComputedStyle(element).display === "none") return null;
+      return {selector,left:Math.round(rect.left),right:Math.round(rect.right),width:Math.round(rect.width)};
+    }).filter(Boolean);
+    const lefts = sections.map(item => item.left);
+    const rights = sections.map(item => item.right);
+    const aligned = sections.length >= 5 &&
+      Math.max(...lefts)-Math.min(...lefts) <= 2 &&
+      Math.max(...rights)-Math.min(...rights) <= 2;
+    const boundsSelectors = [
+      ".header-inner","#appLocationTrigger",".app-search-box","#quickAccess .quick-access-card",
+      "#offerCarousel .offer-slide.is-active","#menu .sort-control","#menuGrid .dish-card",
+      "#meal-studio .meal-builder-shell","#mobileDock",".site-footer"
+    ];
+    const outOfBounds = boundsSelectors.map(selector => {
+      const element = document.querySelector(selector);
+      if (!element || getComputedStyle(element).display === "none") return null;
+      const rect = element.getBoundingClientRect();
+      return rect.width <= 0 || rect.left < -1 || rect.right > window.innerWidth + 1
+        ? {selector,left:Math.round(rect.left),right:Math.round(rect.right),width:Math.round(rect.width)}
+        : null;
+    }).filter(Boolean);
+    const cards = Array.from(document.querySelectorAll("#menuGrid .dish-card")).slice(0,6).map(card => {
+      const cardRect = card.getBoundingClientRect();
+      const image = card.querySelector(".dish-image-wrap")?.getBoundingClientRect();
+      const content = card.querySelector(".dish-content")?.getBoundingClientRect();
+      return Boolean(image && content &&
+        image.left >= cardRect.left - 1 &&
+        image.right <= content.left + 2 &&
+        content.right <= cardRect.right + 1 &&
+        content.width >= 90 &&
+        Math.abs(image.top-cardRect.top) <= 10 &&
+        Math.abs(content.top-cardRect.top) <= 12);
+    });
+    const overflowingSections = [".hero-section",".promise-strip","#quickAccess","#offers","#menu",
+      "#meal-studio","#smart-combos","#rewards",".story-section",".closing-banner"]
+      .map(selector => document.querySelector(selector))
+      .filter(element => element && getComputedStyle(element).display !== "none" &&
+        element.scrollWidth > element.clientWidth + 2)
+      .map(element => element.id || element.className || element.tagName);
+    const actionSelectors = [
+      ".hero-actions .button","#themeToggle","#favouritesToggle","#openProfile","#openCart",
+      "#appVegToggle",".quick-access-card","#offerCarousel .offer-copy .button",
+      "#menu .diet-button","#menuGrid .add-button","#mobileDock .mobile-dock-item"
+    ];
+    const actions = actionSelectors.flatMap(selector => Array.from(document.querySelectorAll(selector)))
+      .filter(element => {
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== "hidden";
+      });
+    const invalidActions = actions.map(element => {
+      const rect = element.getBoundingClientRect();
+      return rect.left < -1 || rect.right > window.innerWidth + 1 || rect.height < 26
+        ? {name:element.id || element.className || element.tagName,
+          left:Math.round(rect.left),right:Math.round(rect.right),height:Math.round(rect.height)}
+        : null;
+    }).filter(Boolean);
+    return {
+      sections,aligned,outOfBounds,cardCount:cards.length,
+      cardsAligned:cards.length >= 3 && cards.every(Boolean),
+      overflowingSections,actionCount:actions.length,invalidActions
+    };
+  });
+  check(audit.aligned, viewport, themeName + "-mobile-sections-share-one-alignment-grid",
+    JSON.stringify(audit.sections));
+  check(audit.outOfBounds.length === 0 && audit.overflowingSections.length === 0,
+    viewport, themeName + "-mobile-sections-and-surfaces-stay-inside-viewport",
+    JSON.stringify({outOfBounds:audit.outOfBounds,overflowingSections:audit.overflowingSections}));
+  check(audit.cardsAligned, viewport, themeName + "-mobile-dish-cards-have-aligned-image-and-copy",
+    JSON.stringify({cardCount:audit.cardCount,allAligned:audit.cardsAligned}));
+  check(audit.actionCount >= 10 && audit.invalidActions.length === 0,
+    viewport, themeName + "-mobile-buttons-fit-and-remain-tappable",
+    JSON.stringify({actionCount:audit.actionCount,invalid:audit.invalidActions}));
 }
 
 async function waitForSite(page) {
@@ -966,6 +1054,7 @@ async function runViewport(browser, viewport) {
         await page.waitForFunction(expected => document.documentElement.dataset.theme === expected, theme);
         await waitForThemeTransition(page);
       }
+      await auditMobileLayout(page, viewport, theme);
       await page.locator("#appLocationTrigger").click();
       await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
       const houseField = page.locator('#profileDialog .address-grid input[name="house"]');
