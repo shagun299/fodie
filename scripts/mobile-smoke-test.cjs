@@ -320,6 +320,61 @@ async function waitForThemeTransition(page) {
   }, { timeout:5000 });
 }
 
+async function auditInteractionMotion(page, viewport, label) {
+  const audit = await page.evaluate(() => {
+    const read = selector => {
+      const element = document.querySelector(selector);
+      if (!element) return null;
+      const style = getComputedStyle(element);
+      return {
+        transitionProperty:style.transitionProperty,
+        transitionDuration:style.transitionDuration,
+        transitionTimingFunction:style.transitionTimingFunction
+      };
+    };
+    return {
+      button:read(".hero-actions .button"),
+      iconButton:read("#themeToggle"),
+      category:read("#categoryTabs .category-tab"),
+      addButton:read("#menuGrid .add-button"),
+      mobileDock:read("#mobileDock .mobile-dock-item"),
+      card:read("#menuGrid .dish-card"),
+      cartDrawer:read("#cartDrawer"),
+      dialog:read("#profileDialog"),
+      offer:read("#offerCarousel .offer-slide"),
+      input:read("#menuSearch")
+    };
+  });
+  const keys = ["button","iconButton","category","addButton","mobileDock","card","cartDrawer","dialog","offer","input"];
+  const missing = keys.filter(key => !audit[key]);
+  const hasMotion = item => item && item.transitionDuration.split(",").some(value => {
+    const ms = parseFloat(value);
+    return Number.isFinite(ms) && ms > 0;
+  });
+  const nonResponsive = keys.filter(key => !hasMotion(audit[key]));
+  check(missing.length === 0 && nonResponsive.length === 0,
+    viewport, label + "-interaction-motion-is-configured",
+    JSON.stringify({missing,nonResponsive,audit}));
+
+  await page.emulateMedia({ reducedMotion:"reduce" });
+  const reduced = await page.evaluate(() => {
+    const selectors = [".hero-actions .button","#themeToggle","#categoryTabs .category-tab",
+      "#menuGrid .add-button","#mobileDock .mobile-dock-item","#menuGrid .dish-card",
+      "#cartDrawer","#profileDialog","#offerCarousel .offer-slide","#menuSearch"];
+    return selectors.map(selector => {
+      const element = document.querySelector(selector);
+      return {selector,duration:element ? getComputedStyle(element).transitionDuration : "missing"};
+    });
+  });
+  const reducedMotionApplied = reduced.every(item => item.duration.split(",").every(value => {
+    const ms = parseFloat(value);
+    return Number.isFinite(ms) && ms <= .01;
+  }));
+  check(reducedMotionApplied, viewport, label + "-reduced-motion-setting-disables-interaction-transitions",
+    JSON.stringify(reduced));
+  await page.emulateMedia({ reducedMotion:"no-preference" });
+}
+
 async function waitForSite(page) {
   const response = await page.goto(BASE_URL, {
     waitUntil: "domcontentloaded",
@@ -351,6 +406,7 @@ async function runDesktopHeroThemeAudit(browser) {
   const page = await context.newPage();
   try {
     await waitForSite(page);
+    await auditInteractionMotion(page, viewport, "desktop");
     await auditThemeContrast(page, viewport, "light");
 
     await page.locator("#favouritesToggle").click();
@@ -450,6 +506,7 @@ async function runViewport(browser, viewport) {
 
   try {
     await waitForSite(page);
+    await auditInteractionMotion(page, viewport, "mobile");
 
     const introButton = page.locator("#skipWelcome");
     if (await introButton.isVisible().catch(() => false)) {

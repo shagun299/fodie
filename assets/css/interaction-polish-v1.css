@@ -1,0 +1,283 @@
+/* FoodieHub interaction polish v1
+   A consistent motion layer for controls, cards, overlays and navigation.
+   Motion stays on transform/opacity/colour/border/shadow, never layout or blur. */
+
+:root {
+  --fh-motion-curve:cubic-bezier(.22,.72,.18,1);
+  --fh-motion-control:190ms;
+  --fh-motion-surface:300ms;
+  --fh-motion-overlay:380ms;
+}
+
+html {
+  scroll-behavior:smooth;
+  scroll-padding-top:88px;
+}
+
+button,
+a[href],
+[role="button"],
+input,
+select,
+textarea,
+summary {
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+
+/* Explicit class selectors intentionally override older mobile no-transition rules. */
+button:not(:disabled),
+a[href],
+[role="button"],
+.nav-link,
+.mobile-dock-item,
+.category-tab,
+.diet-button,
+.sort-control,
+.app-veg-toggle,
+.icon-button,
+.profile-trigger,
+.cart-trigger,
+.add-button,
+.button,
+.close-button,
+.dish-favourite,
+.offer-nav,
+.offer-dots button,
+.hero-note-action,
+.customize-link,
+.quick-access-card,
+.dish-card,
+.combo-card,
+.recommendation-card,
+.payment-choice label,
+.customizer-choice,
+.customizer-addon,
+.customizer-preference,
+.account-address-actions button,
+.profile-tab,
+.account-auth-tab,
+.my-order-actions button,
+.admin-chart-switch button {
+  transition-property:transform,color,background-color,border-color,box-shadow,opacity,filter !important;
+  transition-duration:var(--fh-motion-control) !important;
+  transition-timing-function:var(--fh-motion-curve) !important;
+}
+
+input,
+select,
+textarea {
+  transition-property:border-color,background-color,box-shadow,color !important;
+  transition-duration:180ms !important;
+  transition-timing-function:var(--fh-motion-curve) !important;
+}
+
+button:not(:disabled),
+[role="button"] { cursor:pointer; }
+
+button:disabled,
+[aria-disabled="true"] { cursor:not-allowed; }
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible { outline-offset:2px; }
+
+/* Quick, tactile response for both mouse and touch. */
+button:not(:disabled):active,
+[role="button"]:active,
+.mobile-dock-item:active,
+.category-tab:active,
+.diet-button:active,
+.app-veg-toggle:active,
+.icon-button:active,
+.profile-trigger:active,
+.cart-trigger:active,
+.add-button:active,
+.button:active,
+.close-button:active,
+.dish-favourite:active,
+.offer-nav:active,
+.offer-dots button:active,
+.hero-note-action:active,
+.customize-link:active,
+.account-address-actions button:active,
+.profile-tab:active,
+.account-auth-tab:active {
+  transform:scale(.975);
+  filter:brightness(.985);
+}
+
+.mobile-dock-item:active,
+.category-tab:active,
+.diet-button:active { transform:scale(.965); }
+
+.dish-favourite:active,
+.close-button:active,
+.offer-nav:active { transform:scale(.94); }
+
+/* Surfaces move a few pixels, not whole layout blocks. */
+.dish-card,
+.quick-access-card,
+.combo-card,
+.recommendation-card,
+.meal-builder-summary,
+.meal-builder-shell,
+.rewards-panel {
+  transition-property:transform,border-color,box-shadow,background-color !important;
+  transition-duration:var(--fh-motion-surface) !important;
+  transition-timing-function:var(--fh-motion-curve) !important;
+}
+
+.dish-image-wrap img,
+.story-image img,
+.hero-image-frame img {
+  transition:transform 520ms var(--fh-motion-curve) !important;
+}
+
+@media (hover:hover) and (pointer:fine) {
+  button:not(:disabled):hover,
+  [role="button"]:hover,
+  .icon-button:hover,
+  .profile-trigger:hover,
+  .cart-trigger:hover,
+  .add-button:hover,
+  .button:hover,
+  .close-button:hover,
+  .offer-nav:hover,
+  .category-tab:hover,
+  .diet-button:hover,
+  .mobile-dock-item:hover {
+    transform:translateY(-1px);
+  }
+
+  .button:hover,
+  .add-button:hover {
+    box-shadow:0 9px 22px rgba(25,35,27,.11);
+  }
+
+  .icon-button:hover,
+  .profile-trigger:hover,
+  .cart-trigger:hover {
+    box-shadow:0 7px 18px rgba(25,35,27,.10);
+  }
+
+  .dish-card:hover,
+  .quick-access-card:hover,
+  .combo-card:hover,
+  .recommendation-card:hover {
+    transform:translateY(-3px);
+  }
+
+  .dish-card:hover .dish-image-wrap img { transform:scale(1.035); }
+
+  .nav-link,
+  .footer-column a,
+  .text-link {
+    transition:color 180ms var(--fh-motion-curve) !important;
+  }
+}
+
+@media (hover:none) and (pointer:coarse) {
+  .dish-card:active,
+  .quick-access-card:active,
+  .combo-card:active,
+  .recommendation-card:active {
+    box-shadow:0 5px 16px rgba(25,35,27,.10);
+  }
+}
+
+/* One cadence for drawers, backdrops, dialogs, toasts and rotating offers. */
+.cart-drawer {
+  transition:transform var(--fh-motion-overlay) var(--fh-motion-curve) !important;
+}
+.cart-backdrop {
+  transition:opacity 320ms ease,visibility 0s linear 320ms !important;
+}
+.cart-backdrop.is-visible { transition-delay:0s !important; }
+
+.site-dialog {
+  opacity:0;
+  transform:translateY(10px) scale(.99);
+  transition:
+    opacity 260ms var(--fh-motion-curve),
+    transform 300ms var(--fh-motion-curve),
+    display 300ms allow-discrete,
+    overlay 300ms allow-discrete !important;
+}
+.site-dialog[open] {
+  opacity:1;
+  transform:translateY(0) scale(1);
+}
+@starting-style {
+  .site-dialog[open] {
+    opacity:0;
+    transform:translateY(10px) scale(.99);
+  }
+}
+.site-dialog::backdrop { transition:background-color 260ms ease; }
+
+.toast {
+  transition:opacity 240ms var(--fh-motion-curve),transform 300ms var(--fh-motion-curve) !important;
+}
+.offer-slide {
+  transition:opacity 420ms var(--fh-motion-curve),transform 420ms var(--fh-motion-curve),visibility 0s linear 420ms !important;
+}
+.offer-slide.is-active { transition-delay:0s !important; }
+
+:where(button,a[href],input,select,textarea,[role="button"]):focus-visible {
+  outline-offset:3px;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  html { scroll-behavior:auto !important; }
+  button,
+  a[href],
+  [role="button"],
+  input,
+  select,
+  textarea,
+  summary,
+  .nav-link,
+  .mobile-dock-item,
+  .category-tab,
+  .diet-button,
+  .sort-control,
+  .app-veg-toggle,
+  .icon-button,
+  .profile-trigger,
+  .cart-trigger,
+  .add-button,
+  .button,
+  .close-button,
+  .dish-favourite,
+  .offer-nav,
+  .offer-dots button,
+  .hero-note-action,
+  .customize-link,
+  .quick-access-card,
+  .dish-card,
+  .combo-card,
+  .recommendation-card,
+  .payment-choice label,
+  .customizer-choice,
+  .customizer-addon,
+  .customizer-preference,
+  .account-address-actions button,
+  .profile-tab,
+  .account-auth-tab,
+  .my-order-actions button,
+  .admin-chart-switch button,
+  .cart-drawer,
+  .cart-backdrop,
+  .site-dialog,
+  .site-dialog::backdrop,
+  .toast,
+  .offer-slide,
+  .dish-image-wrap img,
+  .story-image img,
+  .hero-image-frame img {
+    animation:none !important;
+    transition:none !important;
+    transform:none !important;
+  }
+}
