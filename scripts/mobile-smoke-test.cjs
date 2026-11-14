@@ -159,6 +159,35 @@ async function auditThemeContrast(page, viewport, themeName) {
         textColor:style.color
       };
     }
+    const controls = [];
+    for (const [name, selector, surfaceName] of [
+      ["header-theme-button",".theme-button","card"],
+      ["header-favourites-button",".favourite-shortcut","card"],
+      ["header-profile-button","#openProfile","card"],
+      ["header-cart-button","#openCart","card"],
+      ["delivery-address-button","#appLocationTrigger","paper"],
+      ["veg-mode-button","#appVegToggle","greenSoft"],
+      ["category-filter","#categoryTabs .category-tab","paper"],
+      ["diet-filter-button","#menu .diet-button","paper"],
+      ["sort-control","#sortMenu","card"],
+      ["mobile-dock-item","#mobileDock .mobile-dock-item","card"],
+      ["dish-add-button","#menuGrid .add-button","greenSoft"],
+      ["quick-access-button",".quick-access-card","card"],
+      ["account-tab",".account-auth-tab","card"],
+      ["profile-tab",".profile-tab","card"],
+      ["payment-method",".payment-method-card","card"]
+    ]) {
+      const element = document.querySelector(selector);
+      if (!element || getComputedStyle(element).display === "none") continue;
+      const style = getComputedStyle(element);
+      const foreground = parseColor(style.color);
+      const background = surfaces[surfaceName];
+      const composite = foreground && foreground[3] < 1 ? blend(foreground, background) : foreground;
+      const contrast = composite ? ratio(composite, background) : 0;
+      controls.push({name,selector,color:style.color,background:surfaceName,
+        contrast:Number(contrast.toFixed(2)),pass:contrast >= 4.5});
+    }
+    const failedControls = controls.filter(item => !item.pass);
     const borders = [];
     for (const [name, selector, surfaceName] of [
       ["dish-card-border","#menuGrid .dish-card","card"],
@@ -185,14 +214,19 @@ async function auditThemeContrast(page, viewport, themeName) {
       theme:document.documentElement.dataset.theme,
       colors,
       borders,
+      controls,
       eyebrowAudit,
       failedColors:colors.filter(item => !item.pass),
-      failedBorders:borders.filter(item => !item.pass)
+      failedBorders:borders.filter(item => !item.pass),
+      failedControls
     };
   });
   check(audit.theme === themeName && audit.colors.length >= 25 && audit.failedColors.length === 0,
     viewport, themeName + "-theme-text-has-readable-contrast",
     JSON.stringify({tested:audit.colors.length,failures:audit.failedColors}));
+  check(audit.controls.length >= 8 && audit.failedControls.length === 0,
+    viewport, themeName + "-theme-control-contrast",
+    JSON.stringify({tested:audit.controls.length,failures:audit.failedControls}));
   check(audit.borders.length >= 4 && audit.failedBorders.length === 0,
     viewport, themeName + "-theme-ui-dividers-remain-visible",
     JSON.stringify({tested:audit.borders.length,failures:audit.failedBorders}));

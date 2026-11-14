@@ -307,3 +307,69 @@ hr,.divider,.section-divider,.form-divider,
   background:#e7cc98 !important;
   opacity:1 !important;
 }
+
+
+/* Light-theme control clarity: prevent disabled/idle controls from fading
+   into the ivory surfaces on small screens. */
+:root:not([data-theme="dark"]) {
+  --line:rgba(35,66,48,.26) !important;
+}
+:root:not([data-theme="dark"]) .icon-button,
+:root:not([data-theme="dark"]) .profile-trigger,
+:root:not([data-theme="dark"]) .cart-trigger,
+:root:not([data-theme="dark"]) .app-location-trigger,
+:root:not([data-theme="dark"]) .app-veg-toggle,
+:root:not([data-theme="dark"]) .category-tab,
+:root:not([data-theme="dark"]) .diet-button,
+:root:not([data-theme="dark"]) .sort-control,
+:root:not([data-theme="dark"]) .account-auth-tab,
+:root:not([data-theme="dark"]) .profile-tab,
+:root:not([data-theme="dark"]) .tab-button,
+:root:not([data-theme="dark"]) .payment-method-card,
+:root:not([data-theme="dark"]) .payment-choice label,
+:root:not([data-theme="dark"]) .mobile-dock-item,
+:root:not([data-theme="dark"]) .quick-access-card,
+:root:not([data-theme="dark"]) .close-button {
+  border-color:rgba(35,66,48,.30) !important;
+}
+:root:not([data-theme="dark"]) .icon-button,
+:root:not([data-theme="dark"]) .profile-trigger,
+:root:not([data-theme="dark"]) .cart-trigger,
+:root:not([data-theme="dark"]) .app-location-trigger,
+:root:not([data-theme="dark"]) .category-tab,
+:root:not([data-theme="dark"]) .diet-button,
+:root:not([data-theme="dark"]) .sort-control,
+:root:not([data-theme="dark"]) .account-auth-tab,
+:root:not([data-theme="dark"]) .profile-tab,
+:root:not([data-theme="dark"]) .tab-button,
+:root:not([data-theme="dark"]) .payment-method-card,
+:root:not([data-theme="dark"]) .payment-choice label,
+:root:not([data-theme="dark"]) .mobile-dock-item,
+:root:not([data-theme="dark"]) .close-button {
+  color:#20352a !important;
+}
+:root:not([data-theme="dark"]) .category-tab:not(.active),
+:root:not([data-theme="dark"]) .diet-button:not(.active),
+:root:not([data-theme="dark"]) .account-auth-tab:not([aria-selected="true"]),
+:root:not([data-theme="dark"]) .profile-tab:not(.active),
+:root:not([data-theme="dark"]) .tab-button:not(.active) {
+  background-color:#fffefa !important;
+}
+:root:not([data-theme="dark"]) .category-tab.active,
+:root:not([data-theme="dark"]) .diet-button.active,
+:root:not([data-theme="dark"]) .account-auth-tab[aria-selected="true"],
+:root:not([data-theme="dark"]) .profile-tab.active,
+:root:not([data-theme="dark"]) .tab-button.active {
+  color:#244d35 !important;
+  border-color:rgba(43,87,60,.48) !important;
+  background-color:#e7efe7 !important;
+}
+:root:not([data-theme="dark"]) .add-button {
+  border-color:rgba(43,87,60,.52) !important;
+  background:#e7efe7 !important;
+  color:#244d35 !important;
+}
+:root:not([data-theme="dark"]) :disabled,
+:root:not([data-theme="dark"]) [aria-disabled="true"] {
+  opacity:.88 !important;
+}
