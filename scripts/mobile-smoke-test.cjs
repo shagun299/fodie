@@ -508,6 +508,33 @@ async function auditMobileLayout(page, viewport, themeName) {
         Math.abs(image.top-cardRect.top) <= 10 &&
         Math.abs(content.top-cardRect.top) <= 12);
     });
+    const hero = document.querySelector(".hero-section");
+    const heroDiagnostics = (() => {
+      if (!hero) return null;
+      const rect = hero.getBoundingClientRect();
+      const describe = element => {
+        const r = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          tag:element.tagName,className:String(element.className || ""),id:element.id || "",
+          display:style.display,position:style.position,gridColumn:style.gridColumn,
+          width:style.width,minWidth:style.minWidth,maxWidth:style.maxWidth,
+          left:Math.round(r.left),right:Math.round(r.right),rectWidth:Math.round(r.width),
+          clientWidth:element.clientWidth,scrollWidth:element.scrollWidth,
+          overflowX:style.overflowX,flex:style.flex
+        };
+      };
+      return {
+        hero:describe(hero),
+        children:Array.from(hero.children).map(describe),
+        notes:hero.querySelector(".hero-notes") ? describe(hero.querySelector(".hero-notes")) : null,
+        notesChildren:hero.querySelector(".hero-notes") ? Array.from(hero.querySelector(".hero-notes").children).map(describe) : [],
+        scrollableDescendants:Array.from(hero.querySelectorAll("*"))
+          .filter(element => getComputedStyle(element).display !== "none" &&
+            element.scrollWidth > element.clientWidth + 2)
+          .map(describe).slice(0,20)
+      };
+    })();
     const overflowingSections = [".hero-section",".promise-strip","#quickAccess","#offers","#menu",
       "#meal-studio","#smart-combos","#rewards",".story-section",".closing-banner"]
       .map(selector => document.querySelector(selector))
@@ -550,14 +577,14 @@ async function auditMobileLayout(page, viewport, themeName) {
     return {
       sections,aligned,outOfBounds,cardCount:cards.length,
       cardsAligned:cards.length >= 3 && cards.every(Boolean),
-      overflowingSections,actionCount:actions.length,invalidActions
+      overflowingSections,heroDiagnostics,actionCount:actions.length,invalidActions
     };
   });
   check(audit.aligned, viewport, themeName + "-mobile-sections-share-one-alignment-grid",
     JSON.stringify(audit.sections));
   check(audit.outOfBounds.length === 0 && audit.overflowingSections.length === 0,
     viewport, themeName + "-mobile-sections-and-surfaces-stay-inside-viewport",
-    JSON.stringify({outOfBounds:audit.outOfBounds,overflowingSections:audit.overflowingSections}));
+    JSON.stringify({outOfBounds:audit.outOfBounds,overflowingSections:audit.overflowingSections,heroDiagnostics:audit.heroDiagnostics}));
   check(audit.cardsAligned, viewport, themeName + "-mobile-dish-cards-have-aligned-image-and-copy",
     JSON.stringify({cardCount:audit.cardCount,allAligned:audit.cardsAligned}));
   check(audit.actionCount >= 10 && audit.invalidActions.length === 0,
