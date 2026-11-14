@@ -295,9 +295,29 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
       }
       return found.slice(-8);
     };
+    const rootDarkMatches = (() => { try { return document.documentElement.matches(':root[data-theme="dark"]'); } catch (_) { return false; } })();
+    const stylesheetRuleDump = (() => {
+      if (!stabilitySheet) return [];
+      try {
+        return Array.from(stabilitySheet.cssRules).map(rule => ({
+          type:rule.constructor?.name || "",
+          selector:rule.selectorText || "",
+          nested:rule.cssRules?.length || 0,
+          sample:String(rule.cssText || "").slice(0,180)
+        }));
+      } catch (error) { return [{error:error.message}]; }
+    })();
     const cssDiagnostics = {
       layerLinkPresent:Boolean(stabilitySheet),
+      layerHref:stabilitySheet?.href || "",
       layerRules:(() => { try { return stabilitySheet ? stabilitySheet.cssRules.length : 0; } catch (_) { return -1; } })(),
+      rootDarkMatches,
+      darkTargetMatches:(() => { try { return Boolean(document.querySelector(':root[data-theme="dark"] #menuGrid .dish-content h3')); } catch (_) { return false; } })(),
+      elementCounts:{
+        dish:document.querySelectorAll("#menuGrid .dish-content h3").length,
+        diet:document.querySelectorAll("#menu .diet-button").length
+      },
+      stylesheetRuleDump,
       theme:document.documentElement.dataset.theme || "",
       dishName:{
         inline:document.querySelector("#menuGrid .dish-content h3")?.getAttribute("style") || "",
@@ -478,7 +498,23 @@ async function auditMobileLayout(page, viewport, themeName) {
       .map(selector => document.querySelector(selector))
       .filter(element => element && getComputedStyle(element).display !== "none" &&
         element.scrollWidth > element.clientWidth + 2)
-      .map(element => element.id || element.className || element.tagName);
+      .map(element => {
+        const rect = element.getBoundingClientRect();
+        const offenders = Array.from(element.querySelectorAll("*")).map(child => {
+          const childRect = child.getBoundingClientRect();
+          return childRect.right > rect.right + 1 || childRect.left < rect.left - 1
+            ? {tag:child.tagName,className:String(child.className || ""),id:child.id,
+              left:Math.round(childRect.left),right:Math.round(childRect.right)}
+            : null;
+        }).filter(Boolean).slice(0,15);
+        return {
+          section:element.id || element.className || element.tagName,
+          clientWidth:element.clientWidth,scrollWidth:element.scrollWidth,
+          left:Math.round(rect.left),right:Math.round(rect.right),
+          overflowX:getComputedStyle(element).overflowX,
+          offenders
+        };
+      });
     const actionSelectors = [
       ".hero-actions .button","#themeToggle","#favouritesToggle","#openProfile","#openCart",
       "#appVegToggle",".quick-access-card","#offerCarousel .offer-copy .button",
