@@ -1931,26 +1931,6 @@
       resumeOfferRotation();
     }
   }
-  function openTeamDashboard(){
-    $("#adminError").textContent="";
-    if(state.backendOnline){
-      $("#adminLoginForm").hidden=false;
-      if(state.adminAnalytics)renderAdminDashboard();
-      $("#adminConnection").textContent=state.adminKey
-        ?"Your live dashboard is ready. Reconnect to refresh the latest data."
-        :"Enter the server admin key to load live order analytics.";
-    }else{
-      $("#adminLoginForm").hidden=true;
-      state.adminKey="";
-      state.adminSource="demo";
-      state.adminOrders=state.orders.map(order=>({...order,customer_name:(order.customer&&order.customer.name)||"This browser",order_number:order.orderNumber,total:order.total}));
-      state.adminAnalytics=buildDemoAdminAnalytics(state.adminOrders);
-      $("#adminConnection").textContent="LOCAL DEMO · Showing orders saved on this device only. Connect the hosted backend to view shared orders.";
-      renderAdminDashboard();
-    }
-    openDialog("adminDialog");
-  }
-
   function bindFeatureEvents(){
     ["mealMain","mealSide","mealDrink"].forEach(id=>$("#"+id).addEventListener("change",updateMealSummary));
     $("#mealVegOnly").addEventListener("change",populateMealBuilder);$("#addMealBundle").addEventListener("click",addMealBundle);
@@ -1972,7 +1952,6 @@
       if(dishId)openDishDetails(dishId);
     });
     $("#redeemRewards").addEventListener("click",redeemRewards);
-    $("#openAdmin").addEventListener("click",openTeamDashboard);
     $("#adminLoginForm").addEventListener("submit",connectAdmin);
     $$(".admin-chart-switch [data-analytics-view]").forEach(button=>button.addEventListener("click",()=>{state.adminChartView=button.dataset.analyticsView;renderAdminAnalytics();}));
     $("#adminOrdersBody").addEventListener("click",event=>{const button=event.target.closest("[data-admin-update]");if(button)updateAdminOrder(button);});

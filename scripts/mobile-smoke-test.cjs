@@ -410,6 +410,24 @@ async function runViewport(browser, viewport) {
     if (viewport.width === 390) {
       await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-home.png") });
     }
+    const teamDashboardOption = await page.evaluate(() => {
+      const footer = document.querySelector(".site-footer");
+      const helpColumn = Array.from(footer?.querySelectorAll(".footer-column") || [])
+        .find(column => column.querySelector("h3")?.textContent.trim() === "Need a hand?");
+      const contact = Array.from(helpColumn?.querySelectorAll("a") || [])
+        .find(link => link.textContent.trim() === "Get in touch");
+      return {
+        buttonPresent:Boolean(document.querySelector("#openAdmin")),
+        footerContainsTeamDashboard:/team dashboard/i.test(footer?.innerText || ""),
+        helpHeading:helpColumn?.querySelector("h3")?.textContent.trim() || "",
+        contactVisible:Boolean(contact && getComputedStyle(contact).display !== "none" &&
+          contact.getBoundingClientRect().width > 0 && contact.getBoundingClientRect().height > 0)
+      };
+    });
+    check(!teamDashboardOption.buttonPresent && !teamDashboardOption.footerContainsTeamDashboard &&
+      teamDashboardOption.helpHeading === "Need a hand?" && teamDashboardOption.contactVisible,
+      viewport, "team-dashboard-footer-option-removed", JSON.stringify(teamDashboardOption));
+
     const initialPerformance = await page.evaluate(() => {
       const nav = window.performance.getEntriesByType("navigation")[0];
       const images = window.performance.getEntriesByType("resource").filter(item =>
