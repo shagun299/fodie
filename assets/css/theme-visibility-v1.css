@@ -439,53 +439,53 @@ hr,.divider,.section-divider,.form-divider,
 }
 
 
-/* Premium theme switch: quiet crossfade with a restrained depth shift. */
+/* Premium theme switch: matched, low-motion crossfade. */
 ::view-transition-group(root) {
-  animation-duration:420ms;
-  animation-timing-function:cubic-bezier(.22,.68,.2,1);
+  animation-duration:640ms;
+  animation-timing-function:cubic-bezier(.22,.72,.18,1);
 }
 ::view-transition-image-pair(root) {
   isolation:isolate;
 }
 ::view-transition-old(root) {
-  animation:theme-crossfade-out 220ms ease-out both;
+  animation:theme-crossfade-out 640ms cubic-bezier(.22,.72,.18,1) both;
 }
 ::view-transition-new(root) {
-  animation:theme-crossfade-in 420ms cubic-bezier(.22,.68,.2,1) both;
+  animation:theme-crossfade-in 640ms cubic-bezier(.22,.72,.18,1) both;
 }
 @keyframes theme-crossfade-out {
-  from { opacity:1; filter:blur(0); transform:scale(1); }
-  to { opacity:0; filter:blur(.8px); transform:scale(.998); }
+  from { opacity:1; }
+  to { opacity:0; }
 }
 @keyframes theme-crossfade-in {
-  from { opacity:0; filter:blur(1.4px); transform:scale(1.003); }
-  to { opacity:1; filter:blur(0); transform:scale(1); }
+  from { opacity:0; }
+  to { opacity:1; }
 }
 .theme-button span {
   display:inline-block;
   transform-origin:50% 50%;
 }
 .theme-button.is-theme-switching {
-  animation:theme-button-glow 440ms ease-out both;
+  animation:theme-button-glow 640ms cubic-bezier(.22,.72,.18,1) both;
 }
 .theme-button.is-theme-switching span {
-  animation:theme-icon-turn 440ms cubic-bezier(.2,.72,.2,1) both;
+  animation:theme-icon-turn 640ms cubic-bezier(.22,.72,.18,1) both;
 }
 @keyframes theme-icon-turn {
   0% { transform:rotate(0) scale(1); }
-  48% { transform:rotate(100deg) scale(1.12); }
+  48% { transform:rotate(90deg) scale(1.06); }
   100% { transform:rotate(180deg) scale(1); }
 }
 @keyframes theme-button-glow {
   0% { box-shadow:0 0 0 0 rgba(198,163,107,0); }
-  45% { box-shadow:0 0 0 4px rgba(198,163,107,.16),0 6px 18px rgba(32,53,42,.10); }
+  45% { box-shadow:0 0 0 3px rgba(198,163,107,.12),0 5px 14px rgba(32,53,42,.07); }
   100% { box-shadow:0 0 0 0 rgba(198,163,107,0); }
 }
 :root.theme-transition-fallback,
 :root.theme-transition-fallback * {
   transition-property:background-color,color,border-color,box-shadow,fill,stroke !important;
-  transition-duration:360ms !important;
-  transition-timing-function:cubic-bezier(.22,.68,.2,1) !important;
+  transition-duration:640ms !important;
+  transition-timing-function:cubic-bezier(.22,.72,.18,1) !important;
 }
 @media(prefers-reduced-motion:reduce) {
   ::view-transition-group(root),
