@@ -353,3 +353,139 @@
   background:#245a3d!important;
   border-color:#245a3d!important;
 }
+
+
+/* Mobile stability v2: consistent hero stacking and high-visibility theme controls. */
+@media (max-width:760px) {
+  .hero-section.page-width {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-auto-flow:row!important;
+    justify-items:stretch!important;
+    align-items:start!important;
+    width:calc(100% - 32px)!important;
+    max-width:none!important;
+    min-width:0!important;
+  }
+  .hero-section.page-width > .hero-copy,
+  .hero-section.page-width > .hero-visual {
+    grid-column:1 / -1!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin-inline:0!important;
+  }
+  /* Match the more specific desktop hero-notes rule so the phone layout really stacks. */
+  .hero-copy .hero-notes {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    align-items:stretch!important;
+    justify-items:stretch!important;
+    gap:10px!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+  .hero-copy .hero-notes > .note-divider {
+    display:none!important;
+    width:0!important;
+    height:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .hero-copy .hero-notes > .hero-note,
+  .hero-copy .hero-notes > .hero-note-action {
+    display:flex!important;
+    align-items:center!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:58px!important;
+    flex:none!important;
+    box-sizing:border-box!important;
+  }
+  .hero-copy .hero-notes .hero-note-action > span:nth-child(2) {
+    flex:1 1 auto!important;
+    min-width:0!important;
+  }
+  .hero-copy .hero-notes strong,
+  .hero-copy .hero-notes small {
+    max-width:100%!important;
+    overflow-wrap:anywhere!important;
+  }
+  .hero-visual,.hero-image-frame {
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+}
+
+/* Contrast-safe Veg control in both states and both palettes. */
+:root:not([data-theme="dark"]) body .app-location-row button#appVegToggle {
+  color:#1f4d32!important;
+  background:#e7efe7!important;
+  border-color:#426e50!important;
+}
+:root:not([data-theme="dark"]) body .app-location-row button#appVegToggle[aria-pressed="true"],
+:root:not([data-theme="dark"]) body .app-location-row button#appVegToggle.is-active {
+  color:#fffdf7!important;
+  background:#245a3d!important;
+  border-color:#245a3d!important;
+}
+:root[data-theme="dark"] body .app-location-row button#appVegToggle {
+  color:#e6eee7!important;
+  background:#20382a!important;
+  border-color:#89a38d!important;
+}
+:root[data-theme="dark"] body .app-location-row button#appVegToggle[aria-pressed="true"],
+:root[data-theme="dark"] body .app-location-row button#appVegToggle.is-active {
+  color:#fffdf7!important;
+  background:#365a41!important;
+  border-color:#a9c4ad!important;
+}
+
+/* The hero CTA keeps a known solid fallback beneath its light-theme gradient. */
+:root:not([data-theme="dark"]) .hero-section .button-primary {
+  background-color:#d6b985!important;
+  color:#263729!important;
+  border-color:#d6b985!important;
+}
+:root[data-theme="dark"] .hero-section .button-primary {
+  background:#376848!important;
+  color:#fffdf7!important;
+  border-color:#8fb39a!important;
+}
+
+/* Clear section/card separators without relying on low-alpha glass borders. */
+:root:not([data-theme="dark"]) #meal-studio .meal-builder-shell,
+:root:not([data-theme="dark"]) #menuGrid .dish-card,
+:root:not([data-theme="dark"]) .quick-access-card,
+:root:not([data-theme="dark"]) #mobileDock,
+:root:not([data-theme="dark"]) .app-search-box {
+  border-color:#9aab9d!important;
+}
+:root[data-theme="dark"] #meal-studio .meal-builder-shell,
+:root[data-theme="dark"] #menuGrid .dish-card,
+:root[data-theme="dark"] .quick-access-card,
+:root[data-theme="dark"] #mobileDock,
+:root[data-theme="dark"] .app-search-box {
+  border-color:#6d8974!important;
+}
+:root:not([data-theme="dark"]) hr,
+:root:not([data-theme="dark"]) .divider,
+:root:not([data-theme="dark"]) .section-divider,
+:root:not([data-theme="dark"]) .form-divider,
+:root:not([data-theme="dark"]) .footer-bottom,
+:root:not([data-theme="dark"]) .note-divider {
+  border-color:#9aab9d!important;
+  background-color:#9aab9d!important;
+}
+:root[data-theme="dark"] hr,
+:root[data-theme="dark"] .divider,
+:root[data-theme="dark"] .section-divider,
+:root[data-theme="dark"] .form-divider,
+:root[data-theme="dark"] .footer-bottom,
+:root[data-theme="dark"] .note-divider {
+  border-color:#6d8974!important;
+  background-color:#6d8974!important;
+}

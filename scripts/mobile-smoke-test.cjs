@@ -166,6 +166,21 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
         textColor:style.color
       };
     }
+    function effectiveBackground(element) {
+      const fallback = surfaces.paper;
+      const layers = [];
+      let current = element;
+      while (current && current.nodeType === 1) {
+        const color = parseColor(getComputedStyle(current).backgroundColor);
+        if (color && color[3] > 0) layers.push(color);
+        current = current.parentElement;
+      }
+      let background = fallback;
+      for (let index = layers.length - 1; index >= 0; index -= 1) {
+        background = blend(layers[index], background);
+      }
+      return background;
+    }
     const controls = [];
     for (const [name, selector, surfaceName] of [
       ["header-theme-button",".theme-button","card"],
@@ -195,7 +210,7 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
       if (!element || getComputedStyle(element).display === "none") continue;
       const style = getComputedStyle(element);
       const foreground = parseColor(style.color);
-      const background = surfaces[surfaceName];
+      const background = effectiveBackground(element);
       const composite = foreground && foreground[3] < 1 ? blend(foreground, background) : foreground;
       const contrast = composite ? ratio(composite, background) : 0;
       controls.push({name,selector,color:style.color,background:surfaceName,
@@ -261,7 +276,7 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
       const style = getComputedStyle(element);
       const color = parseColor(style.borderTopColor);
       const width = Number.parseFloat(style.borderTopWidth) || 0;
-      const background = surfaces[surfaceName];
+      const background = effectiveBackground(element);
       if (!color || width === 0) {
         borders.push({name,selector,pass:false,width,color:style.borderTopColor});
         continue;
