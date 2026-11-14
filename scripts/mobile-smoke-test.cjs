@@ -67,12 +67,16 @@ async function auditThemeContrast(page, viewport, themeName) {
       paper, card, paperDeep,
       greenSoft:parseColor(root.getPropertyValue("--green-soft").trim()) || [231,239,231,1],
       forest:parseColor("#203d2e"),
+      heroNote:parseColor("#193826"),
       forestDeep:parseColor("#172c21")
     };
     const specs = [
       ["hero-headline","#heroTitle","forest"],
       ["hero-highlight","#heroTitle em","forest"],
       ["hero-description",".hero-description","forest"],
+      ["hero-note-title",".hero-copy .hero-note strong","heroNote"],
+      ["hero-note-description",".hero-copy .hero-note small","heroNote"],
+      ["hero-side-note",".hero-side-note","heroNote"],
       ["menu-heading","#menuTitle","paper"],
       ["menu-description",".menu-heading p","paper"],
       ["dish-name","#menuGrid .dish-content h3","card"],
@@ -172,6 +176,8 @@ async function auditThemeContrast(page, viewport, themeName) {
       ["diet-filter-button","#menu .diet-button","paper"],
       ["sort-control","#sortMenu","card"],
       ["mobile-dock-item","#mobileDock .mobile-dock-item","card"],
+      ["hero-customise-button",".hero-copy .hero-note-action","heroNote"],
+      ["hero-image-side-note",".hero-visual .hero-side-note","heroNote"],
       ["dish-add-button","#menuGrid .add-button","greenSoft"],
       ["quick-access-button",".quick-access-card","card"],
       ["account-tab",".account-auth-tab","card"],
@@ -189,13 +195,59 @@ async function auditThemeContrast(page, viewport, themeName) {
         contrast:Number(contrast.toFixed(2)),pass:contrast >= 4.5});
     }
     const failedControls = controls.filter(item => !item.pass);
+    const heroCards = Array.from(document.querySelectorAll(".hero-copy .hero-note"));
+    const heroNoteAudit = heroCards.map(card => {
+      const cardStyle = getComputedStyle(card);
+      const background = parseColor(cardStyle.backgroundColor);
+      const title = card.querySelector("strong");
+      const description = card.querySelector("small");
+      const titleColor = title ? parseColor(getComputedStyle(title).color) : null;
+      const descriptionColor = description ? parseColor(getComputedStyle(description).color) : null;
+      const border = parseColor(cardStyle.borderTopColor);
+      return {
+        background:cardStyle.backgroundColor,
+        titleContrast:background && titleColor ? Number(ratio(titleColor,background).toFixed(2)) : 0,
+        descriptionContrast:background && descriptionColor ? Number(ratio(descriptionColor,background).toFixed(2)) : 0,
+        borderWidth:Number.parseFloat(cardStyle.borderTopWidth) || 0,
+        borderContrast:background && border ? Number(ratio(blend(border,background),background).toFixed(2)) : 0
+      };
+    });
+    const sideNote = document.querySelector(".hero-visual .hero-side-note");
+    const sideNoteAudit = (() => {
+      if (!sideNote) return null;
+      const style = getComputedStyle(sideNote);
+      const background = parseColor(style.backgroundColor);
+      const foreground = parseColor(style.color);
+      const rect = sideNote.getBoundingClientRect();
+      return {
+        display:style.display,visibility:style.visibility,
+        background:style.backgroundColor,
+        textContrast:background && foreground ? Number(ratio(foreground,background).toFixed(2)) : 0,
+        borderWidth:Number.parseFloat(style.borderTopWidth) || 0,
+        width:rect.width,height:rect.height
+      };
+    })();
+    const noteDivider = document.querySelector(".hero-notes .note-divider");
+    const noteDividerAudit = (() => {
+      if (!noteDivider) return null;
+      const style = getComputedStyle(noteDivider);
+      const foreground = parseColor(style.backgroundColor);
+      const rect = noteDivider.getBoundingClientRect();
+      return {
+        display:style.display,visibility:style.visibility,
+        contrast:foreground ? Number(ratio(foreground,surfaces.forest).toFixed(2)) : 0,
+        width:rect.width,height:rect.height
+      };
+    })();
     const borders = [];
     for (const [name, selector, surfaceName] of [
       ["dish-card-border","#menuGrid .dish-card","card"],
       ["search-border",".app-search-box","paperDeep"],
       ["meal-builder-border",".meal-builder-shell","card"],
       ["quick-access-border",".quick-access-card","card"],
-      ["mobile-dock-border","#mobileDock","card"]
+      ["mobile-dock-border","#mobileDock","card"],
+      ["hero-note-border",".hero-copy .hero-note","heroNote"],
+      ["hero-side-note-border",".hero-visual .hero-side-note","heroNote"]
     ]) {
       const element = document.querySelector(selector);
       if (!element || getComputedStyle(element).display === "none") continue;
@@ -216,10 +268,22 @@ async function auditThemeContrast(page, viewport, themeName) {
       colors,
       borders,
       controls,
+      heroNoteAudit,
+      sideNoteAudit,
+      noteDividerAudit,
       eyebrowAudit,
       failedColors:colors.filter(item => !item.pass),
       failedBorders:borders.filter(item => !item.pass),
-      failedControls
+      failedControls,
+      failedHeroNotes:heroNoteAudit.filter(item => item.titleContrast < 4.5 || item.descriptionContrast < 4.5 ||
+        item.borderWidth < 1 || item.borderContrast < 1.5 || item.background !== "rgb(25, 56, 38)"),
+      failedSideNote:!sideNoteAudit || sideNoteAudit.display === "none" || sideNoteAudit.visibility === "hidden" ||
+        sideNoteAudit.textContrast < 4.5 || sideNoteAudit.borderWidth < 1 ||
+        sideNoteAudit.width < 80 || sideNoteAudit.height < 20 ||
+        sideNoteAudit.background !== "rgb(25, 56, 38)",
+      failedNoteDivider:noteDividerAudit && noteDividerAudit.display !== "none" &&
+        (noteDividerAudit.visibility === "hidden" || noteDividerAudit.contrast < 2 ||
+         Math.min(noteDividerAudit.width,noteDividerAudit.height) < 1)
     };
   });
   check(audit.theme === themeName && audit.colors.length >= 25 && audit.failedColors.length === 0,
@@ -228,6 +292,11 @@ async function auditThemeContrast(page, viewport, themeName) {
   check(audit.controls.length >= 8 && audit.failedControls.length === 0,
     viewport, themeName + "-theme-control-contrast",
     JSON.stringify({tested:audit.controls.length,failures:audit.failedControls}));
+  check(audit.heroNoteAudit.length === 2 && audit.failedHeroNotes.length === 0 &&
+    !audit.failedSideNote && !audit.failedNoteDivider,
+    viewport, themeName + "-hero-note-surfaces-and-copy-remain-readable",
+    JSON.stringify({cards:audit.heroNoteAudit,sideNote:audit.sideNoteAudit,divider:audit.noteDividerAudit,
+      failedCards:audit.failedHeroNotes,failedSideNote:audit.failedSideNote,failedDivider:audit.failedNoteDivider}));
   check(audit.borders.length >= 4 && audit.failedBorders.length === 0,
     viewport, themeName + "-theme-ui-dividers-remain-visible",
     JSON.stringify({tested:audit.borders.length,failures:audit.failedBorders}));
@@ -261,6 +330,25 @@ async function waitForSite(page) {
     readyState: document.readyState
   }));
   if (!state.cards) throw new Error("Menu initialization did not render cards: " + JSON.stringify(state));
+}
+
+async function runDesktopHeroThemeAudit(browser) {
+  const viewport = { width:1440, height:960 };
+  const context = await browser.newContext({ viewport, deviceScaleFactor:1 });
+  const page = await context.newPage();
+  try {
+    await waitForSite(page);
+    await auditThemeContrast(page, viewport, "light");
+    await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-light.png") });
+    await page.locator("#themeToggle").click();
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+    await auditThemeContrast(page, viewport, "dark");
+    await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-dark.png") });
+  } catch (error) {
+    failures.push({ viewport:sizeName(viewport),name:"desktop-hero-theme-audit",pass:false,detail:error.stack || error.message });
+  } finally {
+    await context.close();
+  }
 }
 
 async function runViewport(browser, viewport) {
@@ -871,6 +959,7 @@ async function runViewport(browser, viewport) {
   const browser = await chromium.launch({ headless:true, args:["--no-sandbox","--disable-dev-shm-usage"] });
   try {
     for (const viewport of viewports) await runViewport(browser, viewport);
+    await runDesktopHeroThemeAudit(browser);
   } finally {
     await browser.close();
   }
