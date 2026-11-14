@@ -437,3 +437,56 @@ hr,.divider,.section-divider,.form-divider,
   background:#245a3d !important;
   border-color:#245a3d !important;
 }
+
+
+/* Premium theme switch: reveal the new palette from the actual toggle button. */
+::view-transition-group(root) {
+  animation-duration:760ms;
+  animation-timing-function:cubic-bezier(.22,.78,.18,1);
+}
+::view-transition-old(root) {
+  animation:theme-old-scene 420ms cubic-bezier(.4,0,.8,.3) both;
+  transform-origin:center;
+}
+::view-transition-new(root) {
+  animation:theme-premium-reveal 760ms cubic-bezier(.22,.78,.18,1) both;
+  clip-path:circle(0 at var(--theme-reveal-x, calc(100vw - 48px)) var(--theme-reveal-y, 32px));
+}
+@keyframes theme-premium-reveal {
+  0% {
+    clip-path:circle(0 at var(--theme-reveal-x, calc(100vw - 48px)) var(--theme-reveal-y, 32px));
+    filter:brightness(1.12) saturate(1.06);
+  }
+  72% {
+    filter:brightness(1.025) saturate(1.02);
+  }
+  100% {
+    clip-path:circle(160vmax at var(--theme-reveal-x, calc(100vw - 48px)) var(--theme-reveal-y, 32px));
+    filter:brightness(1) saturate(1);
+  }
+}
+@keyframes theme-old-scene {
+  to { opacity:0; transform:scale(1.008); filter:blur(1.5px); }
+}
+.theme-button span {
+  display:inline-block;
+  transition:transform .58s cubic-bezier(.2,.85,.25,1), opacity .2s ease;
+}
+.theme-button.is-theme-switching {
+  box-shadow:0 0 0 4px rgba(198,163,107,.16),0 8px 22px rgba(32,53,42,.14) !important;
+}
+.theme-button.is-theme-switching span {
+  transform:rotate(180deg) scale(1.12);
+}
+:root.theme-transition-fallback,
+:root.theme-transition-fallback * {
+  transition-property:background-color,color,border-color,box-shadow,fill,stroke !important;
+  transition-duration:560ms !important;
+  transition-timing-function:cubic-bezier(.22,.78,.18,1) !important;
+}
+@media(prefers-reduced-motion:reduce) {
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation:none !important; }
+  .theme-button span { transition:none !important; }
+}

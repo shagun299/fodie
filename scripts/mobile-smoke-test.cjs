@@ -347,6 +347,15 @@ async function runDesktopHeroThemeAudit(browser) {
     await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-light.png") });
     await page.locator("#themeToggle").click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+    const darkToggleState = await page.evaluate(() => ({
+      theme:document.documentElement.dataset.theme,
+      revealOriginX:getComputedStyle(document.documentElement).getPropertyValue("--theme-reveal-x").trim(),
+      revealOriginY:getComputedStyle(document.documentElement).getPropertyValue("--theme-reveal-y").trim(),
+      viewTransitionsSupported:typeof document.startViewTransition === "function"
+    }));
+    check(darkToggleState.theme === "dark" && Boolean(darkToggleState.revealOriginX) &&
+      Boolean(darkToggleState.revealOriginY), viewport, "theme-toggle-click-changes-theme",
+      JSON.stringify(darkToggleState));
     await auditThemeContrast(page, viewport, "dark", true);
     await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-dark.png") });
   } catch (error) {
@@ -695,6 +704,14 @@ async function runViewport(browser, viewport) {
     check(lightBrandAfterToggle.visible && lightBrandAfterToggle.text === "FoodieHub" &&
       lightBrandAfterToggle.color === "rgb(32, 61, 46)",
       viewport, "light-theme-keeps-mobile-wordmark-readable", JSON.stringify(lightBrandAfterToggle));
+    await page.locator("#favouritesToggle").click();
+    await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show all dishes");
+    const favouritesOn = await page.locator("#favouritesToggle").evaluate(button => button.classList.contains("is-active"));
+    await page.locator("#favouritesToggle").click();
+    await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show favourites");
+    const favouritesOff = await page.locator("#favouritesToggle").evaluate(button => !button.classList.contains("is-active"));
+    check(favouritesOn && favouritesOff, viewport, "header-favourites-toggle-filters-and-restores-menu",
+      JSON.stringify({favouritesOn,favouritesOff}));
     check(pageGeometry.typography.bodyFont.includes("Manrope"), viewport, "brand-font-loaded",
       pageGeometry.typography.bodyFont);
     check(pageGeometry.typography.heroFont.includes("Manrope") &&
@@ -921,6 +938,15 @@ async function runViewport(browser, viewport) {
       viewport, "customer-account-controls-render", JSON.stringify(accountUi));
     if (viewport.width === 390) await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-account.png") });
     await page.locator('[data-close-dialog="profileDialog"]').click();
+    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === false);
+    check(await page.locator("#profileDialog").evaluate(dialog => !dialog.open),
+      viewport, "profile-close-button-closes-dialog");
+    await page.locator("#openProfile").click();
+    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === false);
+    check(await page.locator("#profileDialog").evaluate(dialog => !dialog.open),
+      viewport, "profile-dialog-closes-with-escape");
 
     const scrollFrameMetrics = await page.evaluate(async () => {
       const scroller = document.scrollingElement;
