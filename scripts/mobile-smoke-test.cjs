@@ -65,6 +65,7 @@ async function auditThemeContrast(page, viewport, themeName) {
     const paperDeep = parseColor(root.getPropertyValue("--paper-deep").trim()) || paper;
     const surfaces = {
       paper, card, paperDeep,
+      greenSoft:parseColor(root.getPropertyValue("--green-soft").trim()) || [231,239,231,1],
       forest:parseColor("#203d2e"),
       forestDeep:parseColor("#172c21")
     };
