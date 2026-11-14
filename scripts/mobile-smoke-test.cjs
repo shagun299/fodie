@@ -278,8 +278,7 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
       const found = [];
       const walk = (rules, href) => {
         for (const rule of Array.from(rules || [])) {
-          if (rule.cssRules) walk(rule.cssRules, href);
-          else if (rule.selectorText && rule.style && rule.style.getPropertyValue(property)) {
+          if (rule.selectorText && rule.style && rule.style.getPropertyValue(property)) {
             let matches = false;
             try { matches = element.matches(rule.selectorText); } catch (_) {}
             if (matches) found.push({
@@ -288,6 +287,7 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
               important:rule.style.getPropertyPriority(property)
             });
           }
+          if (rule.cssRules && rule.cssRules.length) walk(rule.cssRules, href);
         }
       };
       for (const sheet of Array.from(document.styleSheets)) {
