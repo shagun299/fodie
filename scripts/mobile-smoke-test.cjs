@@ -68,6 +68,7 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
       greenSoft:parseColor(root.getPropertyValue("--green-soft").trim()) || [231,239,231,1],
       green:parseColor(root.getPropertyValue("--green").trim()) || [43,87,60,1],
       forest:parseColor("#203d2e"),
+      goldButton:parseColor("#d6b985"),
       heroNote:parseColor("#193826"),
       forestDeep:parseColor("#172c21")
     };
@@ -184,7 +185,7 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
       ["account-tab",".account-auth-tab","card"],
       ["profile-tab",".profile-tab","card"],
       ["payment-method",".payment-method-card","card"],
-      ["hero-primary-cta",".hero-actions .button-primary","forest"],
+      ["hero-primary-cta",".hero-actions .button-primary","goldButton"],
       ["dish-customise-link","#menuGrid .customize-link","card"],
       ["offer-previous-button","#offerPrevious","card"],
       ["offer-next-button","#offerNext","card"],
@@ -269,8 +270,58 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
       const contrast = ratio(visibleLine, background);
       borders.push({name,selector,width,contrast:Number(contrast.toFixed(2)),pass:contrast >= 1.2});
     }
+    const stabilitySheet = Array.from(document.styleSheets).find(sheet =>
+      String(sheet.href || "").includes("mobile-layout-stability-v1.css"));
+    const matchedRules = (selector, property) => {
+      const element = document.querySelector(selector);
+      if (!element) return [];
+      const found = [];
+      const walk = (rules, href) => {
+        for (const rule of Array.from(rules || [])) {
+          if (rule.cssRules) walk(rule.cssRules, href);
+          else if (rule.selectorText && rule.style && rule.style.getPropertyValue(property)) {
+            let matches = false;
+            try { matches = element.matches(rule.selectorText); } catch (_) {}
+            if (matches) found.push({
+              href, selector:rule.selectorText,
+              value:rule.style.getPropertyValue(property).trim(),
+              important:rule.style.getPropertyPriority(property)
+            });
+          }
+        }
+      };
+      for (const sheet of Array.from(document.styleSheets)) {
+        try { walk(sheet.cssRules, sheet.href || "inline"); } catch (_) {}
+      }
+      return found.slice(-8);
+    };
+    const cssDiagnostics = {
+      layerLinkPresent:Boolean(stabilitySheet),
+      layerRules:(() => { try { return stabilitySheet ? stabilitySheet.cssRules.length : 0; } catch (_) { return -1; } })(),
+      theme:document.documentElement.dataset.theme || "",
+      dishName:{
+        inline:document.querySelector("#menuGrid .dish-content h3")?.getAttribute("style") || "",
+        computed:getComputedStyle(document.querySelector("#menuGrid .dish-content h3") || document.body).color,
+        rules:matchedRules("#menuGrid .dish-content h3","color")
+      },
+      dietButton:{
+        inline:document.querySelector("#menu .diet-button")?.getAttribute("style") || "",
+        computed:getComputedStyle(document.querySelector("#menu .diet-button") || document.body).color,
+        rules:matchedRules("#menu .diet-button","color")
+      },
+      search:{
+        inline:document.querySelector("#menuSearch")?.getAttribute("style") || "",
+        computed:getComputedStyle(document.querySelector("#menuSearch") || document.body).color,
+        rules:matchedRules("#menuSearch","color")
+      },
+      cardBorder:{
+        computed:getComputedStyle(document.querySelector("#menuGrid .dish-card") || document.body).borderTopColor,
+        rules:matchedRules("#menuGrid .dish-card","border-color")
+      }
+    };
     return {
       theme:document.documentElement.dataset.theme,
+      cssDiagnostics,
       colors,
       borders,
       controls,
@@ -295,10 +346,10 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
   if (!heroOnly) {
   check(audit.theme === themeName && audit.colors.length >= 25 && audit.failedColors.length === 0,
     viewport, themeName + "-theme-text-has-readable-contrast",
-    JSON.stringify({tested:audit.colors.length,failures:audit.failedColors}));
+    JSON.stringify({tested:audit.colors.length,failures:audit.failedColors,css:audit.cssDiagnostics}));
   check(audit.controls.length >= 8 && audit.failedControls.length === 0,
     viewport, themeName + "-theme-control-contrast",
-    JSON.stringify({tested:audit.controls.length,failures:audit.failedControls}));
+    JSON.stringify({tested:audit.controls.length,failures:audit.failedControls,css:audit.cssDiagnostics}));
   }
   check(audit.heroNoteAudit.length === 2 && audit.failedHeroNotes.length === 0 &&
     !audit.failedSideNote && !audit.failedNoteDivider,
@@ -308,7 +359,7 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
   if (!heroOnly) {
   check(audit.borders.length >= 4 && audit.failedBorders.length === 0,
     viewport, themeName + "-theme-ui-dividers-remain-visible",
-    JSON.stringify({tested:audit.borders.length,failures:audit.failedBorders}));
+    JSON.stringify({tested:audit.borders.length,failures:audit.failedBorders,css:audit.cssDiagnostics}));
   check(Boolean(audit.eyebrowAudit) && audit.eyebrowAudit.display !== "none" &&
     audit.eyebrowAudit.visibility !== "hidden" && audit.eyebrowAudit.text === "A CLEAR MENU. AN EASY ORDER." &&
     audit.eyebrowAudit.textContrast >= 4.5 && audit.eyebrowAudit.lineContrast >= 3 &&
