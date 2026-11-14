@@ -312,6 +312,14 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
   }
 }
 
+async function waitForThemeTransition(page) {
+  await page.waitForFunction(() => {
+    const button = document.querySelector("#themeToggle");
+    return (!button || !button.classList.contains("is-theme-switching")) &&
+      !document.documentElement.classList.contains("theme-transition-fallback");
+  }, { timeout:5000 });
+}
+
 async function waitForSite(page) {
   const response = await page.goto(BASE_URL, {
     waitUntil: "domcontentloaded",
@@ -347,6 +355,7 @@ async function runDesktopHeroThemeAudit(browser) {
     await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-light.png") });
     await page.locator("#themeToggle").click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+    await waitForThemeTransition(page);
     const darkToggleState = await page.evaluate(() => ({
       theme:document.documentElement.dataset.theme,
       revealOriginX:getComputedStyle(document.documentElement).getPropertyValue("--theme-reveal-x").trim(),
@@ -696,6 +705,7 @@ async function runViewport(browser, viewport) {
     }
     await page.locator("#themeToggle").click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
+    await waitForThemeTransition(page);
     const lightBrandAfterToggle = await page.evaluate(() => ({
       visible:getComputedStyle(document.querySelector(".mobile-brand-lockup")).display !== "none",
       text:document.querySelector(".mobile-brand-name")?.innerText.replace(/\s+/g,"") || "",
@@ -704,6 +714,9 @@ async function runViewport(browser, viewport) {
     check(lightBrandAfterToggle.visible && lightBrandAfterToggle.text === "FoodieHub" &&
       lightBrandAfterToggle.color === "rgb(32, 61, 46)",
       viewport, "light-theme-keeps-mobile-wordmark-readable", JSON.stringify(lightBrandAfterToggle));
+    await page.evaluate(() => window.scrollTo({ top:0, behavior:"instant" }));
+    await page.waitForTimeout(250);
+    await page.locator("#favouritesToggle").waitFor({ state:"visible", timeout:5000 });
     await page.locator("#favouritesToggle").click();
     await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show all dishes");
     const favouritesOn = await page.locator("#favouritesToggle").evaluate(button => button.classList.contains("is-active"));
@@ -873,6 +886,7 @@ async function runViewport(browser, viewport) {
       if (activeTheme !== theme) {
         await page.locator("#themeToggle").click();
         await page.waitForFunction(expected => document.documentElement.dataset.theme === expected, theme);
+        await waitForThemeTransition(page);
       }
       await page.locator("#appLocationTrigger").click();
       await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
@@ -899,6 +913,7 @@ async function runViewport(browser, viewport) {
     if (currentThemeAfterAddress !== originalThemeForAddress) {
       await page.locator("#themeToggle").click();
       await page.waitForFunction(expected => document.documentElement.dataset.theme === expected, originalThemeForAddress);
+      await waitForThemeTransition(page);
     }
 
     await page.locator("#openProfile").click();
