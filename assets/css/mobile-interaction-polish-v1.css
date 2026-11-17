@@ -291,6 +291,7 @@
     width:min(calc(100vw - 16px),560px)!important;
     max-width:560px!important;
     max-height:min(70dvh,600px)!important;
+    animation:foodie-profile-sheet-in 180ms ease-out both!important;
     margin:0 auto!important;
     border:1px solid var(--line)!important;
     border-radius:21px!important;
@@ -320,4 +321,12 @@
   body .button,
   body .close-button,
   body .add-button { animation:none!important; transition:none!important; }
+}
+
+@keyframes foodie-profile-sheet-in {
+  from { opacity:.94; }
+  to { opacity:1; }
+}
+@media(prefers-reduced-motion:reduce) {
+  body .site-dialog.profile-dialog#profileDialog[open] { animation:none!important; }
 }
