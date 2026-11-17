@@ -2485,3 +2485,105 @@
     max-width:132px!important;
   }
 }
+
+
+/* Three equally balanced recommendation tiles: no orphan card on row two. */
+@media(max-width:760px) {
+  body #smart-picks .recommendation-grid {
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-auto-flow:row!important;
+    grid-auto-columns:auto!important;
+    align-items:stretch!important;
+    gap:7px!important;
+    width:100%!important;
+    overflow:visible!important;
+  }
+  body #smart-picks .recommendation-card {
+    display:flex!important;
+    flex-direction:column!important;
+    min-width:0!important;
+    width:100%!important;
+    min-height:0!important;
+    max-height:190px!important;
+    margin:0!important;
+    overflow:hidden!important;
+    border-radius:10px!important;
+  }
+  body #smart-picks .recommendation-image-trigger {
+    display:block!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+    min-height:0!important;
+    aspect-ratio:1.35/1!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  body #smart-picks .recommendation-image-trigger img {
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+  }
+  body #smart-picks .recommendation-card-copy {
+    display:flex!important;
+    flex:1 1 auto!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:3px!important;
+    min-width:0!important;
+    padding:6px!important;
+  }
+  body #smart-picks .recommendation-card-copy>span {
+    display:block!important;
+    min-width:0!important;
+    font-size:6px!important;
+    line-height:1.15!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  body #smart-picks .recommendation-card-copy h3 {
+    display:-webkit-box!important;
+    -webkit-box-orient:vertical!important;
+    -webkit-line-clamp:2!important;
+    min-height:22px!important;
+    max-height:22px!important;
+    margin:0!important;
+    overflow:hidden!important;
+    font-size:8px!important;
+    line-height:1.25!important;
+  }
+  body #smart-picks .recommendation-card-copy p {
+    display:none!important;
+  }
+  body #smart-picks .recommendation-card-copy>div {
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:3px!important;
+    min-width:0!important;
+    margin-top:auto!important;
+  }
+  body #smart-picks .recommendation-card-copy>div>strong {
+    flex:0 0 auto!important;
+    font-size:9px!important;
+    line-height:1!important;
+  }
+  body #smart-picks .recommendation-card-copy .button {
+    display:inline-flex!important;
+    flex:0 0 auto!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-width:35px!important;
+    min-height:24px!important;
+    height:24px!important;
+    margin:0!important;
+    padding:0 5px!important;
+    border-radius:6px!important;
+    font-size:6.5px!important;
+    line-height:1!important;
+  }
+}

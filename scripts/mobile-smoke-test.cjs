@@ -693,6 +693,8 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
         select:rect(recommendationSelect),
         selectStyle:recommendationSelect ? {height:getComputedStyle(recommendationSelect).height,minHeight:getComputedStyle(recommendationSelect).minHeight,maxHeight:getComputedStyle(recommendationSelect).maxHeight,aspectRatio:getComputedStyle(recommendationSelect).aspectRatio,appearance:getComputedStyle(recommendationSelect).appearance} : null,
         options:Array.from(recommendationSelect?.options||[]).map(option=>option.textContent.trim()),
+        gridColumns:document.querySelector("#smart-picks .recommendation-grid")?getComputedStyle(document.querySelector("#smart-picks .recommendation-grid")).gridTemplateColumns.split(" ").filter(Boolean).length:0,
+        gridCards:document.querySelectorAll("#smart-picks .recommendation-card").length,
         selectorFits:Boolean(recommendationFilter&&recommendationSelect&&recommendationFilter.getBoundingClientRect().height<=40&&recommendationSelect.getBoundingClientRect().width<=160&&recommendationSelect.getBoundingClientRect().height<=35)
       },
       newsletter:{
@@ -713,6 +715,8 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
     viewport,themeName+"-meal-combos-use-compact-horizontal-cards",JSON.stringify(state.combos));
   check(state.recommendations.title==="A little inspiration."&&state.recommendations.titleSize<=23&&state.recommendations.selectorFits&&state.recommendations.options[0]==="Popular picks",
     viewport,themeName+"-recommendations-have-a-clean-heading-and-selector",JSON.stringify(state.recommendations));
+  check(state.recommendations.gridColumns===3&&state.recommendations.gridCards===3,
+    viewport,themeName+"-recommendation-cards-form-one-balanced-row",JSON.stringify(state.recommendations));
   check(state.newsletter.titleLeftAligned&&state.newsletter.titleToCopy&&state.newsletter.formWidth>250,
     viewport,themeName+"-newsletter-heading-and-copy-share-one-left-edge",JSON.stringify(state.newsletter));
 
