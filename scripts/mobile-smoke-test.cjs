@@ -1287,6 +1287,91 @@ async function runViewport(browser, viewport) {
       }
       await auditMobileLayout(page, viewport, theme);
       await auditDiscountBadge(page, viewport, theme);
+
+      // Full mobile checkout pass in both themes. Use validation-only submits:
+      // never create a demo order or contact the payment provider.
+      await page.locator("#mobileOpenCart").click();
+      await page.waitForFunction(() => document.querySelector("#cartDrawer")?.classList.contains("is-open"));
+      await page.locator("#checkoutButton").click();
+      await page.waitForFunction(() => document.querySelector("#checkoutDialog")?.open === true);
+      const checkoutLayout = await page.evaluate(() => {
+        const dialog = document.querySelector("#checkoutDialog");
+        const form = document.querySelector("#checkoutForm");
+        const placeButton = form?.querySelector(".place-order-button");
+        if (!dialog || !form || !placeButton) return null;
+        const dialogRect = dialog.getBoundingClientRect();
+        const formRect = form.getBoundingClientRect();
+        const fields = Array.from(form.querySelectorAll(".form-field input,.form-field select,.form-field textarea"));
+        const fieldBounds = fields.map(field => {
+          const rect = field.getBoundingClientRect();
+          return rect.left >= formRect.left - 1 && rect.right <= formRect.right + 1 && rect.width > 0;
+        });
+        const paymentLabels = Array.from(form.querySelectorAll(".payment-choice label"));
+        const paymentBounds = paymentLabels.map(label => {
+          const rect = label.getBoundingClientRect();
+          return rect.left >= formRect.left - 1 && rect.right <= formRect.right + 1 && rect.width > 0;
+        });
+        const itemCount = form.querySelectorAll(".checkout-review-item").length;
+        const hasCod = Boolean(form.querySelector('input[name="paymentMethod"][value="cod"]:not(:disabled)'));
+        const hasUpi = Boolean(form.querySelector('input[name="paymentMethod"][value="upi_at_door"]:not(:disabled)'));
+        const originalScrollTop = form.scrollTop;
+        form.scrollTop = form.scrollHeight;
+        const buttonRect = placeButton.getBoundingClientRect();
+        const buttonReachable = buttonRect.top >= formRect.top - 1 && buttonRect.bottom <= formRect.bottom + 1;
+        form.scrollTop = originalScrollTop;
+        return {
+          theme:document.documentElement.dataset.theme || "light",
+          dialogWithinViewport:dialogRect.left >= -1 && dialogRect.right <= window.innerWidth + 1 &&
+            dialogRect.top >= -1 && dialogRect.bottom <= window.innerHeight + 1,
+          dialogWidth:dialogRect.width,
+          dialogHeight:dialogRect.height,
+          viewportWidth:window.innerWidth,
+          viewportHeight:window.innerHeight,
+          formHasNoHorizontalOverflow:form.scrollWidth <= form.clientWidth + 1,
+          formScrollsVertically:form.scrollHeight > form.clientHeight,
+          allFieldsFit:fieldBounds.length >= 10 && fieldBounds.every(Boolean),
+          paymentChoicesFit:paymentBounds.length === 3 && paymentBounds.every(Boolean),
+          hasCartReviewItem:itemCount >= 1,
+          hasCod,
+          hasUpi,
+          buttonReachable,
+          buttonWidth:buttonRect.width,
+          formWidth:formRect.width
+        };
+      });
+      check(Boolean(checkoutLayout) && checkoutLayout.dialogWithinViewport &&
+        checkoutLayout.formHasNoHorizontalOverflow && checkoutLayout.formScrollsVertically &&
+        checkoutLayout.allFieldsFit && checkoutLayout.paymentChoicesFit &&
+        checkoutLayout.hasCartReviewItem && checkoutLayout.hasCod && checkoutLayout.hasUpi &&
+        checkoutLayout.buttonReachable && checkoutLayout.buttonWidth >= checkoutLayout.formWidth - 2,
+        viewport, "checkout-layout-and-payment-controls-fit-in-" + theme, JSON.stringify(checkoutLayout));
+
+      await page.locator("#checkoutForm").evaluate(form => {
+        form.noValidate = true;
+        form.requestSubmit();
+      });
+      await page.waitForFunction(() => document.querySelector("#checkoutError")?.textContent.includes("Choose a payment method"));
+      const missingPaymentMessage = await page.locator("#checkoutError").textContent();
+      check(Boolean(missingPaymentMessage && missingPaymentMessage.includes("Choose a payment method")),
+        viewport, "checkout-requires-payment-method-in-" + theme, missingPaymentMessage || "");
+
+      await page.locator('#checkoutForm input[name="name"]').fill("QA Customer");
+      await page.locator('#checkoutForm input[name="phone"]').fill("12345");
+      await page.locator('#checkoutForm input[name="paymentMethod"][value="cod"]').check({ force:true });
+      await page.locator("#checkoutForm").evaluate(form => form.requestSubmit());
+      await page.waitForFunction(() => document.querySelector("#checkoutError")?.textContent.includes("valid 10-digit Indian mobile number"));
+      const invalidPhoneState = await page.evaluate(() => ({
+        message:document.querySelector("#checkoutError")?.textContent || "",
+        cartCount:document.querySelector("#cartCount")?.textContent || "",
+        dialogOpen:Boolean(document.querySelector("#checkoutDialog")?.open),
+        codSelected:Boolean(document.querySelector('#checkoutForm input[name="paymentMethod"][value="cod"]')?.checked)
+      }));
+      check(invalidPhoneState.message.includes("valid 10-digit Indian mobile number") &&
+        invalidPhoneState.cartCount === "1" && invalidPhoneState.dialogOpen && invalidPhoneState.codSelected,
+        viewport, "checkout-invalid-phone-keeps-cart-safe-in-" + theme, JSON.stringify(invalidPhoneState));
+      await page.locator('[data-close-dialog="checkoutDialog"]').click();
+      await page.waitForFunction(() => document.querySelector("#checkoutDialog")?.open === false);
+
       await page.locator("#appLocationTrigger").click();
       await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
       const houseField = page.locator('#profileDialog .address-grid input[name="house"]');
