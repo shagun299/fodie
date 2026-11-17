@@ -392,7 +392,7 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
   check(Boolean(audit.footerLogo) &&
     audit.footerLogo.lightDisplay === "none" &&
     audit.footerLogo.darkDisplay !== "none" &&
-    /FoodieHub_Logo_Dark\\.svg/i.test(audit.footerLogo.darkSource) &&
+    audit.footerLogo.darkSource.toLowerCase().includes("foodiehub_logo_dark.svg") &&
     audit.footerLogo.darkNaturalWidth > 0,
     viewport, themeName + "-footer-wordmark-uses-high-contrast-dark-logo",
     JSON.stringify(audit.footerLogo));
