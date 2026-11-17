@@ -673,19 +673,25 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
       meal:{
         rect:rect(meal),
         height:meal?.getBoundingClientRect().height || 0,
+        headingGap:meal&&rect(document.querySelector("#meal-studio .feature-heading")) ?
+          Math.round(meal.getBoundingClientRect().top-document.querySelector("#meal-studio .feature-heading").getBoundingClientRect().bottom) : null,
         columns:mealControls?getComputedStyle(mealControls).gridTemplateColumns.split(" ").filter(Boolean).length:0,
         selectors:mealSelects.length,
-        selectorsVisible:mealSelects.every(s=>s.getBoundingClientRect().width>0&&s.getBoundingClientRect().height>=30),
+        selectorsVisible:mealSelects.every(s=>s.getBoundingClientRect().width>0&&s.getBoundingClientRect().height>=38),
+        mainUsesFullRow:Boolean(mealSelects[0]&&mealSelects[1]&&mealSelects[0].parentElement.getBoundingClientRect().width>
+          mealSelects[1].parentElement.getBoundingClientRect().width*1.65),
         titleSize:document.querySelector("#mealStudioTitle")?parseFloat(getComputedStyle(document.querySelector("#mealStudioTitle")).fontSize):0
       },
       combos:{
         grid:rect(comboGrid),
+        headingGap:comboGrid&&document.querySelector("#smart-combos .feature-heading") ?
+          Math.round(comboGrid.getBoundingClientRect().top-document.querySelector("#smart-combos .feature-heading").getBoundingClientRect().bottom) : null,
         columns:comboGrid?getComputedStyle(comboGrid).gridAutoFlow:"",
         card:rect(comboCard),
         count:document.querySelectorAll("#smart-combos .combo-card").length,
         horizontalScroll:Boolean(comboGrid&&comboGrid.scrollWidth>comboGrid.clientWidth+10),
         gridHeight:comboGrid?.getBoundingClientRect().height||0,
-        compact:Boolean(comboCard&&comboCard.getBoundingClientRect().height<=205&&comboGrid?.getBoundingClientRect().height<=190)
+        compact:Boolean(comboCard&&comboCard.getBoundingClientRect().height<=165&&comboGrid?.getBoundingClientRect().height<=170)
       },
       recommendations:{
         title:recommendationTitle?.textContent.replace(/\\s+/g," ").trim() || "",
@@ -696,7 +702,15 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
         selectStyle:recommendationSelect ? {height:getComputedStyle(recommendationSelect).height,minHeight:getComputedStyle(recommendationSelect).minHeight,maxHeight:getComputedStyle(recommendationSelect).maxHeight,aspectRatio:getComputedStyle(recommendationSelect).aspectRatio,appearance:getComputedStyle(recommendationSelect).appearance} : null,
         options:Array.from(recommendationSelect?.options||[]).map(option=>option.textContent.trim()),
         gridColumns:document.querySelector("#smart-picks .recommendation-grid")?getComputedStyle(document.querySelector("#smart-picks .recommendation-grid")).gridTemplateColumns.split(" ").filter(Boolean).length:0,
+        gridAutoFlow:document.querySelector("#smart-picks .recommendation-grid")?getComputedStyle(document.querySelector("#smart-picks .recommendation-grid")).gridAutoFlow:"",
         gridCards:document.querySelectorAll("#smart-picks .recommendation-card").length,
+        gridHeight:document.querySelector("#smart-picks .recommendation-grid")?.getBoundingClientRect().height||0,
+        horizontalScroll:Boolean(document.querySelector("#smart-picks .recommendation-grid")&&
+          document.querySelector("#smart-picks .recommendation-grid").scrollWidth>document.querySelector("#smart-picks .recommendation-grid").clientWidth+10),
+        cardHeight:document.querySelector("#smart-picks .recommendation-card")?.getBoundingClientRect().height||0,
+        headingGap:document.querySelector("#smart-picks .recommendation-grid")&&document.querySelector("#smart-picks .recommendation-heading") ?
+          Math.round(document.querySelector("#smart-picks .recommendation-grid").getBoundingClientRect().top-
+            document.querySelector("#smart-picks .recommendation-heading").getBoundingClientRect().bottom) : null,
         selectorFits:Boolean(recommendationFilter&&recommendationSelect&&recommendationFilter.getBoundingClientRect().height<=40&&recommendationSelect.getBoundingClientRect().width<=160&&recommendationSelect.getBoundingClientRect().height<=35)
       },
       newsletter:{
@@ -711,14 +725,18 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
   const sortRight = Boolean(state.sort.rightAligned && state.sort.control && state.sort.control.width>0);
   check(sortRight,viewport,themeName+"-sort-control-is-anchored-to-the-right",JSON.stringify(state.sort));
   check(state.categories.allCentered,viewport,themeName+"-category-icons-and-labels-share-a-centre",JSON.stringify(state.categories));
-  check(state.meal.columns===3&&state.meal.selectors===3&&state.meal.selectorsVisible&&state.meal.height<=280,
-    viewport,themeName+"-meal-studio-is-compact-with-three-aligned-selectors",JSON.stringify(state.meal));
-  check(state.combos.columns==="column"&&state.combos.count>=2&&state.combos.horizontalScroll&&state.combos.compact,
-    viewport,themeName+"-meal-combos-use-compact-horizontal-cards",JSON.stringify(state.combos));
+  check(state.meal.columns===2&&state.meal.selectors===3&&state.meal.selectorsVisible&&
+    state.meal.mainUsesFullRow&&state.meal.height<=300&&state.meal.headingGap>=0&&state.meal.headingGap<=18,
+    viewport,themeName+"-meal-studio-uses-readable-aligned-fields-without-empty-gap",JSON.stringify(state.meal));
+  check(state.combos.columns==="column"&&state.combos.count>=2&&state.combos.horizontalScroll&&
+    state.combos.compact&&state.combos.headingGap>=0&&state.combos.headingGap<=18,
+    viewport,themeName+"-meal-combos-use-compact-horizontal-cards-without-empty-gap",JSON.stringify(state.combos));
   check(state.recommendations.title==="A little inspiration."&&state.recommendations.titleSize<=23&&state.recommendations.selectorFits&&state.recommendations.options[0]==="Popular picks",
     viewport,themeName+"-recommendations-have-a-clean-heading-and-selector",JSON.stringify(state.recommendations));
-  check(state.recommendations.gridColumns===3&&state.recommendations.gridCards===3,
-    viewport,themeName+"-recommendation-cards-form-one-balanced-row",JSON.stringify(state.recommendations));
+  check(state.recommendations.gridAutoFlow==="column"&&state.recommendations.gridCards===3&&
+    state.recommendations.horizontalScroll&&state.recommendations.gridHeight<=205&&
+    state.recommendations.cardHeight<=195&&state.recommendations.headingGap>=0&&state.recommendations.headingGap<=18,
+    viewport,themeName+"-recommendation-cards-form-readable-swipe-row",JSON.stringify(state.recommendations));
   check(state.newsletter.titleLeftAligned&&state.newsletter.titleToCopy&&state.newsletter.formWidth>250,
     viewport,themeName+"-newsletter-heading-and-copy-share-one-left-edge",JSON.stringify(state.newsletter));
 
@@ -1078,6 +1096,64 @@ async function runDesktopHeroThemeAudit(browser) {
     } finally {
       await context.close();
     }
+  }
+}
+
+async function auditDishDetailSheet(page, viewport, themeName) {
+  await page.locator("#menu").scrollIntoViewIfNeeded();
+  await page.locator("#menuGrid [data-customize]").first().click();
+  await page.waitForFunction(() => document.querySelector("#dishDetailDialog")?.open === true);
+  await page.waitForTimeout(280);
+  const metrics = await page.evaluate(() => {
+    const dialog=document.querySelector("#dishDetailDialog");
+    const hero=dialog?.querySelector(".customizer-hero");
+    const image=dialog?.querySelector(".customizer-image-wrap");
+    const form=dialog?.querySelector(".dish-customizer-form");
+    const footer=dialog?.querySelector(".customizer-footer");
+    const close=dialog?.querySelector(".customizer-close");
+    const submit=dialog?.querySelector(".customizer-submit");
+    const rect=element=>element?element.getBoundingClientRect():null;
+    const d=rect(dialog),h=rect(hero),i=rect(image),f=rect(form),b=rect(footer),c=rect(close),s=rect(submit);
+    return {
+      theme:document.documentElement.dataset.theme||"",
+      viewport:{width:window.innerWidth,height:window.innerHeight},
+      dialog:d?{left:d.left,right:d.right,top:d.top,bottom:d.bottom,width:d.width,height:d.height}:null,
+      bottomAnchored:Boolean(d&&Math.abs(d.bottom-window.innerHeight)<=2),
+      heightRatio:d?d.height/window.innerHeight:0,
+      heroHeight:h?.height||0,
+      imageFits:Boolean(i&&h&&i.left>=h.left-1&&i.right<=h.right+1&&i.top>=h.top-1&&i.bottom<=h.bottom+1),
+      closeFits:Boolean(c&&d&&c.left>=d.left&&c.right<=d.right&&c.top>=d.top&&c.bottom<=d.bottom),
+      formFits:Boolean(f&&d&&f.left>=d.left-1&&f.right<=d.right+1&&f.bottom<=d.bottom+1),
+      formNoHorizontalOverflow:Boolean(form&&form.scrollWidth<=form.clientWidth+1),
+      formUsesOwnScroll:Boolean(form&&["auto","scroll"].includes(getComputedStyle(form).overflowY)),
+      choiceCount:dialog?.querySelectorAll(".customizer-choice,.customizer-addon,.customizer-preference").length||0,
+      footerFits:Boolean(b&&f&&b.left>=f.left-1&&b.right<=f.right+1&&b.height>=50),
+      submitFits:Boolean(s&&b&&s.left>=b.left-1&&s.right<=b.right+1&&s.height>=40&&s.bottom<=b.bottom+1),
+      submitText:submit?.innerText.replace(/\s+/g," ").trim()||"",
+      borderRadius:getComputedStyle(dialog||document.body).borderTopLeftRadius
+    };
+  });
+  check(Boolean(metrics.dialog)&&metrics.bottomAnchored&&metrics.heightRatio<=.86&&
+    metrics.dialog.left>=-1&&metrics.dialog.right<=viewport.width+1,
+    viewport,themeName+"-dish-customizer-is-a-compact-bottom-sheet",JSON.stringify(metrics));
+  check(metrics.imageFits&&metrics.closeFits&&metrics.formFits&&metrics.formNoHorizontalOverflow&&
+    metrics.formUsesOwnScroll&&metrics.choiceCount>=3&&metrics.footerFits&&metrics.submitFits,
+    viewport,themeName+"-dish-customizer-controls-and-add-bar-align",JSON.stringify(metrics));
+  if(viewport.width===390) {
+    await page.screenshot({path:path.join(OUT_DIR,"mobile-390-dish-sheet-"+themeName+".png")});
+  }
+
+  if(themeName==="light") {
+    await page.locator("#customizerQtyPlus").click();
+    const quantity=await page.locator("#customizerQty").textContent();
+    check(quantity?.trim()==="2",viewport,"dish-customizer-quantity-control-works",quantity||"");
+    await page.locator(".customizer-submit").click();
+    await page.waitForFunction(()=>document.querySelector("#dishDetailDialog")?.open===false);
+    const cartCount=Number((await page.locator("#cartCount").textContent())||"0");
+    check(cartCount>=2,viewport,"dish-customizer-adds-selected-quantity-to-bag",String(cartCount));
+  } else {
+    await page.locator('[data-close-dialog="dishDetailDialog"]').click();
+    await page.waitForFunction(()=>document.querySelector("#dishDetailDialog")?.open===false);
   }
 }
 
@@ -1598,22 +1674,6 @@ async function runViewport(browser, viewport) {
     }
 
     await page.locator("#closeCart").click();
-    await page.locator("#menuGrid [data-customize]").first().click();
-    await page.waitForFunction(() => document.querySelector("#dishDetailDialog")?.open === true);
-    const detail = await page.evaluate(() => {
-      const dialog = document.querySelector("#dishDetailDialog");
-      const r = dialog.getBoundingClientRect();
-      const image = dialog.querySelector("img")?.getBoundingClientRect();
-      const width = window.innerWidth;
-      return {
-        dialogWithinViewport: r.left >= -1 && r.right <= width + 1,
-        imageWithinDialog: !image || (image.left >= r.left - 1 && image.right <= r.right + 1),
-        dialogWidth: r.width,
-        viewportWidth: width
-      };
-    });
-    check(detail.dialogWithinViewport && detail.imageWithinDialog, viewport, "dish-detail-fits-viewport", JSON.stringify(detail));
-    await page.locator('[data-close-dialog="dishDetailDialog"]').click().catch(() => {});
     if (viewport.width === 390) {
       await page.locator("#offers").scrollIntoViewIfNeeded();
       await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-page.png") });
@@ -1629,6 +1689,7 @@ async function runViewport(browser, viewport) {
       }
       await auditMobileLayout(page, viewport, theme);
       await auditMobileFeaturePolish(page, viewport, theme);
+      await auditDishDetailSheet(page, viewport, theme);
       await auditDiscountBadge(page, viewport, theme);
 
       // Full mobile checkout pass in both themes. Use validation-only submits:
@@ -1751,6 +1812,7 @@ async function runViewport(browser, viewport) {
       const rect = dialog.getBoundingClientRect();
       return {
         fitsViewport: rect.left >= -1 && rect.right <= window.innerWidth + 1,
+        bottomSheet:Math.abs(rect.bottom-window.innerHeight)<=2&&rect.height<=window.innerHeight*.82,
         dialogWidth: rect.width,
         viewportWidth: window.innerWidth,
         hasSignIn: Boolean(document.querySelector("#customerLoginForm input[name=email]") &&
@@ -1776,7 +1838,8 @@ async function runViewport(browser, viewport) {
         })()
       };
     });
-    check(accountUi.fitsViewport && accountUi.formFits, viewport, "account-dialog-fits-mobile", JSON.stringify(accountUi));
+    check(accountUi.fitsViewport && accountUi.formFits && accountUi.bottomSheet,
+      viewport, "account-dialog-is-a-compact-bottom-sheet", JSON.stringify(accountUi));
     check(accountUi.hasSignIn && accountUi.hasRegistration && accountUi.hasSavedAddressList,
       viewport, "customer-account-controls-render", JSON.stringify(accountUi));
     if (viewport.width === 390) await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-account.png") });
