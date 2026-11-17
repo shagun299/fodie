@@ -1294,6 +1294,7 @@ async function runViewport(browser, viewport) {
       await page.waitForFunction(() => document.querySelector("#cartDrawer")?.classList.contains("is-open"));
       await page.locator("#checkoutButton").click();
       await page.waitForFunction(() => document.querySelector("#checkoutDialog")?.open === true);
+      await page.waitForTimeout(360); // let the 300ms dialog entrance transition settle before measuring bounds
       const checkoutLayout = await page.evaluate(() => {
         const dialog = document.querySelector("#checkoutDialog");
         const form = document.querySelector("#checkoutForm");
