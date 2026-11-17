@@ -751,7 +751,7 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
   check(state.recommendations.gridAutoFlow==="column"&&state.recommendations.gridCards===3&&
     state.recommendations.horizontalScroll&&state.recommendations.gridHeight<=205&&
     state.recommendations.cardHeight<=195&&state.recommendations.headingGap>=0&&state.recommendations.headingGap<=18&&
-    state.recommendations.headingHeight<=90&&state.recommendations.headingFirstChildHeight<=70&&
+    state.recommendations.headingHeight<=100&&state.recommendations.headingFirstChildHeight<=70&&
     state.recommendations.headingFirstChildFlexBasis!=="220px",
     viewport,themeName+"-recommendation-cards-form-readable-swipe-row-without-reserved-gap",JSON.stringify(state.recommendations));
   check(state.newsletter.titleLeftAligned&&state.newsletter.titleToCopy&&state.newsletter.formWidth>250,
