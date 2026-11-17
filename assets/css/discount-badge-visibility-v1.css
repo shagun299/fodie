@@ -61,9 +61,11 @@
   }
 }
 
+
 /* On 100px-wide image tiles, keep the full discount phrase inside its badge. */
 @media(max-width:375px) {
-  #menuGrid .dish-image-wrap > .discount-badge {
+  :root[data-theme="light"] #menuGrid .dish-image-wrap > .discount-badge,
+  :root[data-theme="dark"] #menuGrid .dish-image-wrap > .discount-badge {
     min-height:27px!important;
     padding:5px 4px!important;
     font-size:8.5px!important;
