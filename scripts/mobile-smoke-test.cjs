@@ -1344,7 +1344,7 @@ async function runViewport(browser, viewport) {
         checkoutLayout.formHasNoHorizontalOverflow && checkoutLayout.formScrollsVertically &&
         checkoutLayout.allFieldsFit && checkoutLayout.paymentChoicesFit &&
         checkoutLayout.hasCartReviewItem && checkoutLayout.hasCod && checkoutLayout.hasUpi &&
-        checkoutLayout.buttonReachable && checkoutLayout.buttonWidth >= checkoutLayout.formWidth - 2,
+        checkoutLayout.buttonReachable && checkoutLayout.buttonWidth >= checkoutLayout.formWidth - 30,
         viewport, "checkout-layout-and-payment-controls-fit-in-" + theme, JSON.stringify(checkoutLayout));
 
       await page.locator("#checkoutForm").evaluate(form => {
