@@ -2400,3 +2400,88 @@
   body #smart-picks .recommendation-filter select { flex-basis:132px!important; width:132px!important; max-width:132px!important; }
   body #meal-studio .feature-field span { font-size:7.5px!important; }
 }
+
+
+/* Final correction for native mobile select sizing and combo-grid vertical stretch. */
+@media(max-width:760px) {
+  body #smart-combos .combo-grid {
+    display:grid!important;
+    grid-auto-flow:column!important;
+    grid-auto-columns:minmax(260px,84%)!important;
+    grid-template-columns:none!important;
+    grid-template-rows:170px!important;
+    grid-auto-rows:170px!important;
+    align-content:start!important;
+    align-items:start!important;
+    justify-content:start!important;
+    height:178px!important;
+    min-height:0!important;
+    max-height:178px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+  }
+  body #smart-combos .combo-card {
+    display:grid!important;
+    align-self:start!important;
+    height:170px!important;
+    min-height:170px!important;
+    max-height:170px!important;
+    overflow:hidden!important;
+  }
+  body #smart-picks .recommendation-filter {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    width:100%!important;
+    height:36px!important;
+    min-height:36px!important;
+    max-height:36px!important;
+    box-sizing:border-box!important;
+    overflow:hidden!important;
+    flex:0 0 36px!important;
+    padding:0 9px!important;
+  }
+  body #smart-picks .recommendation-filter select#recommendationMood {
+    display:block!important;
+    position:static!important;
+    flex:0 0 145px!important;
+    width:145px!important;
+    min-width:145px!important;
+    max-width:145px!important;
+    height:30px!important;
+    min-height:30px!important;
+    max-height:30px!important;
+    aspect-ratio:auto!important;
+    box-sizing:border-box!important;
+    align-self:center!important;
+    justify-self:end!important;
+    margin:0!important;
+    padding:0 23px 0 8px!important;
+    line-height:28px!important;
+    border:0!important;
+    border-radius:7px!important;
+    appearance:none!important;
+    -webkit-appearance:none!important;
+    background-color:var(--paper-deep)!important;
+    background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%)!important;
+    background-position:calc(100% - 12px) 12px,calc(100% - 8px) 12px!important;
+    background-size:4px 4px,4px 4px!important;
+    background-repeat:no-repeat!important;
+    color:var(--ink)!important;
+    font-size:9px!important;
+    font-weight:850!important;
+    text-align:left!important;
+    text-align-last:left!important;
+    box-shadow:none!important;
+    overflow:hidden!important;
+  }
+}
+@media(max-width:380px) {
+  body #smart-picks .recommendation-filter select#recommendationMood {
+    flex-basis:132px!important;
+    width:132px!important;
+    min-width:132px!important;
+    max-width:132px!important;
+  }
+}

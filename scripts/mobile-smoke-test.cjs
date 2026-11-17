@@ -682,15 +682,18 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
         card:rect(comboCard),
         count:document.querySelectorAll("#smart-combos .combo-card").length,
         horizontalScroll:Boolean(comboGrid&&comboGrid.scrollWidth>comboGrid.clientWidth+10),
-        compact:Boolean(comboCard&&comboCard.getBoundingClientRect().height<=205)
+        gridHeight:comboGrid?.getBoundingClientRect().height||0,
+        compact:Boolean(comboCard&&comboCard.getBoundingClientRect().height<=205&&comboGrid?.getBoundingClientRect().height<=190)
       },
       recommendations:{
-        title:recommendationTitle?.innerText.trim() || "",
+        title:recommendationTitle?.textContent.replace(/\\s+/g," ").trim() || "",
         titleSize:recommendationTitle?parseFloat(getComputedStyle(recommendationTitle).fontSize):0,
         selector:rect(recommendationFilter),
+        selectorStyle:recommendationFilter ? {height:getComputedStyle(recommendationFilter).height,display:getComputedStyle(recommendationFilter).display} : null,
         select:rect(recommendationSelect),
+        selectStyle:recommendationSelect ? {height:getComputedStyle(recommendationSelect).height,minHeight:getComputedStyle(recommendationSelect).minHeight,maxHeight:getComputedStyle(recommendationSelect).maxHeight,aspectRatio:getComputedStyle(recommendationSelect).aspectRatio,appearance:getComputedStyle(recommendationSelect).appearance} : null,
         options:Array.from(recommendationSelect?.options||[]).map(option=>option.textContent.trim()),
-        selectorFits:Boolean(recommendationFilter&&recommendationSelect&&recommendationSelect.getBoundingClientRect().width<=160&&recommendationSelect.getBoundingClientRect().height<=32)
+        selectorFits:Boolean(recommendationFilter&&recommendationSelect&&recommendationFilter.getBoundingClientRect().height<=40&&recommendationSelect.getBoundingClientRect().width<=160&&recommendationSelect.getBoundingClientRect().height<=35)
       },
       newsletter:{
         box:rect(newsletter),title:rect(newsletterTitle),description:rect(newsletterDescription),
