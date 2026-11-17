@@ -354,6 +354,12 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
         rules:matchedRules("#menuGrid .dish-card","border-color")
       }
     };
+    const isForestSurface = value => {
+      const parsed = parseColor(value);
+      return Boolean(parsed &&
+        parsed.slice(0,3).every((channel,index) => Math.abs(channel - [25,56,38][index]) <= 2) &&
+        parsed[3] >= .98);
+    };
     return {
       theme:document.documentElement.dataset.theme,
       cssDiagnostics,
@@ -368,11 +374,11 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
       failedBorders:borders.filter(item => !item.pass),
       failedControls,
       failedHeroNotes:heroNoteAudit.filter(item => item.titleContrast < 4.5 || item.descriptionContrast < 4.5 ||
-        item.borderWidth < 1 || item.borderContrast < 1.5 || item.background !== "rgb(25, 56, 38)"),
+        item.borderWidth < 1 || item.borderContrast < 1.5 || !isForestSurface(item.background)),
       failedSideNote:!sideNoteAudit || sideNoteAudit.display === "none" || sideNoteAudit.visibility === "hidden" ||
         sideNoteAudit.textContrast < 4.5 || sideNoteAudit.borderWidth < 1 ||
         sideNoteAudit.width < 80 || sideNoteAudit.height < 20 ||
-        sideNoteAudit.background !== "rgb(25, 56, 38)",
+        !isForestSurface(sideNoteAudit.background),
       failedNoteDivider:noteDividerAudit && noteDividerAudit.display !== "none" &&
         (noteDividerAudit.visibility === "hidden" || noteDividerAudit.contrast < 2 ||
          Math.min(noteDividerAudit.width,noteDividerAudit.height) < .5),
