@@ -508,3 +508,13 @@
 .site-footer .footer-logo-dark {
   display:block!important;
 }
+
+
+/* Tablet safeguard: keep the vertical separator from shrinking out of view. */
+@media (min-width:761px) and (max-width:1000px) {
+  .hero-copy .hero-notes > .note-divider {
+    flex:0 0 1px!important;
+    width:1px!important;
+    min-width:1px!important;
+  }
+}
