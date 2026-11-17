@@ -520,17 +520,27 @@ async function auditMobileLayout(page, viewport, themeName) {
         ? {selector,left:Math.round(rect.left),right:Math.round(rect.right),width:Math.round(rect.width)}
         : null;
     }).filter(Boolean);
+    const grid = document.querySelector("#menuGrid");
+    const gridStyle = grid ? getComputedStyle(grid) : null;
+    const gridColumns = gridStyle ? gridStyle.gridTemplateColumns.split(" ").filter(Boolean).length : 0;
     const cards = Array.from(document.querySelectorAll("#menuGrid .dish-card")).slice(0,6).map(card => {
       const cardRect = card.getBoundingClientRect();
       const image = card.querySelector(".dish-image-wrap")?.getBoundingClientRect();
       const content = card.querySelector(".dish-content")?.getBoundingClientRect();
-      return Boolean(image && content &&
-        image.left >= cardRect.left - 1 &&
-        image.right <= content.left + 2 &&
-        content.right <= cardRect.right + 1 &&
-        content.width >= 90 &&
-        Math.abs(image.top-cardRect.top) <= 10 &&
-        Math.abs(content.top-cardRect.top) <= 12);
+      const imageContained = Boolean(image && image.left >= cardRect.left - 1 &&
+        image.right <= cardRect.right + 1 && image.top >= cardRect.top - 1 &&
+        image.bottom <= cardRect.bottom + 1);
+      const contentContained = Boolean(content && content.left >= cardRect.left - 1 &&
+        content.right <= cardRect.right + 1 && content.bottom <= cardRect.bottom + 1);
+      const imageAboveCopy = Boolean(image && content && image.bottom <= content.top + 2 &&
+        Math.abs(image.left-cardRect.left) <= 2 && Math.abs(content.left-cardRect.left) <= 2);
+      const imageRatio = image && image.height > 0 ? image.width / image.height : 0;
+      return {
+        valid:imageContained && contentContained && imageAboveCopy && imageRatio >= 1.05 && imageRatio <= 1.55,
+        imageRatio:Number(imageRatio.toFixed(2)),
+        cardWidth:Math.round(cardRect.width),
+        imageHeight:Math.round(image?.height || 0)
+      };
     });
     const hero = document.querySelector(".hero-section");
     const heroDiagnostics = (() => {
@@ -601,8 +611,9 @@ async function auditMobileLayout(page, viewport, themeName) {
         : null;
     }).filter(Boolean);
     return {
-      sections,aligned,outOfBounds,cardCount:cards.length,
-      cardsAligned:cards.length >= 3 && cards.every(Boolean),
+      sections,aligned,outOfBounds,cardCount:cards.length,gridColumns,
+      cardsAligned:cards.length >= 3 && cards.every(item => item.valid),
+      cardMetrics:cards,
       overflowingSections,heroDiagnostics,actionCount:actions.length,invalidActions
     };
   });
@@ -612,7 +623,9 @@ async function auditMobileLayout(page, viewport, themeName) {
     viewport, themeName + "-mobile-sections-and-surfaces-stay-inside-viewport",
     JSON.stringify({outOfBounds:audit.outOfBounds,overflowingSections:audit.overflowingSections,heroDiagnostics:audit.heroDiagnostics}));
   check(audit.cardsAligned, viewport, themeName + "-mobile-dish-cards-have-aligned-image-and-copy",
-    JSON.stringify({cardCount:audit.cardCount,allAligned:audit.cardsAligned}));
+    JSON.stringify({cardCount:audit.cardCount,gridColumns:audit.gridColumns,metrics:audit.cardMetrics}));
+  check(audit.gridColumns === 2, viewport, themeName + "-mobile-food-menu-uses-two-column-grid",
+    "Rendered columns: " + audit.gridColumns);
   check(audit.actionCount >= 10 && audit.invalidActions.length === 0,
     viewport, themeName + "-mobile-buttons-fit-and-remain-tappable",
     JSON.stringify({actionCount:audit.actionCount,invalid:audit.invalidActions}));
@@ -1001,13 +1014,21 @@ async function runViewport(browser, viewport) {
       })(),
       dishCardAlignment: (() => {
         const card = document.querySelector("#menuGrid .dish-card");
-        if (!card) return { valid:false };
+        const grid = document.querySelector("#menuGrid");
+        if (!card || !grid) return { valid:false,columns:0 };
         const cardRect = card.getBoundingClientRect();
         const imageRect = card.querySelector(".dish-image-wrap")?.getBoundingClientRect();
         const contentRect = card.querySelector(".dish-content")?.getBoundingClientRect();
+        const columns = getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length;
+        const imageRatio = imageRect && imageRect.height > 0 ? imageRect.width / imageRect.height : 0;
         return { valid:Boolean(imageRect && contentRect) &&
-          imageRect.left >= cardRect.left-1 && imageRect.right <= contentRect.left+2 &&
-          contentRect.right <= cardRect.right+1 && contentRect.left < contentRect.right };
+          imageRect.left >= cardRect.left-1 && imageRect.right <= cardRect.right+1 &&
+          imageRect.top >= cardRect.top-1 && imageRect.bottom <= contentRect.top+2 &&
+          contentRect.left >= cardRect.left-1 && contentRect.right <= cardRect.right+1 &&
+          contentRect.bottom <= cardRect.bottom+1 && columns === 2 &&
+          imageRatio >= 1.05 && imageRatio <= 1.55,
+          columns,imageRatio:Number(imageRatio.toFixed(2)),
+          cardWidth:Math.round(cardRect.width),imageHeight:Math.round(imageRect?.height || 0) };
       })(),
       menuImage: document.querySelector("#menuGrid .dish-image")?.getAttribute("src") || "",
       appLocation: (() => {
@@ -1064,6 +1085,8 @@ async function runViewport(browser, viewport) {
     check(pageGeometry.contentAlignment.aligned, viewport, "main-sections-share-one-content-grid",
       JSON.stringify(pageGeometry.contentAlignment.boxes));
     check(pageGeometry.dishCardAlignment.valid, viewport, "dish-card-image-and-content-align-without-overlap",
+      JSON.stringify(pageGeometry.dishCardAlignment));
+    check(pageGeometry.dishCardAlignment.columns === 2, viewport, "dish-menu-has-two-aligned-columns",
       JSON.stringify(pageGeometry.dishCardAlignment));
     check(pageGeometry.dockVisible, viewport, "mobile-dock-visible");
     check(pageGeometry.scrollShell.separated && pageGeometry.scrollShell.contentHeight > 200,
