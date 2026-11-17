@@ -637,6 +637,77 @@ async function waitForSite(page) {
   if (!state.cards) throw new Error("Menu initialization did not render cards: " + JSON.stringify(state));
 }
 
+
+async function auditDiscountBadge(page, viewport, themeName) {
+  const count = await page.locator("#menuGrid .dish-image-wrap > .discount-badge").count();
+  if (!count) {
+    check(false, viewport, "discount-badge-present-in-" + themeName, "No rendered discount badge found");
+    return;
+  }
+  const snapshot = await page.locator("#menuGrid .dish-image-wrap > .discount-badge").first().evaluate(element => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    const image = element.closest(".dish-image-wrap");
+    const imageRect = image?.getBoundingClientRect();
+    const favourite = image?.querySelector(".dish-favourite");
+    const favouriteRect = favourite?.getBoundingClientRect();
+    const parse = value => {
+      const parts = String(value || "").match(/[\\d.]+/g)?.map(Number) || [];
+      return parts.length >= 3 ? [parts[0],parts[1],parts[2],Number.isFinite(parts[3]) ? parts[3] : 1] : null;
+    };
+    const luminance = color => {
+      const channels = color.slice(0,3).map(value => {
+        const channel = value / 255;
+        return channel <= .04045 ? channel / 12.92 : Math.pow((channel + .055) / 1.055,2.4);
+      });
+      return .2126*channels[0] + .7152*channels[1] + .0722*channels[2];
+    };
+    const foreground = parse(style.color);
+    const background = parse(style.backgroundColor);
+    const border = parse(style.borderTopColor);
+    const contrast = foreground && background ?
+      (Math.max(luminance(foreground),luminance(background)) + .05) /
+      (Math.min(luminance(foreground),luminance(background)) + .05) : 0;
+    return {
+      text:element.textContent.trim(),
+      foreground,
+      background,
+      border,
+      contrast,
+      opacity:Number(style.opacity),
+      display:style.display,
+      visibility:style.visibility,
+      position:style.position,
+      zIndex:Number.parseInt(style.zIndex,10) || 0,
+      fontSize:Number.parseFloat(style.fontSize) || 0,
+      fontWeight:Number.parseInt(style.fontWeight,10) || 0,
+      width:rect.width,
+      height:rect.height,
+      textFits:element.scrollWidth <= element.clientWidth + 1,
+      contained:Boolean(imageRect && rect.left >= imageRect.left - 1 && rect.right <= imageRect.right + 1 &&
+        rect.top >= imageRect.top - 1 && rect.bottom <= imageRect.bottom + 1),
+      overlapsFavourite:Boolean(favouriteRect && rect.left < favouriteRect.right && rect.right > favouriteRect.left &&
+        rect.top < favouriteRect.bottom && rect.bottom > favouriteRect.top)
+    };
+  });
+  const expectedBackground = [23,63,43];
+  const expectedForeground = [255,253,246];
+  const expectedBorder = [230,202,145];
+  const near = (actual, expected) => Boolean(actual && expected.every((value,index) => Math.abs(actual[index] - value) <= 2));
+  check(snapshot.opacity >= .98 && snapshot.display !== "none" && snapshot.visibility !== "hidden" &&
+    snapshot.position === "absolute" && snapshot.zIndex >= 3,
+    viewport, "discount-badge-is-solid-and-layered-in-" + themeName, JSON.stringify(snapshot));
+  check(near(snapshot.background,expectedBackground) && near(snapshot.foreground,expectedForeground) &&
+    near(snapshot.border,expectedBorder) && snapshot.contrast >= 7,
+    viewport, "discount-badge-has-high-contrast-in-" + themeName, JSON.stringify(snapshot));
+  check(snapshot.height >= (viewport.width <= 760 ? 27 : 30) &&
+    snapshot.fontSize >= (viewport.width <= 760 ? 8.5 : 9.5) &&
+    snapshot.fontWeight >= 800 && snapshot.textFits,
+    viewport, "discount-badge-text-is-readable-and-fits-in-" + themeName, JSON.stringify(snapshot));
+  check(snapshot.contained && !snapshot.overlapsFavourite,
+    viewport, "discount-badge-stays-inside-photo-in-" + themeName, JSON.stringify(snapshot));
+}
+
 async function runDesktopHeroThemeAudit(browser) {
   const viewport = { width:1440, height:960 };
   const context = await browser.newContext({ viewport, deviceScaleFactor:1 });
@@ -645,6 +716,7 @@ async function runDesktopHeroThemeAudit(browser) {
     await waitForSite(page);
     await auditInteractionMotion(page, viewport, "desktop");
     await auditThemeContrast(page, viewport, "light");
+    await auditDiscountBadge(page, viewport, "light");
 
     await page.locator("#favouritesToggle").click();
     await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show all dishes");
@@ -673,6 +745,7 @@ async function runDesktopHeroThemeAudit(browser) {
     await page.locator("#themeToggle").click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
     await waitForThemeTransition(page);
+    await auditDiscountBadge(page, viewport, "dark");
     const darkToggleState = await page.evaluate(async () => {
       const link = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
         .find(item => item.href.includes("theme-visibility-v1.css"));
@@ -1207,6 +1280,7 @@ async function runViewport(browser, viewport) {
         await waitForThemeTransition(page);
       }
       await auditMobileLayout(page, viewport, theme);
+      await auditDiscountBadge(page, viewport, theme);
       await page.locator("#appLocationTrigger").click();
       await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
       const houseField = page.locator('#profileDialog .address-grid input[name="house"]');

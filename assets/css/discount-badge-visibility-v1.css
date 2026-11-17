@@ -1,0 +1,51 @@
+/* Keep sale labels readable over every food photo in both themes.
+   Do not derive badge colour from --green: dark mode intentionally uses a pale green. */
+#menuGrid .dish-image-wrap > .discount-badge,
+:root[data-theme="light"] #menuGrid .dish-image-wrap > .discount-badge,
+:root[data-theme="dark"] #menuGrid .dish-image-wrap > .discount-badge {
+  position:absolute!important;
+  z-index:5!important;
+  top:10px!important;
+  left:10px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  min-width:0!important;
+  min-height:32px!important;
+  max-width:calc(100% - 48px)!important;
+  padding:7px 10px!important;
+  border:1px solid #e6ca91!important;
+  border-radius:0 0 10px 0!important;
+  background:#173f2b!important;
+  color:#fffdf6!important;
+  font-family:var(--sans,Manrope,Arial,sans-serif)!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  letter-spacing:.035em!important;
+  line-height:1.05!important;
+  text-align:center!important;
+  text-transform:uppercase!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  opacity:1!important;
+  visibility:visible!important;
+  text-shadow:0 1px 1px rgba(0,0,0,.18)!important;
+  box-shadow:0 4px 14px rgba(4,16,9,.34),0 1px 2px rgba(0,0,0,.22)!important;
+}
+
+@media(max-width:760px) {
+  #menuGrid .dish-image-wrap > .discount-badge,
+  :root[data-theme="light"] #menuGrid .dish-image-wrap > .discount-badge,
+  :root[data-theme="dark"] #menuGrid .dish-image-wrap > .discount-badge {
+    top:8px!important;
+    left:8px!important;
+    min-height:29px!important;
+    max-width:calc(100% - 46px)!important;
+    padding:6px 8px!important;
+    font-size:9px!important;
+    letter-spacing:.025em!important;
+    border-radius:0 0 8px 0!important;
+  }
+}
