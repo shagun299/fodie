@@ -375,9 +375,27 @@ async function auditThemeContrast(page, viewport, themeName, heroOnly=false) {
         sideNoteAudit.background !== "rgb(25, 56, 38)",
       failedNoteDivider:noteDividerAudit && noteDividerAudit.display !== "none" &&
         (noteDividerAudit.visibility === "hidden" || noteDividerAudit.contrast < 2 ||
-         Math.min(noteDividerAudit.width,noteDividerAudit.height) < .5)
+         Math.min(noteDividerAudit.width,noteDividerAudit.height) < .5),
+      footerLogo: (() => {
+        const light = document.querySelector(".site-footer .footer-logo-light");
+        const dark = document.querySelector(".site-footer .footer-logo-dark");
+        if (!light || !dark) return null;
+        return {
+          lightDisplay:getComputedStyle(light).display,
+          darkDisplay:getComputedStyle(dark).display,
+          darkSource:dark.getAttribute("src") || "",
+          darkNaturalWidth:dark.naturalWidth
+        };
+      })()
     };
   });
+  check(Boolean(audit.footerLogo) &&
+    audit.footerLogo.lightDisplay === "none" &&
+    audit.footerLogo.darkDisplay !== "none" &&
+    /FoodieHub_Logo_Dark\\.svg/i.test(audit.footerLogo.darkSource) &&
+    audit.footerLogo.darkNaturalWidth > 0,
+    viewport, themeName + "-footer-wordmark-uses-high-contrast-dark-logo",
+    JSON.stringify(audit.footerLogo));
   if (!heroOnly) {
   check(audit.theme === themeName && audit.colors.length >= 25 && audit.failedColors.length === 0,
     viewport, themeName + "-theme-text-has-readable-contrast",

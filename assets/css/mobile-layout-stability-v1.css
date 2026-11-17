@@ -498,3 +498,13 @@
     content:none!important;
   }
 }
+
+
+/* The footer is permanently forest-green, regardless of the page theme.
+   Always use the ivory FoodieHub wordmark on this surface. */
+.site-footer .footer-logo-light {
+  display:none!important;
+}
+.site-footer .footer-logo-dark {
+  display:block!important;
+}
