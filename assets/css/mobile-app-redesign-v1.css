@@ -3272,3 +3272,121 @@
 @media(prefers-reduced-motion:reduce) {
   .site-dialog[open],.dish-detail-dialog[open] { animation:none!important; }
 }
+
+
+
+/* MOBILE POLISH V4: remove reserved blank space and win legacy modal specificity. */
+@media (max-width:760px) {
+  /* These sections were reserving a 650px placeholder before entering view. */
+  body #meal-studio,
+  body #smart-combos,
+  body #smart-picks,
+  body #rewards,
+  body #about,
+  body .site-footer,
+  body .closing-banner {
+    content-visibility:visible!important;
+    contain:initial!important;
+    contain-intrinsic-size:none!important;
+  }
+
+  /* The customiser must beat the legacy .site-dialog:not(...) top-sheet rule. */
+  body .site-dialog.dish-detail-dialog#dishDetailDialog:not(#checkoutDialog)[open] {
+    position:fixed!important;
+    inset:auto 0 0!important;
+    top:auto!important;
+    right:0!important;
+    bottom:0!important;
+    left:0!important;
+    display:flex!important;
+    flex-direction:column!important;
+    width:min(calc(100vw - 16px),560px)!important;
+    max-width:560px!important;
+    height:auto!important;
+    max-height:min(84dvh,740px)!important;
+    margin:0 auto!important;
+    padding:0 0 max(6px,env(safe-area-inset-bottom))!important;
+    overflow:hidden!important;
+    border:1px solid var(--line)!important;
+    border-bottom:0!important;
+    border-radius:23px 23px 0 0!important;
+    background:var(--card)!important;
+  }
+
+  /* Profile stays a bottom sheet, but does not occupy nearly the whole phone. */
+  body .site-dialog.profile-dialog#profileDialog:not(#checkoutDialog)[open] {
+    position:fixed!important;
+    inset:auto 0 0!important;
+    top:auto!important;
+    right:0!important;
+    bottom:0!important;
+    left:0!important;
+    width:min(calc(100vw - 16px),560px)!important;
+    max-width:560px!important;
+    height:auto!important;
+    max-height:min(78dvh,680px)!important;
+    margin:0 auto!important;
+    border-radius:21px 21px 0 0!important;
+  }
+
+  /* Three short selectors avoid turning the meal builder into a tall form. */
+  body #meal-studio .meal-builder-shell {
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:8px!important;
+    min-height:0!important;
+    padding:10px!important;
+  }
+  body #meal-studio .meal-builder-controls {
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    align-items:start!important;
+    gap:6px!important;
+    min-height:0!important;
+  }
+  body #meal-studio .meal-builder-controls>.feature-field:first-child { grid-column:auto!important; }
+  body #meal-studio .feature-field {
+    gap:4px!important;
+    min-width:0!important;
+    font-size:7px!important;
+  }
+  body #meal-studio .feature-field span {
+    display:block!important;
+    min-height:22px!important;
+    font-size:8px!important;
+    line-height:1.2!important;
+  }
+  body #meal-studio .feature-field select {
+    min-height:36px!important;
+    height:36px!important;
+    padding:0 15px 0 5px!important;
+    font-size:8px!important;
+  }
+  body #meal-studio .meal-veg-toggle {
+    grid-column:1/-1!important;
+    min-height:28px!important;
+    padding:5px 7px!important;
+    font-size:8px!important;
+  }
+  body #meal-studio .meal-builder-summary {
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:4px 8px!important;
+    padding-top:8px!important;
+  }
+  body #meal-studio .meal-summary-saving {
+    min-height:0!important;
+    font-size:7px!important;
+    line-height:1.2!important;
+  }
+  body #meal-studio .meal-builder-summary .button {
+    grid-column:2!important;
+    grid-row:2/5!important;
+    min-width:94px!important;
+    min-height:36px!important;
+    padding:0 8px!important;
+    font-size:8px!important;
+  }
+}
+@media(max-width:380px) {
+  body #meal-studio .feature-field span { font-size:7px!important; }
+  body #meal-studio .feature-field select { font-size:7.5px!important; }
+}

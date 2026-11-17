@@ -677,7 +677,9 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
           Math.round(meal.getBoundingClientRect().top-document.querySelector("#meal-studio .feature-heading").getBoundingClientRect().bottom) : null,
         columns:mealControls?getComputedStyle(mealControls).gridTemplateColumns.split(" ").filter(Boolean).length:0,
         selectors:mealSelects.length,
-        selectorsVisible:mealSelects.every(s=>s.getBoundingClientRect().width>0&&s.getBoundingClientRect().height>=38),
+        selectorsVisible:mealSelects.every(s=>s.getBoundingClientRect().width>0&&s.getBoundingClientRect().height>=34),
+        controlsHeight:mealControls?.getBoundingClientRect().height||0,
+        summaryHeight:document.querySelector("#meal-studio .meal-builder-summary")?.getBoundingClientRect().height||0,
         mainUsesFullRow:Boolean(mealSelects[0]&&mealSelects[1]&&mealSelects[0].parentElement.getBoundingClientRect().width>
           mealSelects[1].parentElement.getBoundingClientRect().width*1.65),
         titleSize:document.querySelector("#mealStudioTitle")?parseFloat(getComputedStyle(document.querySelector("#mealStudioTitle")).fontSize):0
@@ -725,9 +727,9 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
   const sortRight = Boolean(state.sort.rightAligned && state.sort.control && state.sort.control.width>0);
   check(sortRight,viewport,themeName+"-sort-control-is-anchored-to-the-right",JSON.stringify(state.sort));
   check(state.categories.allCentered,viewport,themeName+"-category-icons-and-labels-share-a-centre",JSON.stringify(state.categories));
-  check(state.meal.columns===2&&state.meal.selectors===3&&state.meal.selectorsVisible&&
-    state.meal.mainUsesFullRow&&state.meal.height<=300&&state.meal.headingGap>=0&&state.meal.headingGap<=18,
-    viewport,themeName+"-meal-studio-uses-readable-aligned-fields-without-empty-gap",JSON.stringify(state.meal));
+  check(state.meal.columns===3&&state.meal.selectors===3&&state.meal.selectorsVisible&&
+    !state.meal.mainUsesFullRow&&state.meal.height<=290&&state.meal.headingGap>=0&&state.meal.headingGap<=18,
+    viewport,themeName+"-meal-studio-uses-three-compact-aligned-selectors",JSON.stringify(state.meal));
   check(state.combos.columns==="column"&&state.combos.count>=2&&state.combos.horizontalScroll&&
     state.combos.compact&&state.combos.headingGap>=0&&state.combos.headingGap<=18,
     viewport,themeName+"-meal-combos-use-compact-horizontal-cards-without-empty-gap",JSON.stringify(state.combos));
@@ -748,8 +750,15 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
       ["#smart-picks","mobile-390-recommendations.png"],
       [".site-footer","mobile-390-footer.png"]
     ]) {
-      await page.locator(selector).scrollIntoViewIfNeeded();
-      await page.waitForTimeout(120);
+      await page.evaluate((targetSelector) => {
+        const element=document.querySelector(targetSelector);
+        const header=document.querySelector(".site-header");
+        if(!element) return;
+        const offset=header ? header.getBoundingClientRect().height : 0;
+        const top=element.getBoundingClientRect().top+window.scrollY-offset-8;
+        window.scrollTo({top,behavior:"instant"});
+      },selector);
+      await page.waitForTimeout(240);
       await page.screenshot({path:path.join(OUT_DIR,file)});
     }
     await page.evaluate(y=>window.scrollTo({top:y,behavior:"instant"}),startY);
@@ -1143,18 +1152,11 @@ async function auditDishDetailSheet(page, viewport, themeName) {
     await page.screenshot({path:path.join(OUT_DIR,"mobile-390-dish-sheet-"+themeName+".png")});
   }
 
-  if(themeName==="light") {
-    await page.locator("#customizerQtyPlus").click();
-    const quantity=await page.locator("#customizerQty").textContent();
-    check(quantity?.trim()==="2",viewport,"dish-customizer-quantity-control-works",quantity||"");
-    await page.locator(".customizer-submit").click();
-    await page.waitForFunction(()=>document.querySelector("#dishDetailDialog")?.open===false);
-    const cartCount=Number((await page.locator("#cartCount").textContent())||"0");
-    check(cartCount>=2,viewport,"dish-customizer-adds-selected-quantity-to-bag",String(cartCount));
-  } else {
-    await page.locator('[data-close-dialog="dishDetailDialog"]').click();
-    await page.waitForFunction(()=>document.querySelector("#dishDetailDialog")?.open===false);
-  }
+  await page.locator("#customizerQtyPlus").click();
+  const quantity=await page.locator("#customizerQty").textContent();
+  check(quantity?.trim()==="2",viewport,themeName+"-dish-customizer-quantity-control-works",quantity||"");
+  await page.locator('[data-close-dialog="dishDetailDialog"]').click();
+  await page.waitForFunction(()=>document.querySelector("#dishDetailDialog")?.open===false);
 }
 
 async function runViewport(browser, viewport) {
@@ -1812,7 +1814,10 @@ async function runViewport(browser, viewport) {
       const rect = dialog.getBoundingClientRect();
       return {
         fitsViewport: rect.left >= -1 && rect.right <= window.innerWidth + 1,
-        bottomSheet:Math.abs(rect.bottom-window.innerHeight)<=2&&rect.height<=window.innerHeight*.82,
+        dialogTop:Math.round(rect.top),
+        dialogBottom:Math.round(rect.bottom),
+        dialogHeight:Math.round(rect.height),
+        bottomSheet:Math.abs(rect.bottom-window.innerHeight)<=2&&rect.height<=window.innerHeight*.80,
         dialogWidth: rect.width,
         viewportWidth: window.innerWidth,
         hasSignIn: Boolean(document.querySelector("#customerLoginForm input[name=email]") &&
@@ -1903,6 +1908,15 @@ async function runViewport(browser, viewport) {
       JSON.stringify({ all:httpErrors, unexpected:unexpectedHttpErrors }));
     check(firstPartyFailures.length === 0, viewport, "no-site-or-food-image-request-failures", JSON.stringify(firstPartyFailures));
     reports.push({ viewport:sizeName(viewport), name:"performance-observation", pass:true, detail:performance });
+    // One final add-to-bag action, after checkout validation has verified its clean cart count.
+    const addTheme = await page.evaluate(() => document.documentElement.dataset.theme || "light");
+    await page.locator("#menuGrid [data-customize]").first().click();
+    await page.waitForFunction(() => document.querySelector("#dishDetailDialog")?.open === true);
+    await page.locator("#customizerQtyPlus").click();
+    await page.locator(".customizer-submit").click();
+    await page.waitForFunction(() => document.querySelector("#dishDetailDialog")?.open === false);
+    const finalCartCount = Number((await page.locator("#cartCount").textContent()) || "0");
+    check(finalCartCount >= 3, viewport, addTheme+"-dish-customizer-adds-selected-quantity-to-bag", String(finalCartCount));
   } catch (error) {
     failures.push({ viewport:sizeName(viewport), name:"browser-test-execution", pass:false, detail:error.stack || error.message });
   } finally {
