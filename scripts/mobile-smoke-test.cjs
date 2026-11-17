@@ -1199,7 +1199,15 @@ async function runViewport(browser, viewport) {
           copyWidth:copy ? Math.round(copy.width) : 0,
           panelWidth:Math.round(panelRect.width),
           ctaVisible:Boolean(button && button.width > 0 && button.height >= 30 &&
-            button.left >= panelRect.left && button.right <= panelRect.right)
+            button.left >= panelRect.left - 1 && button.right <= panelRect.right + 1 &&
+            button.top >= panelRect.top - 1 && button.bottom <= panelRect.bottom + 1),
+          ctaRect:button ? {x:Math.round(button.left-panelRect.left),y:Math.round(button.top-panelRect.top),
+            width:Math.round(button.width),height:Math.round(button.height),bottom:Math.round(button.bottom-panelRect.top)} : null,
+          ctaStyle:panel.querySelector(".offer-copy .button") ? {
+            display:getComputedStyle(panel.querySelector(".offer-copy .button")).display,
+            visibility:getComputedStyle(panel.querySelector(".offer-copy .button")).visibility,
+            opacity:getComputedStyle(panel.querySelector(".offer-copy .button")).opacity
+          } : null
         };
       }));
     }
