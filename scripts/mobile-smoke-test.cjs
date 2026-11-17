@@ -1826,6 +1826,11 @@ async function runViewport(browser, viewport) {
 
     await page.locator("#openProfile").click();
     await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
+    await page.locator("#profileDialog").evaluate(async dialog => {
+      const animations = dialog.getAnimations({subtree:true});
+      await Promise.all(animations.map(animation => animation.finished.catch(() => {})));
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
     const accountUi = await page.evaluate(() => {
       const dialog = document.querySelector("#profileDialog");
       const rect = dialog.getBoundingClientRect();
