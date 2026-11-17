@@ -631,6 +631,104 @@ async function auditMobileLayout(page, viewport, themeName) {
     JSON.stringify({actionCount:audit.actionCount,invalid:audit.invalidActions}));
 }
 
+
+async function auditMobileFeaturePolish(page, viewport, themeName) {
+  const state = await page.evaluate(() => {
+    const rect = element => {
+      if (!element) return null;
+      const r = element.getBoundingClientRect();
+      return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};
+    };
+    const toolbar = document.querySelector("#menu .menu-toolbar");
+    const sort = document.querySelector("#menu .sort-control");
+    const tabs = Array.from(document.querySelectorAll("#menu .category-tab")).slice(0,6).map(tab => {
+      const icon = tab.querySelector(".category-icon");
+      const label = tab.querySelector(".category-label");
+      const t=rect(tab),i=rect(icon),l=rect(label);
+      return {
+        direction:getComputedStyle(tab).flexDirection,
+        iconCentered:Boolean(t && i && Math.abs((t.left+t.right-i.left-i.right)/2) <= 3),
+        labelCentered:Boolean(t && l && Math.abs((t.left+t.right-l.left-l.right)/2) <= 3),
+        iconAboveLabel:Boolean(i && l && i.bottom <= l.top + 2),
+        iconHeight:i?.height || 0,
+        labelHeight:l?.height || 0
+      };
+    });
+    const meal=document.querySelector("#meal-studio .meal-builder-shell");
+    const mealControls=document.querySelector("#meal-studio .meal-builder-controls");
+    const mealSelects=Array.from(document.querySelectorAll("#meal-studio .feature-field select"));
+    const comboGrid=document.querySelector("#smart-combos .combo-grid");
+    const comboCard=document.querySelector("#smart-combos .combo-card");
+    const recommendationTitle=document.querySelector("#recommendationTitle");
+    const recommendationFilter=document.querySelector("#smart-picks .recommendation-filter");
+    const recommendationSelect=document.querySelector("#recommendationMood");
+    const newsletter=document.querySelector(".footer-newsletter");
+    const newsletterTitle=newsletter?.querySelector("h3");
+    const newsletterDescription=newsletter?.querySelector("p");
+    return {
+      sort:{toolbar:rect(toolbar),control:rect(sort),rightAligned:Boolean(toolbar&&sort&&Math.abs(toolbar.getBoundingClientRect().right-sort.getBoundingClientRect().right)<=3)},
+      categories:{count:tabs.length,items:tabs,allCentered:tabs.length>=3&&tabs.every(t=>t.direction==="column"&&t.iconCentered&&t.labelCentered&&t.iconAboveLabel)},
+      meal:{
+        rect:rect(meal),
+        height:meal?.getBoundingClientRect().height || 0,
+        columns:mealControls?getComputedStyle(mealControls).gridTemplateColumns.split(" ").filter(Boolean).length:0,
+        selectors:mealSelects.length,
+        selectorsVisible:mealSelects.every(s=>s.getBoundingClientRect().width>0&&s.getBoundingClientRect().height>=30),
+        titleSize:document.querySelector("#mealStudioTitle")?parseFloat(getComputedStyle(document.querySelector("#mealStudioTitle")).fontSize):0
+      },
+      combos:{
+        grid:rect(comboGrid),
+        columns:comboGrid?getComputedStyle(comboGrid).gridAutoFlow:"",
+        card:rect(comboCard),
+        count:document.querySelectorAll("#smart-combos .combo-card").length,
+        horizontalScroll:Boolean(comboGrid&&comboGrid.scrollWidth>comboGrid.clientWidth+10),
+        compact:Boolean(comboCard&&comboCard.getBoundingClientRect().height<=205)
+      },
+      recommendations:{
+        title:recommendationTitle?.innerText.trim() || "",
+        titleSize:recommendationTitle?parseFloat(getComputedStyle(recommendationTitle).fontSize):0,
+        selector:rect(recommendationFilter),
+        select:rect(recommendationSelect),
+        options:Array.from(recommendationSelect?.options||[]).map(option=>option.textContent.trim()),
+        selectorFits:Boolean(recommendationFilter&&recommendationSelect&&recommendationSelect.getBoundingClientRect().width<=160&&recommendationSelect.getBoundingClientRect().height<=32)
+      },
+      newsletter:{
+        box:rect(newsletter),title:rect(newsletterTitle),description:rect(newsletterDescription),
+        headingText:newsletterTitle?.textContent.trim()||"",
+        titleLeftAligned:Boolean(newsletterTitle&&newsletterDescription&&Math.abs(newsletterTitle.getBoundingClientRect().left-newsletterDescription.getBoundingClientRect().left)<=2),
+        titleToCopy:Boolean(newsletterTitle&&newsletterDescription&&newsletterDescription.getBoundingClientRect().top>=newsletterTitle.getBoundingClientRect().bottom-1),
+        formWidth:newsletter?.querySelector(".newsletter-form")?.getBoundingClientRect().width || 0
+      }
+    };
+  });
+  const sortRight = Boolean(state.sort.rightAligned && state.sort.control && state.sort.control.width>0);
+  check(sortRight,viewport,themeName+"-sort-control-is-anchored-to-the-right",JSON.stringify(state.sort));
+  check(state.categories.allCentered,viewport,themeName+"-category-icons-and-labels-share-a-centre",JSON.stringify(state.categories));
+  check(state.meal.columns===3&&state.meal.selectors===3&&state.meal.selectorsVisible&&state.meal.height<=280,
+    viewport,themeName+"-meal-studio-is-compact-with-three-aligned-selectors",JSON.stringify(state.meal));
+  check(state.combos.columns==="column"&&state.combos.count>=2&&state.combos.horizontalScroll&&state.combos.compact,
+    viewport,themeName+"-meal-combos-use-compact-horizontal-cards",JSON.stringify(state.combos));
+  check(state.recommendations.title==="A little inspiration."&&state.recommendations.titleSize<=23&&state.recommendations.selectorFits&&state.recommendations.options[0]==="Popular picks",
+    viewport,themeName+"-recommendations-have-a-clean-heading-and-selector",JSON.stringify(state.recommendations));
+  check(state.newsletter.titleLeftAligned&&state.newsletter.titleToCopy&&state.newsletter.formWidth>250,
+    viewport,themeName+"-newsletter-heading-and-copy-share-one-left-edge",JSON.stringify(state.newsletter));
+
+  if(viewport.width===390&&themeName==="light") {
+    const startY=await page.evaluate(()=>window.scrollY);
+    for(const [selector,file] of [
+      ["#meal-studio","mobile-390-meal-studio.png"],
+      ["#smart-combos","mobile-390-combos.png"],
+      ["#smart-picks","mobile-390-recommendations.png"],
+      [".site-footer","mobile-390-footer.png"]
+    ]) {
+      await page.locator(selector).scrollIntoViewIfNeeded();
+      await page.waitForTimeout(120);
+      await page.screenshot({path:path.join(OUT_DIR,file)});
+    }
+    await page.evaluate(y=>window.scrollTo({top:y,behavior:"instant"}),startY);
+  }
+}
+
 async function waitForSite(page) {
   const response = await page.goto(BASE_URL, {
     waitUntil: "domcontentloaded",
@@ -1317,6 +1415,7 @@ async function runViewport(browser, viewport) {
         await waitForThemeTransition(page);
       }
       await auditMobileLayout(page, viewport, theme);
+      await auditMobileFeaturePolish(page, viewport, theme);
       await auditDiscountBadge(page, viewport, theme);
 
       // Full mobile checkout pass in both themes. Use validation-only submits:
