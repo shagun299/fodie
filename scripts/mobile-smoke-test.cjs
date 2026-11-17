@@ -1827,7 +1827,8 @@ async function runViewport(browser, viewport) {
     await page.locator("#openProfile").click();
     await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
     await page.locator("#profileDialog").evaluate(async dialog => {
-      const animations = dialog.getAnimations({subtree:true});
+      const animations = dialog.getAnimations().filter(animation =>
+        Number.isFinite(animation.effect?.getComputedTiming().endTime));
       await Promise.all(animations.map(animation => animation.finished.catch(() => {})));
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });
