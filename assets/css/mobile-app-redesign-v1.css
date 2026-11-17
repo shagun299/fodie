@@ -2587,3 +2587,27 @@
     line-height:1!important;
   }
 }
+
+
+
+/* Keep the closed cart drawer fully out of view and out of the tap/focus path.
+   The visibility delay lets its translate animation finish before hiding it. */
+.cart-drawer {
+  transition-property:transform,visibility!important;
+  transition-duration:320ms,0s!important;
+  transition-timing-function:cubic-bezier(.22,.72,.18,1),linear!important;
+}
+.cart-drawer:not(.is-open),
+.cart-drawer[aria-hidden="true"] {
+  visibility:hidden!important;
+  pointer-events:none!important;
+  transition-delay:0s,320ms!important;
+}
+.cart-drawer.is-open[aria-hidden="false"] {
+  visibility:visible!important;
+  pointer-events:auto!important;
+  transition-delay:0s,0s!important;
+}
+@media(prefers-reduced-motion:reduce) {
+  .cart-drawer { transition:none!important; }
+}

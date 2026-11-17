@@ -949,12 +949,18 @@ async function runDesktopHeroThemeAudit(browser) {
           controlMetrics,
           menuColumns,
           mobileDockDisplay:getComputedStyle(document.querySelector("#mobileDock") || document.body).display,
-          initialCart:{
-            drawerOpen:Boolean(document.querySelector("#cartDrawer")?.classList.contains("is-open")),
-            ariaHidden:document.querySelector("#cartDrawer")?.getAttribute("aria-hidden"),
+          initialCart:(() => {
+          const drawer = document.querySelector("#cartDrawer");
+          const style = drawer ? getComputedStyle(drawer) : null;
+          return {
+            drawerOpen:Boolean(drawer?.classList.contains("is-open")),
+            ariaHidden:drawer?.getAttribute("aria-hidden"),
+            visibility:style?.visibility || "missing",
+            pointerEvents:style?.pointerEvents || "missing",
             backdropVisible:Boolean(document.querySelector("#cartBackdrop")?.classList.contains("is-visible")),
             bodyLocked:document.body.classList.contains("drawer-open")
-          }
+          };
+        })()
         };
       });
       const desktopShellPass =
@@ -972,9 +978,11 @@ async function runDesktopHeroThemeAudit(browser) {
         JSON.stringify(initialState));
       check(!initialState.initialCart.drawerOpen &&
         initialState.initialCart.ariaHidden === "true" &&
+        initialState.initialCart.visibility === "hidden" &&
+        initialState.initialCart.pointerEvents === "none" &&
         !initialState.initialCart.backdropVisible &&
         !initialState.initialCart.bodyLocked,
-        viewport, "desktop-cart-starts-closed", JSON.stringify(initialState.initialCart));
+        viewport, "desktop-cart-starts-fully-hidden", JSON.stringify(initialState.initialCart));
 
       await auditInteractionMotion(page, viewport, "desktop");
       await auditThemeContrast(page, viewport, "light");
@@ -1043,11 +1051,14 @@ async function runDesktopHeroThemeAudit(browser) {
         documentWidth:document.documentElement.scrollWidth,
         bodyWidth:document.body.scrollWidth,
         drawerOpen:Boolean(document.querySelector("#cartDrawer")?.classList.contains("is-open")),
+        drawerVisibility:getComputedStyle(document.querySelector("#cartDrawer")).visibility,
+        drawerPointerEvents:getComputedStyle(document.querySelector("#cartDrawer")).pointerEvents,
         backdropVisible:Boolean(document.querySelector("#cartBackdrop")?.classList.contains("is-visible"))
       }));
       check(finalGeometry.documentWidth <= viewport.width + 1 &&
         finalGeometry.bodyWidth <= viewport.width + 1 &&
-        !finalGeometry.drawerOpen && !finalGeometry.backdropVisible,
+        !finalGeometry.drawerOpen && finalGeometry.drawerVisibility === "hidden" &&
+        finalGeometry.drawerPointerEvents === "none" && !finalGeometry.backdropVisible,
         viewport, "desktop-layout-remains-stable-after-theme-cycles", JSON.stringify(finalGeometry));
 
       check(pageErrors.length === 0, viewport, "desktop-no-page-javascript-errors",
@@ -1122,15 +1133,22 @@ async function runViewport(browser, viewport) {
       await page.waitForTimeout(450);
     }
 
-    const initialCartState = await page.evaluate(() => ({
-      drawerOpen:Boolean(document.querySelector("#cartDrawer")?.classList.contains("is-open")),
-      ariaHidden:document.querySelector("#cartDrawer")?.getAttribute("aria-hidden"),
-      backdropVisible:Boolean(document.querySelector("#cartBackdrop")?.classList.contains("is-visible")),
-      bodyLocked:document.body.classList.contains("drawer-open")
-    }));
+    const initialCartState = await page.evaluate(() => {
+      const drawer = document.querySelector("#cartDrawer");
+      const style = drawer ? getComputedStyle(drawer) : null;
+      return {
+        drawerOpen:Boolean(drawer?.classList.contains("is-open")),
+        ariaHidden:drawer?.getAttribute("aria-hidden"),
+        visibility:style?.visibility || "missing",
+        pointerEvents:style?.pointerEvents || "missing",
+        backdropVisible:Boolean(document.querySelector("#cartBackdrop")?.classList.contains("is-visible")),
+        bodyLocked:document.body.classList.contains("drawer-open")
+      };
+    });
     check(!initialCartState.drawerOpen && initialCartState.ariaHidden === "true" &&
+      initialCartState.visibility === "hidden" && initialCartState.pointerEvents === "none" &&
       !initialCartState.backdropVisible && !initialCartState.bodyLocked,
-      viewport, "mobile-cart-starts-closed", JSON.stringify(initialCartState));
+      viewport, "mobile-cart-starts-fully-hidden", JSON.stringify(initialCartState));
 
     if (viewport.width === 390) {
       await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-home.png") });
@@ -1553,6 +1571,8 @@ async function runViewport(browser, viewport) {
         values,
         drawerBackground,
         drawerOpaque,
+        drawerVisibility:getComputedStyle(document.querySelector("#cartDrawer")).visibility,
+        drawerPointerEvents:getComputedStyle(document.querySelector("#cartDrawer")).pointerEvents,
         toastHidden: toastDisplay === "none",
         drawerWidth: values["#cartDrawer"]?.width || 0,
         couponWithin: Boolean(values["#cartDrawer .coupon-row"]) &&
@@ -1569,6 +1589,8 @@ async function runViewport(browser, viewport) {
     check(bag.billAfterCoupon, viewport, "bill-below-coupon");
     check(bag.checkoutAfterBill, viewport, "checkout-below-bill");
     check(bag.drawerOpaque, viewport, "bag-drawer-is-opaque", bag.drawerBackground);
+    check(bag.drawerVisibility === "visible" && bag.drawerPointerEvents !== "none",
+      viewport, "bag-drawer-is-visible-and-interactive-only-when-open", JSON.stringify(bag));
     check(bag.toastHidden, viewport, "toast-does-not-cover-bag");
 
     if (viewport.width === 390) {
