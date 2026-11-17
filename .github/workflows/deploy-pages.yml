@@ -75,10 +75,10 @@ jobs:
         uses: actions/deploy-pages@v4
 
   mobile-qa:
-    name: Mobile browser QA (Android sizes)
+    name: Responsive browser QA (mobile, tablet and desktop)
     needs: deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 25
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -98,16 +98,16 @@ jobs:
           npm install --no-audit --no-fund playwright
           npx playwright install --with-deps chromium
 
-      - name: Test live site at Android viewport sizes
+      - name: Test live site across mobile, tablet and desktop
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/foodiehub-mobile-qa/node_modules/playwright
-          FOODIEHUB_QA_URL: https://shagun299.github.io/fodie/?qa=mobile
+          FOODIEHUB_QA_URL: https://shagun299.github.io/fodie/?qa=responsive
         run: node scripts/mobile-smoke-test.cjs
 
       - name: Upload mobile screenshots and report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: foodiehub-mobile-qa-${{ github.run_number }}
+          name: foodiehub-responsive-qa-${{ github.run_number }}
           path: mobile-qa-artifacts/
           if-no-files-found: warn

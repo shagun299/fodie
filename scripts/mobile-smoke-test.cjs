@@ -11,9 +11,11 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 const failures = [];
 const reports = [];
 const viewports = [
+  { width: 320, height: 720 },
   { width: 360, height: 800 },
   { width: 390, height: 844 },
-  { width: 430, height: 932 }
+  { width: 430, height: 932 },
+  { width: 480, height: 960 }
 ];
 
 function sizeName(viewport) {
@@ -833,66 +835,238 @@ async function auditDiscountBadge(page, viewport, themeName) {
 }
 
 async function runDesktopHeroThemeAudit(browser) {
-  const viewport = { width:1440, height:960 };
-  const context = await browser.newContext({ viewport, deviceScaleFactor:1 });
-  const page = await context.newPage();
-  try {
-    await waitForSite(page);
-    await auditInteractionMotion(page, viewport, "desktop");
-    await auditThemeContrast(page, viewport, "light");
-    await auditDiscountBadge(page, viewport, "light");
+  const desktopViewports = [
+    { width: 768, height: 1024 },
+    { width: 820, height: 1180 },
+    { width: 900, height: 900 },
+    { width: 1024, height: 768 },
+    { width: 1280, height: 800 },
+    { width: 1440, height: 960 },
+    { width: 1920, height: 1080 }
+  ];
 
-    await page.locator("#favouritesToggle").click();
-    await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show all dishes");
-    const favouritesOn = await page.locator("#favouritesToggle").evaluate(button => button.classList.contains("is-active"));
-    await page.locator("#favouritesToggle").click();
-    await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show favourites");
-    const favouritesOff = await page.locator("#favouritesToggle").evaluate(button => !button.classList.contains("is-active"));
-    check(favouritesOn && favouritesOff, viewport, "desktop-header-favourites-toggle-works",
-      JSON.stringify({favouritesOn,favouritesOff}));
-
-    await page.locator("#openProfile").click();
-    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
-    await page.locator('[data-close-dialog="profileDialog"]').click();
-    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === false);
-    check(await page.locator("#profileDialog").evaluate(dialog => !dialog.open),
-      viewport, "desktop-profile-close-button-works");
-
-    await page.locator("#openProfile").click();
-    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
-    await page.keyboard.press("Escape");
-    await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === false);
-    check(await page.locator("#profileDialog").evaluate(dialog => !dialog.open),
-      viewport, "desktop-profile-escape-close-works");
-
-    await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-light.png") });
-    await page.locator("#themeToggle").click();
-    await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
-    await waitForThemeTransition(page);
-    await auditDiscountBadge(page, viewport, "dark");
-    const darkToggleState = await page.evaluate(async () => {
-      const link = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-        .find(item => item.href.includes("theme-visibility-v1.css"));
-      const stylesheet = link ? await fetch(link.href).then(response => response.text()) : "";
-      return {
-        theme:document.documentElement.dataset.theme,
-        viewTransitionsSupported:typeof document.startViewTransition === "function",
-        softCrossfadePresent:stylesheet.includes("theme-crossfade-in") &&
-          stylesheet.includes("theme-crossfade-out"),
-        circularRevealPresent:/clip-path\\s*:\\s*circle/i.test(stylesheet),
-        revealOriginProperties:stylesheet.includes("--theme-reveal-")
-      };
+  for (const viewport of desktopViewports) {
+    const context = await browser.newContext({
+      viewport,
+      deviceScaleFactor: 1,
+      isMobile: false,
+      hasTouch: false,
+      colorScheme: "light",
+      reducedMotion: "no-preference"
     });
-    check(darkToggleState.theme === "dark" && darkToggleState.softCrossfadePresent &&
-      !darkToggleState.circularRevealPresent && !darkToggleState.revealOriginProperties,
-      viewport, "theme-toggle-uses-soft-crossfade",
-      JSON.stringify(darkToggleState));
-    await auditThemeContrast(page, viewport, "dark", true);
-    await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-dark.png") });
-  } catch (error) {
-    failures.push({ viewport:sizeName(viewport),name:"desktop-hero-theme-audit",pass:false,detail:error.stack || error.message });
-  } finally {
-    await context.close();
+    const page = await context.newPage();
+    const pageErrors = [];
+    const httpErrors = [];
+    const firstPartyFailures = [];
+    page.on("pageerror", error => pageErrors.push(error.message));
+    page.on("response", response => {
+      if (response.status() >= 400) httpErrors.push({ url:response.url(), status:response.status() });
+    });
+    page.on("requestfailed", request => {
+      const url = request.url();
+      if (url.includes("shagun299.github.io") ||
+          url.includes("images.unsplash.com") || url.includes("images.pexels.com")) {
+        firstPartyFailures.push({ url, error:request.failure()?.errorText || "request failed" });
+      }
+    });
+
+    try {
+      await waitForSite(page);
+      await page.waitForTimeout(180);
+
+      const initialState = await page.evaluate(() => {
+        const rect = element => {
+          if (!element) return null;
+          const r = element.getBoundingClientRect();
+          return { left:r.left, right:r.right, top:r.top, bottom:r.bottom, width:r.width, height:r.height };
+        };
+        const header = document.querySelector(".header-inner");
+        const headerChildren = Array.from(header?.children || [])
+          .filter(element => getComputedStyle(element).display !== "none" &&
+            getComputedStyle(element).visibility !== "hidden" && rect(element)?.width > 0)
+          .map(element => ({
+            selector:element.id ? "#" + element.id : (element.className || element.tagName.toLowerCase()),
+            ...rect(element)
+          }));
+        const headerOverlaps = headerChildren.slice(1).flatMap((item,index) => {
+          const previous = headerChildren[index];
+          return previous.right > item.left + 2
+            ? [{ previous:previous.selector, current:item.selector, overlap:Math.round(previous.right-item.left) }]
+            : [];
+        });
+        const selectors = [
+          ".hero-section",".promise-strip","#quickAccess","#offers","#menu",
+          "#meal-studio","#smart-combos","#rewards",".story-section",
+          ".closing-banner",".site-footer"
+        ];
+        const sections = selectors.map(selector => {
+          const element = document.querySelector(selector);
+          if (!element || getComputedStyle(element).display === "none") return null;
+          return { selector, ...rect(element) };
+        }).filter(Boolean);
+        const outOfBounds = sections.filter(item => item.left < -1 || item.right > window.innerWidth + 1);
+        const overflowSelectors = [
+          ".hero-section",".promise-strip","#quickAccess","#offers","#menu",
+          "#meal-studio","#rewards",".story-section",".closing-banner",".site-footer"
+        ];
+        const internalOverflow = overflowSelectors.map(selector => {
+          const element = document.querySelector(selector);
+          if (!element || getComputedStyle(element).display === "none") return null;
+          return element.scrollWidth > element.clientWidth + 2
+            ? { selector, scrollWidth:element.scrollWidth, clientWidth:element.clientWidth }
+            : null;
+        }).filter(Boolean);
+        const hero = document.querySelector(".hero-section");
+        const copy = hero?.querySelector(".hero-copy");
+        const visual = hero?.querySelector(".hero-visual");
+        const heroRect = rect(hero), copyRect = rect(copy), visualRect = rect(visual);
+        const heroChildrenFit = Boolean(heroRect && copyRect && visualRect) &&
+          copyRect.left >= heroRect.left - 1 && copyRect.right <= heroRect.right + 1 &&
+          visualRect.left >= heroRect.left - 1 && visualRect.right <= heroRect.right + 1;
+        const heroChildrenOverlap = Boolean(copyRect && visualRect) &&
+          copyRect.left < visualRect.right - 2 && copyRect.right > visualRect.left + 2 &&
+          copyRect.top < visualRect.bottom - 2 && copyRect.bottom > visualRect.top + 2;
+        const controls = ["#themeToggle","#favouritesToggle","#openProfile","#openCart"];
+        const controlMetrics = controls.map(selector => {
+          const element = document.querySelector(selector);
+          const r = rect(element);
+          return { selector, visible:Boolean(r && r.width > 0 && r.height > 0), width:r?.width || 0, height:r?.height || 0 };
+        });
+        const menuColumns = getComputedStyle(document.querySelector("#menuGrid") || document.body)
+          .gridTemplateColumns.split(" ").filter(Boolean).length;
+        return {
+          viewportWidth:window.innerWidth,
+          documentWidth:document.documentElement.scrollWidth,
+          bodyWidth:document.body.scrollWidth,
+          headerChildren,
+          headerOverlaps,
+          sections,
+          outOfBounds,
+          internalOverflow,
+          heroChildrenFit,
+          heroChildrenOverlap,
+          heroGeometry:{hero:heroRect,copy:copyRect,visual:visualRect},
+          controlMetrics,
+          menuColumns,
+          mobileDockDisplay:getComputedStyle(document.querySelector("#mobileDock") || document.body).display,
+          initialCart:{
+            drawerOpen:Boolean(document.querySelector("#cartDrawer")?.classList.contains("is-open")),
+            ariaHidden:document.querySelector("#cartDrawer")?.getAttribute("aria-hidden"),
+            backdropVisible:Boolean(document.querySelector("#cartBackdrop")?.classList.contains("is-visible")),
+            bodyLocked:document.body.classList.contains("drawer-open")
+          }
+        };
+      });
+      const desktopShellPass =
+        initialState.documentWidth <= viewport.width + 1 &&
+        initialState.bodyWidth <= viewport.width + 1 &&
+        initialState.headerChildren.length >= 2 &&
+        initialState.headerOverlaps.length === 0 &&
+        initialState.outOfBounds.length === 0 &&
+        initialState.internalOverflow.length === 0 &&
+        initialState.heroChildrenFit && !initialState.heroChildrenOverlap &&
+        initialState.controlMetrics.every(item => item.visible && item.width >= 28 && item.height >= 28) &&
+        initialState.menuColumns >= 2 &&
+        initialState.mobileDockDisplay === "none";
+      check(desktopShellPass, viewport, "desktop-layout-fits-without-collisions",
+        JSON.stringify(initialState));
+      check(!initialState.initialCart.drawerOpen &&
+        initialState.initialCart.ariaHidden === "true" &&
+        !initialState.initialCart.backdropVisible &&
+        !initialState.initialCart.bodyLocked,
+        viewport, "desktop-cart-starts-closed", JSON.stringify(initialState.initialCart));
+
+      await auditInteractionMotion(page, viewport, "desktop");
+      await auditThemeContrast(page, viewport, "light");
+      await auditDiscountBadge(page, viewport, "light");
+
+      if (viewport.width === 1440) {
+        await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-light.png") });
+        await page.locator("#favouritesToggle").click();
+        await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show all dishes");
+        const favouritesOn = await page.locator("#favouritesToggle").evaluate(button => button.classList.contains("is-active"));
+        await page.locator("#favouritesToggle").click();
+        await page.waitForFunction(() => document.querySelector("#favouritesToggle")?.getAttribute("aria-label") === "Show favourites");
+        const favouritesOff = await page.locator("#favouritesToggle").evaluate(button => !button.classList.contains("is-active"));
+        check(favouritesOn && favouritesOff, viewport, "desktop-header-favourites-toggle-works",
+          JSON.stringify({favouritesOn,favouritesOff}));
+
+        await page.locator("#openProfile").click();
+        await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
+        await page.locator('[data-close-dialog="profileDialog"]').click();
+        await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === false);
+        await page.waitForTimeout(360);
+        check(await page.locator("#profileDialog").evaluate(dialog => !dialog.open),
+          viewport, "desktop-profile-close-button-works");
+
+        await page.locator("#openProfile").click();
+        await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
+        await page.keyboard.press("Escape");
+        await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === false);
+        await page.waitForTimeout(360);
+        check(await page.locator("#profileDialog").evaluate(dialog => !dialog.open),
+          viewport, "desktop-profile-escape-close-works");
+      }
+
+      const themeCycles = [];
+      for (const targetTheme of ["dark","light"]) {
+        await page.locator("#themeToggle").click();
+        await page.waitForFunction(expected => document.documentElement.dataset.theme === expected,
+          targetTheme);
+        await waitForThemeTransition(page);
+        await page.waitForTimeout(80);
+        const state = await page.evaluate(() => ({
+          theme:document.documentElement.dataset.theme || "",
+          toggleLabel:document.querySelector("#themeToggle")?.getAttribute("aria-label") || "",
+          metaThemeColor:document.querySelector('meta[name="theme-color"]')?.getAttribute("content") || "",
+          transitionClass:document.documentElement.classList.contains("theme-transition-fallback") ||
+            Boolean(document.querySelector("#themeToggle")?.classList.contains("is-theme-switching"))
+        }));
+        const expectedLabel = targetTheme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+        const expectedColor = targetTheme === "dark" ? "#101a14" : "#f5f7f2";
+        check(state.theme === targetTheme && state.toggleLabel === expectedLabel &&
+          state.metaThemeColor === expectedColor && !state.transitionClass,
+          viewport, "desktop-theme-toggle-settles-in-" + targetTheme, JSON.stringify(state));
+        themeCycles.push(state);
+        await auditThemeContrast(page, viewport, targetTheme);
+        await auditDiscountBadge(page, viewport, targetTheme);
+        if (viewport.width === 1440 && targetTheme === "dark") {
+          await page.screenshot({ path:path.join(OUT_DIR,"desktop-hero-dark.png") });
+        }
+      }
+      check(themeCycles.length === 2 && themeCycles[0].theme === "dark" &&
+        themeCycles[1].theme === "light",
+        viewport, "desktop-theme-toggle-is-reversible", JSON.stringify(themeCycles));
+
+      const finalGeometry = await page.evaluate(() => ({
+        viewportWidth:window.innerWidth,
+        documentWidth:document.documentElement.scrollWidth,
+        bodyWidth:document.body.scrollWidth,
+        drawerOpen:Boolean(document.querySelector("#cartDrawer")?.classList.contains("is-open")),
+        backdropVisible:Boolean(document.querySelector("#cartBackdrop")?.classList.contains("is-visible"))
+      }));
+      check(finalGeometry.documentWidth <= viewport.width + 1 &&
+        finalGeometry.bodyWidth <= viewport.width + 1 &&
+        !finalGeometry.drawerOpen && !finalGeometry.backdropVisible,
+        viewport, "desktop-layout-remains-stable-after-theme-cycles", JSON.stringify(finalGeometry));
+
+      check(pageErrors.length === 0, viewport, "desktop-no-page-javascript-errors",
+        JSON.stringify(pageErrors));
+      const unexpectedHttpErrors = httpErrors.filter(item => {
+        try { return !new URL(item.url).pathname.includes("/api/"); } catch (_) { return true; }
+      });
+      check(unexpectedHttpErrors.length === 0, viewport, "desktop-no-unexpected-http-errors",
+        JSON.stringify({ all:httpErrors, unexpected:unexpectedHttpErrors }));
+      check(firstPartyFailures.length === 0, viewport, "desktop-no-site-or-food-image-request-failures",
+        JSON.stringify(firstPartyFailures));
+    } catch (error) {
+      failures.push({
+        viewport:sizeName(viewport), name:"desktop-responsive-browser-test-execution",
+        pass:false, detail:error.stack || error.message
+      });
+    } finally {
+      await context.close();
+    }
   }
 }
 
@@ -947,6 +1121,16 @@ async function runViewport(browser, viewport) {
       await introButton.click({ timeout: 3000 }).catch(() => {});
       await page.waitForTimeout(450);
     }
+
+    const initialCartState = await page.evaluate(() => ({
+      drawerOpen:Boolean(document.querySelector("#cartDrawer")?.classList.contains("is-open")),
+      ariaHidden:document.querySelector("#cartDrawer")?.getAttribute("aria-hidden"),
+      backdropVisible:Boolean(document.querySelector("#cartBackdrop")?.classList.contains("is-visible")),
+      bodyLocked:document.body.classList.contains("drawer-open")
+    }));
+    check(!initialCartState.drawerOpen && initialCartState.ariaHidden === "true" &&
+      !initialCartState.backdropVisible && !initialCartState.bodyLocked,
+      viewport, "mobile-cart-starts-closed", JSON.stringify(initialCartState));
 
     if (viewport.width === 390) {
       await page.screenshot({ path: path.join(OUT_DIR, "mobile-390-home.png") });
