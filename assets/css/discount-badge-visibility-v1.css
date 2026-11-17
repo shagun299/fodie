@@ -15,12 +15,14 @@
   min-height:32px!important;
   max-width:calc(100% - 48px)!important;
   padding:7px 10px!important;
-  border:1px solid #e6ca91!important;
-  border-radius:0 0 10px 0!important;
-  background:#173f2b!important;
+  border:1px solid #f0c77d!important;
+  border-left:3px solid #ffd27b!important;
+  border-radius:0 0 11px 0!important;
+  background-color:#102e1e!important;
+  background-image:linear-gradient(135deg,rgba(255,255,255,.08),rgba(0,0,0,.12))!important;
   color:#fffdf6!important;
   font-family:var(--sans,Manrope,Arial,sans-serif)!important;
-  font-size:10px!important;
+  font-size:10.5px!important;
   font-weight:900!important;
   letter-spacing:.035em!important;
   line-height:1.05!important;
@@ -32,7 +34,7 @@
   opacity:1!important;
   visibility:visible!important;
   text-shadow:0 1px 1px rgba(0,0,0,.18)!important;
-  box-shadow:0 4px 14px rgba(4,16,9,.34),0 1px 2px rgba(0,0,0,.22)!important;
+  box-shadow:0 4px 16px rgba(0,0,0,.48),0 1px 0 rgba(255,255,255,.16) inset!important;
 }
 
 @media(max-width:760px) {
@@ -44,8 +46,17 @@
     min-height:29px!important;
     max-width:calc(100% - 46px)!important;
     padding:6px 8px!important;
-    font-size:9px!important;
+    font-size:9.5px!important;
     letter-spacing:.025em!important;
-    border-radius:0 0 8px 0!important;
+    border-radius:0 0 9px 0!important;
+  }
+}
+
+/* On very narrow cards, stagger the favourite control below the sale label. */
+@media(max-width:375px) {
+  #menuGrid .dish-image-wrap > .dish-favourite {
+    top:42px!important;
+    right:8px!important;
+    z-index:6!important;
   }
 }

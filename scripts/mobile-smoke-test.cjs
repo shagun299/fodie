@@ -652,7 +652,7 @@ async function auditDiscountBadge(page, viewport, themeName) {
     const favourite = image?.querySelector(".dish-favourite");
     const favouriteRect = favourite?.getBoundingClientRect();
     const parse = value => {
-      const parts = String(value || "").match(/[\\d.]+/g)?.map(Number) || [];
+      const parts = String(value || "").match(/\d+(?:\.\d+)?/g)?.map(Number) || [];
       return parts.length >= 3 ? [parts[0],parts[1],parts[2],Number.isFinite(parts[3]) ? parts[3] : 1] : null;
     };
     const luminance = color => {
@@ -690,9 +690,9 @@ async function auditDiscountBadge(page, viewport, themeName) {
         rect.top < favouriteRect.bottom && rect.bottom > favouriteRect.top)
     };
   });
-  const expectedBackground = [23,63,43];
+  const expectedBackground = [16,46,30];
   const expectedForeground = [255,253,246];
-  const expectedBorder = [230,202,145];
+  const expectedBorder = [240,199,125];
   const near = (actual, expected) => Boolean(actual && expected.every((value,index) => Math.abs(actual[index] - value) <= 2));
   check(snapshot.opacity >= .98 && snapshot.display !== "none" && snapshot.visibility !== "hidden" &&
     snapshot.position === "absolute" && snapshot.zIndex >= 3,
