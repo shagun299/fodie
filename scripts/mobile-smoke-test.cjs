@@ -673,6 +673,9 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
       meal:{
         rect:rect(meal),
         height:meal?.getBoundingClientRect().height || 0,
+        headingHeight:document.querySelector("#meal-studio .feature-heading")?.getBoundingClientRect().height||0,
+        headingFirstChildHeight:document.querySelector("#meal-studio .feature-heading>div:first-child")?.getBoundingClientRect().height||0,
+        headingFirstChildFlexBasis:document.querySelector("#meal-studio .feature-heading>div:first-child")?getComputedStyle(document.querySelector("#meal-studio .feature-heading>div:first-child")).flexBasis:"",
         headingGap:meal&&rect(document.querySelector("#meal-studio .feature-heading")) ?
           Math.round(meal.getBoundingClientRect().top-document.querySelector("#meal-studio .feature-heading").getBoundingClientRect().bottom) : null,
         columns:mealControls?getComputedStyle(mealControls).gridTemplateColumns.split(" ").filter(Boolean).length:0,
@@ -686,6 +689,9 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
       },
       combos:{
         grid:rect(comboGrid),
+        headingHeight:document.querySelector("#smart-combos .feature-heading")?.getBoundingClientRect().height||0,
+        headingFirstChildHeight:document.querySelector("#smart-combos .feature-heading>div:first-child")?.getBoundingClientRect().height||0,
+        headingFirstChildFlexBasis:document.querySelector("#smart-combos .feature-heading>div:first-child")?getComputedStyle(document.querySelector("#smart-combos .feature-heading>div:first-child")).flexBasis:"",
         headingGap:comboGrid&&document.querySelector("#smart-combos .feature-heading") ?
           Math.round(comboGrid.getBoundingClientRect().top-document.querySelector("#smart-combos .feature-heading").getBoundingClientRect().bottom) : null,
         columns:comboGrid?getComputedStyle(comboGrid).gridAutoFlow:"",
@@ -698,6 +704,9 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
       recommendations:{
         title:recommendationTitle?.textContent.replace(/\\s+/g," ").trim() || "",
         titleSize:recommendationTitle?parseFloat(getComputedStyle(recommendationTitle).fontSize):0,
+        headingHeight:document.querySelector("#smart-picks .feature-heading")?.getBoundingClientRect().height||0,
+        headingFirstChildHeight:document.querySelector("#smart-picks .feature-heading>div:first-child")?.getBoundingClientRect().height||0,
+        headingFirstChildFlexBasis:document.querySelector("#smart-picks .feature-heading>div:first-child")?getComputedStyle(document.querySelector("#smart-picks .feature-heading>div:first-child")).flexBasis:"",
         selector:rect(recommendationFilter),
         selectorStyle:recommendationFilter ? {height:getComputedStyle(recommendationFilter).height,display:getComputedStyle(recommendationFilter).display} : null,
         select:rect(recommendationSelect),
@@ -728,17 +737,23 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
   check(sortRight,viewport,themeName+"-sort-control-is-anchored-to-the-right",JSON.stringify(state.sort));
   check(state.categories.allCentered,viewport,themeName+"-category-icons-and-labels-share-a-centre",JSON.stringify(state.categories));
   check(state.meal.columns===3&&state.meal.selectors===3&&state.meal.selectorsVisible&&
-    !state.meal.mainUsesFullRow&&state.meal.height<=290&&state.meal.headingGap>=0&&state.meal.headingGap<=18,
-    viewport,themeName+"-meal-studio-uses-three-compact-aligned-selectors",JSON.stringify(state.meal));
+    !state.meal.mainUsesFullRow&&state.meal.height<=290&&state.meal.headingGap>=0&&state.meal.headingGap<=18&&
+    state.meal.headingHeight<=90&&state.meal.headingFirstChildHeight<=70&&
+    state.meal.headingFirstChildFlexBasis!=="220px",
+    viewport,themeName+"-meal-studio-uses-three-compact-aligned-selectors-without-reserved-gap",JSON.stringify(state.meal));
   check(state.combos.columns==="column"&&state.combos.count>=2&&state.combos.horizontalScroll&&
-    state.combos.compact&&state.combos.headingGap>=0&&state.combos.headingGap<=18,
+    state.combos.compact&&state.combos.headingGap>=0&&state.combos.headingGap<=18&&
+    state.combos.headingHeight<=90&&state.combos.headingFirstChildHeight<=70&&
+    state.combos.headingFirstChildFlexBasis!=="220px",
     viewport,themeName+"-meal-combos-use-compact-horizontal-cards-without-empty-gap",JSON.stringify(state.combos));
   check(state.recommendations.title==="A little inspiration."&&state.recommendations.titleSize<=23&&state.recommendations.selectorFits&&state.recommendations.options[0]==="Popular picks",
     viewport,themeName+"-recommendations-have-a-clean-heading-and-selector",JSON.stringify(state.recommendations));
   check(state.recommendations.gridAutoFlow==="column"&&state.recommendations.gridCards===3&&
     state.recommendations.horizontalScroll&&state.recommendations.gridHeight<=205&&
-    state.recommendations.cardHeight<=195&&state.recommendations.headingGap>=0&&state.recommendations.headingGap<=18,
-    viewport,themeName+"-recommendation-cards-form-readable-swipe-row",JSON.stringify(state.recommendations));
+    state.recommendations.cardHeight<=195&&state.recommendations.headingGap>=0&&state.recommendations.headingGap<=18&&
+    state.recommendations.headingHeight<=90&&state.recommendations.headingFirstChildHeight<=70&&
+    state.recommendations.headingFirstChildFlexBasis!=="220px",
+    viewport,themeName+"-recommendation-cards-form-readable-swipe-row-without-reserved-gap",JSON.stringify(state.recommendations));
   check(state.newsletter.titleLeftAligned&&state.newsletter.titleToCopy&&state.newsletter.formWidth>250,
     viewport,themeName+"-newsletter-heading-and-copy-share-one-left-edge",JSON.stringify(state.newsletter));
 
@@ -748,6 +763,8 @@ async function auditMobileFeaturePolish(page, viewport, themeName) {
       ["#meal-studio","mobile-390-meal-studio.png"],
       ["#smart-combos","mobile-390-combos.png"],
       ["#smart-picks","mobile-390-recommendations.png"],
+      ["#rewards","mobile-390-rewards.png"],
+      ["#about","mobile-390-story.png"],
       [".site-footer","mobile-390-footer.png"]
     ]) {
       await page.evaluate((targetSelector) => {
@@ -1142,7 +1159,7 @@ async function auditDishDetailSheet(page, viewport, themeName) {
       borderRadius:getComputedStyle(dialog||document.body).borderTopLeftRadius
     };
   });
-  check(Boolean(metrics.dialog)&&metrics.bottomAnchored&&metrics.heightRatio<=.86&&
+  check(Boolean(metrics.dialog)&&metrics.bottomAnchored&&metrics.heightRatio<=.74&&
     metrics.dialog.left>=-1&&metrics.dialog.right<=viewport.width+1,
     viewport,themeName+"-dish-customizer-is-a-compact-bottom-sheet",JSON.stringify(metrics));
   check(metrics.imageFits&&metrics.closeFits&&metrics.formFits&&metrics.formNoHorizontalOverflow&&
@@ -1817,7 +1834,12 @@ async function runViewport(browser, viewport) {
         dialogTop:Math.round(rect.top),
         dialogBottom:Math.round(rect.bottom),
         dialogHeight:Math.round(rect.height),
-        bottomSheet:Math.abs(rect.bottom-window.innerHeight)<=2&&rect.height<=window.innerHeight*.80,
+        viewportHeight:window.innerHeight,
+        dialogPosition:getComputedStyle(dialog).position,
+        dialogBottomStyle:getComputedStyle(dialog).bottom,
+        dialogMaxHeight:getComputedStyle(dialog).maxHeight,
+        dialogOverflow:getComputedStyle(dialog).overflowY,
+        bottomSheet:Math.abs(rect.bottom-window.innerHeight)<=2&&rect.height<=window.innerHeight*.72,
         dialogWidth: rect.width,
         viewportWidth: window.innerWidth,
         hasSignIn: Boolean(document.querySelector("#customerLoginForm input[name=email]") &&
@@ -1858,6 +1880,52 @@ async function runViewport(browser, viewport) {
     await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === false);
     check(await page.locator("#profileDialog").evaluate(dialog => !dialog.open),
       viewport, "profile-dialog-closes-with-escape");
+
+    for (const [buttonSelector,dialogSelector,closeSelector,label,maxRatio] of [
+      ["#trackOrderHome","#trackingDialog",'[data-close-dialog="trackingDialog"]',"tracking",0.72],
+      ["#openMyDashboard","#myDashboardDialog",'[data-close-dialog="myDashboardDialog"]',"dashboard",0.78]
+    ]) {
+      await page.locator(buttonSelector).scrollIntoViewIfNeeded();
+      await page.locator(buttonSelector).click();
+      await page.waitForFunction(selector=>document.querySelector(selector)?.open===true,dialogSelector);
+      await page.waitForTimeout(260);
+      const sheet=await page.locator(dialogSelector).evaluate(dialog=>{
+        const rect=dialog.getBoundingClientRect();
+        return {
+          top:Math.round(rect.top),bottom:Math.round(rect.bottom),
+          height:Math.round(rect.height),width:Math.round(rect.width),
+          viewportHeight:window.innerHeight,
+          bottomAnchored:Math.abs(rect.bottom-window.innerHeight)<=2,
+          fitsViewport:rect.left>=-1&&rect.right<=window.innerWidth+1,
+          maxHeight:getComputedStyle(dialog).maxHeight,
+          overflow:getComputedStyle(dialog).overflowY
+        };
+      });
+      check(sheet.bottomAnchored&&sheet.fitsViewport&&sheet.height<=viewport.height*maxRatio,
+        viewport,label+"-opens-as-compact-bottom-sheet",JSON.stringify(sheet));
+      await page.locator(closeSelector).click();
+      await page.waitForFunction(selector=>document.querySelector(selector)?.open===false,dialogSelector);
+    }
+
+    const buttonActions=[];
+    for(const [label,selector] of [
+      ["meal","#addMealBundle"],
+      ["combo","#smart-combos [data-combo]"],
+      ["recommendation","#smart-picks [data-recommend-add]"]
+    ]) {
+      const button=page.locator(selector).first();
+      const visible=await button.isVisible().catch(()=>false);
+      const enabled=visible&&await button.isEnabled().catch(()=>false);
+      const before=Number(await page.locator("#cartCount").textContent()||0);
+      if(enabled) {
+        await button.click();
+        await page.waitForFunction(previous=>Number(document.querySelector("#cartCount")?.textContent||0)>previous,before);
+      }
+      const after=Number(await page.locator("#cartCount").textContent()||0);
+      const pass=visible&&enabled&&after>before;
+      buttonActions.push({label,visible,enabled,before,after,pass});
+      check(pass,viewport,label+"-button-adds-items-to-cart",JSON.stringify(buttonActions[buttonActions.length-1]));
+    }
 
     const scrollFrameMetrics = await page.evaluate(async () => {
       const scroller = document.scrollingElement;

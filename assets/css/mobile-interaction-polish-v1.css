@@ -1,0 +1,320 @@
+/* FoodieHub mobile interaction polish.
+   Final layer for compact sheets, short section headings and lower-page alignment. */
+@media (max-width:760px) {
+  /* Undo the old 220px flex-basis on feature heading wrappers.
+     It was reserving a large empty block below each title. */
+  body .mobile-page-scroll>main .feature-section .feature-heading {
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    justify-content:flex-start!important;
+    align-content:start!important;
+    min-height:0!important;
+    height:auto!important;
+    margin:0 0 10px!important;
+    padding:0!important;
+    gap:4px!important;
+  }
+  body .mobile-page-scroll>main .feature-section .feature-heading>div:first-child {
+    flex:0 1 auto!important;
+    align-self:stretch!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  body .mobile-page-scroll>main .feature-section .feature-heading .eyebrow {
+    min-height:0!important;
+    height:auto!important;
+    margin:0 0 3px!important;
+    line-height:1.2!important;
+  }
+  body .mobile-page-scroll>main .feature-section .feature-heading h2 {
+    min-height:0!important;
+    height:auto!important;
+    margin:0!important;
+    font-size:22px!important;
+    line-height:1.12!important;
+  }
+  body .mobile-page-scroll>main .feature-section .feature-heading p {
+    display:none!important;
+    min-height:0!important;
+    height:0!important;
+    margin:0!important;
+  }
+
+  body #meal-studio,
+  body #smart-combos,
+  body #smart-picks,
+  body #rewards,
+  body #about {
+    display:block!important;
+    height:auto!important;
+    min-height:0!important;
+    content-visibility:visible!important;
+    contain:initial!important;
+    contain-intrinsic-size:none!important;
+  }
+  body #meal-studio { margin-top:20px!important; }
+  body #smart-combos,
+  body #smart-picks,
+  body #rewards { margin-top:20px!important; }
+  body #about { margin-top:22px!important; }
+
+  /* Keep the three feature headings and their content close together. */
+  body #meal-studio .meal-builder-shell,
+  body #smart-combos .combo-grid,
+  body #smart-picks .recommendation-grid {
+    margin-top:0!important;
+  }
+  body #smart-combos .combo-grid {
+    grid-template-rows:156px!important;
+    grid-auto-rows:156px!important;
+    height:163px!important;
+    min-height:0!important;
+    max-height:163px!important;
+  }
+
+  /* Rewards was using ivory copy over an ivory mobile panel.
+     Keep the premium forest card and give every line a readable contrast. */
+  body #rewards .rewards-panel {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:12px!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:15px!important;
+    border:1px solid rgba(231,239,231,.22)!important;
+    border-radius:16px!important;
+    background:
+      radial-gradient(circle at 88% 8%,rgba(226,197,143,.18),transparent 12rem),
+      linear-gradient(125deg,#183326 0%,#244632 62%,#31533c 100%)!important;
+    color:#fffdf7!important;
+    box-shadow:0 10px 28px rgba(19,44,29,.16)!important;
+  }
+  body #rewards .rewards-copy { color:#fffdf7!important; }
+  body #rewards .rewards-copy .drawer-kicker,
+  body #rewards .rewards-copy h2,
+  body #rewards .rewards-copy strong { color:#fffdf7!important; }
+  body #rewards .rewards-copy h2 {
+    margin:4px 0 7px!important;
+    font-size:21px!important;
+    line-height:1.14!important;
+  }
+  body #rewards .rewards-copy h2 em { color:#e8cb98!important; }
+  body #rewards .rewards-copy p,
+  body #rewards .rewards-copy>small,
+  body #rewards .rewards-progress-label,
+  body #rewards .rewards-progress-label strong {
+    color:rgba(255,253,247,.88)!important;
+  }
+  body #rewards .rewards-copy p {
+    margin:0 0 10px!important;
+    font-size:10px!important;
+    line-height:1.5!important;
+  }
+  body #rewards .rewards-progress { margin:0 0 10px!important; }
+  body #rewards .rewards-progress-track { height:7px!important; background:rgba(255,255,255,.18)!important; }
+  body #rewards .rewards-progress-track span { background:#e6c88f!important; }
+  body #rewards .rewards-progress-label { display:flex!important; gap:8px!important; flex-wrap:wrap!important; font-size:8px!important; }
+  body #rewards .rewards-copy .button {
+    min-height:40px!important;
+    border:1px solid #e6c88f!important;
+    border-radius:10px!important;
+    background:#e6c88f!important;
+    color:#24372b!important;
+    font-size:9px!important;
+    font-weight:900!important;
+    box-shadow:none!important;
+  }
+  body #rewards .rewards-copy .button:disabled { opacity:.82!important; }
+  body #rewards .rewards-copy>small { display:block!important; margin-top:8px!important; font-size:8px!important; }
+  body #rewards .rewards-score {
+    display:grid!important;
+    grid-template-columns:34px auto 1fr!important;
+    align-items:center!important;
+    justify-items:start!important;
+    gap:3px 9px!important;
+    min-height:60px!important;
+    padding:9px 11px!important;
+    border:1px solid rgba(255,255,255,.22)!important;
+    border-radius:12px!important;
+    background:rgba(255,255,255,.09)!important;
+    color:#fffdf7!important;
+    text-align:left!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  body #rewards .rewards-score .reward-star { grid-row:1/3!important; color:#e6c88f!important; font-size:21px!important; }
+  body #rewards .rewards-score>strong { grid-column:2!important; grid-row:1/3!important; color:#f2d8a5!important; font-size:29px!important; line-height:1!important; }
+  body #rewards .rewards-score>span:not(.reward-star) { grid-column:3!important; grid-row:1!important; color:#fffdf7!important; font-size:8px!important; letter-spacing:.12em!important; }
+  body #rewards .rewards-score>small { grid-column:3!important; grid-row:2!important; margin:0!important; color:rgba(255,253,247,.78)!important; font-size:7px!important; }
+
+  /* Stable tap targets and clear keyboard focus across mobile actions. */
+  body .button,
+  body .dish-card .add-button,
+  body #menu .diet-button,
+  body .recommendation-card-copy .button,
+  body #rewards .button,
+  body .story-link,
+  body .profile-save-button,
+  body .account-auth-submit {
+    min-height:40px!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    line-height:1.15!important;
+    white-space:normal!important;
+    text-align:center!important;
+    touch-action:manipulation!important;
+  }
+  body .combo-card-footer .button {
+    min-height:36px!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    touch-action:manipulation!important;
+  }
+  body .close-button,
+  body .customizer-close {
+    width:38px!important;
+    min-width:38px!important;
+    height:38px!important;
+    min-height:38px!important;
+    display:grid!important;
+    place-items:center!important;
+    touch-action:manipulation!important;
+  }
+  body button:focus-visible,
+  body a[href]:focus-visible,
+  body [role="button"]:focus-visible,
+  body select:focus-visible,
+  body input:focus-visible,
+  body textarea:focus-visible {
+    outline:2px solid var(--fh-phone-accent)!important;
+    outline-offset:3px!important;
+  }
+
+  /* A more compact food-customiser sheet, with its own scrollable choices
+     and the quantity / Add to bag bar always kept within reach. */
+  body .site-dialog.dish-detail-dialog#dishDetailDialog:not(#checkoutDialog)[open] {
+    position:fixed!important;
+    inset:auto 0 0!important;
+    top:auto!important;
+    right:0!important;
+    bottom:0!important;
+    left:0!important;
+    display:flex!important;
+    flex-direction:column!important;
+    width:min(calc(100vw - 16px),560px)!important;
+    max-width:560px!important;
+    height:auto!important;
+    max-height:min(72dvh,620px)!important;
+    margin:0 auto!important;
+    padding:0 0 max(6px,env(safe-area-inset-bottom))!important;
+    overflow:hidden!important;
+    border-radius:22px 22px 0 0!important;
+    background:var(--card)!important;
+  }
+  body #dishDetailDialog .dish-customizer-form {
+    flex:1 1 auto!important;
+    min-height:0!important;
+    max-height:calc(72dvh - 118px)!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  body #dishDetailDialog .customizer-footer {
+    position:sticky!important;
+    bottom:-1px!important;
+    z-index:8!important;
+    background:var(--card)!important;
+  }
+
+  /* Every secondary modal is a restrained bottom sheet, not a full-screen panel. */
+  body .site-dialog:not(#checkoutDialog):not(#dishDetailDialog)[open] {
+    position:fixed!important;
+    inset:auto 0 0!important;
+    top:auto!important;
+    right:0!important;
+    bottom:max(0px,calc(100dvh - 100vh))!important;
+    left:0!important;
+    display:block!important;
+    width:min(calc(100vw - 16px),560px)!important;
+    max-width:560px!important;
+    height:auto!important;
+    max-height:min(74dvh,620px)!important;
+    margin:0 auto!important;
+    padding:0 0 max(8px,env(safe-area-inset-bottom))!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain!important;
+    border:1px solid var(--line)!important;
+    border-bottom:0!important;
+    border-radius:21px 21px 0 0!important;
+    background:var(--card)!important;
+    color:var(--ink)!important;
+    box-shadow:0 -12px 40px rgba(0,0,0,.2)!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  body .site-dialog:not(#checkoutDialog):not(#dishDetailDialog)[open] .dialog-header {
+    position:sticky!important;
+    top:0!important;
+    z-index:10!important;
+    min-height:58px!important;
+    padding:10px 14px!important;
+    border-bottom:1px solid var(--line)!important;
+    background:var(--card)!important;
+  }
+  body .site-dialog:not(#checkoutDialog):not(#dishDetailDialog)[open] .dialog-header h2 {
+    margin:2px 0 0!important;
+    font-size:19px!important;
+    line-height:1.16!important;
+  }
+  body .site-dialog:not(#checkoutDialog):not(#dishDetailDialog)[open] .close-button {
+    width:38px!important;
+    min-width:38px!important;
+    height:38px!important;
+    min-height:38px!important;
+  }
+  body .site-dialog.profile-dialog#profileDialog:not(#checkoutDialog)[open] {
+    position:fixed!important;
+    inset:auto 0 0!important;
+    top:auto!important;
+    right:0!important;
+    bottom:max(0px,calc(100dvh - 100vh))!important;
+    left:0!important;
+    width:min(calc(100vw - 16px),560px)!important;
+    max-width:560px!important;
+    max-height:min(70dvh,600px)!important;
+    margin:0 auto!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    display:block!important;
+  }
+  body #trackingDialog[open] { max-height:min(68dvh,560px)!important; }
+  body #myDashboardDialog[open] { max-height:min(76dvh,640px)!important; }
+  body #adminDialog[open] { max-height:min(86dvh,740px)!important; }
+  body #successDialog[open] {
+    width:min(calc(100vw - 28px),420px)!important;
+    max-width:420px!important;
+    max-height:min(56dvh,460px)!important;
+    padding:20px 17px max(18px,env(safe-area-inset-bottom))!important;
+    text-align:center!important;
+  }
+}
+@media (max-width:380px) {
+  body #meal-studio .feature-field select { padding-right:11px!important; }
+  body #smart-combos .combo-card { grid-template-columns:78px minmax(0,1fr)!important; }
+  body #smart-combos .combo-image-trigger { width:78px!important; }
+}
+@media (prefers-reduced-motion:reduce) {
+  body .site-dialog[open],
+  body .dish-detail-dialog[open],
+  body .button,
+  body .close-button,
+  body .add-button { animation:none!important; transition:none!important; }
+}
