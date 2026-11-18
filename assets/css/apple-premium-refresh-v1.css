@@ -263,3 +263,18 @@ button, input, select, textarea { font: inherit; }
     overscroll-behavior: contain;
   }
 }
+
+
+/* Close the dish sheet immediately on mobile.
+   The shared dialog rule animates display/overlay on close, leaving an empty
+   sheet visible after its content has already disappeared. */
+@media (max-width: 760px), (hover: none) and (pointer: coarse) {
+  #dishDetailDialog {
+    transition: none !important;
+    animation: none !important;
+  }
+  #dishDetailDialog::backdrop {
+    transition: none !important;
+    animation: none !important;
+  }
+}
