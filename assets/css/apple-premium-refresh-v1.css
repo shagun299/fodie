@@ -223,3 +223,43 @@ button, input, select, textarea { font: inherit; }
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Mobile detail-dialog performance: keep the glass look without costly full-screen blur. */
+#dishDetailDialog {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 22px 64px rgba(0,0,0,.24) !important;
+  contain: layout paint;
+}
+#dishDetailDialog::backdrop {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgba(10, 18, 13, .58) !important;
+}
+#dishDetailDialog .dialog-header {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+@media (hover: none), (pointer: coarse) {
+  .dish-card,
+  .dish-card:hover {
+    transform: none !important;
+    transition: border-color .16s ease, background-color .16s ease !important;
+    box-shadow: 0 5px 16px rgba(32,55,42,.045) !important;
+  }
+  .dish-card .dish-image img,
+  .dish-card:hover .dish-image img {
+    transform: none !important;
+    transition: none !important;
+  }
+  .dish-card:active {
+    transform: scale(.992) !important;
+  }
+}
+@media (max-width: 760px) {
+  #dishDetailDialog {
+    max-height: 90dvh !important;
+    overscroll-behavior: contain;
+  }
+}
