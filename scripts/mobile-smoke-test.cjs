@@ -1798,23 +1798,43 @@ async function runViewport(browser, viewport) {
 
       await page.locator("#appLocationTrigger").click();
       await page.waitForFunction(() => document.querySelector("#profileDialog")?.open === true);
-      const houseField = page.locator('#profileDialog .address-grid input[name="house"]');
-      await houseField.click();
-      const focusStyle = await houseField.evaluate(element => {
-        const style = getComputedStyle(element);
-        const rgb = style.borderTopColor.match(/\d+/g)?.map(Number) || [];
+      const profileAccess = await page.evaluate(() => {
+        const form = document.querySelector("#profileForm");
+        const authPanel = document.querySelector("#accountAuthPanel");
+        const visible = element => {
+          if (!element || element.hidden) return false;
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+        };
         return {
-          theme:document.documentElement.dataset.theme || "light",
-          outlineStyle:style.outlineStyle,
-          outlineWidth:style.outlineWidth,
-          borderColor:style.borderTopColor,
-          borderLooksRed:rgb.length >= 3 && rgb[0] > rgb[1] * 1.25 && rgb[0] > rgb[2] * 1.25,
-          boxShadow:style.boxShadow
+          profileFormVisible:visible(form),
+          authPanelVisible:visible(authPanel),
+          profileFormHidden:Boolean(form && form.hidden)
         };
       });
-      check(focusStyle.outlineStyle === "none" && focusStyle.outlineWidth === "0px" &&
-        !focusStyle.borderLooksRed,
-        viewport, "address-field-focus-is-calm-in-" + theme, JSON.stringify(focusStyle));
+      if (profileAccess.profileFormVisible) {
+        const houseField = page.locator('#profileDialog .address-grid input[name="house"]');
+        await houseField.click();
+        const focusStyle = await houseField.evaluate(element => {
+          const style = getComputedStyle(element);
+          const rgb = style.borderTopColor.match(/\\d+/g)?.map(Number) || [];
+          return {
+            theme:document.documentElement.dataset.theme || "light",
+            outlineStyle:style.outlineStyle,
+            outlineWidth:style.outlineWidth,
+            borderColor:style.borderTopColor,
+            borderLooksRed:rgb.length >= 3 && rgb[0] > rgb[1] * 1.25 && rgb[0] > rgb[2] * 1.25,
+            boxShadow:style.boxShadow
+          };
+        });
+        check(focusStyle.outlineStyle === "none" && focusStyle.outlineWidth === "0px" &&
+          !focusStyle.borderLooksRed,
+          viewport, "address-field-focus-is-calm-in-" + theme, JSON.stringify(focusStyle));
+      } else {
+        check(profileAccess.profileFormHidden && profileAccess.authPanelVisible,
+          viewport, "signed-out-profile-shows-auth-gate-in-" + theme, JSON.stringify(profileAccess));
+      }
       await page.locator('[data-close-dialog="profileDialog"]').click();
     }
     const currentThemeAfterAddress = await page.evaluate(() => document.documentElement.dataset.theme || "light");
