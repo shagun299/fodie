@@ -255,9 +255,13 @@
       const connected = [];
       if (hasGoogle) connected.push("Google");
       if (hasPassword) connected.push("Email + password");
-      message.textContent = connected.length
-        ? "Connected: " + connected.join(" and ") + ". Both methods use this same FoodieHub account."
-        : "Link a sign-in method to make this account easier to access.";
+      message.textContent = hasGoogle && hasPassword
+        ? "Connected: Google and Email + password. Both methods open this same FoodieHub account."
+        : hasGoogle
+          ? "Connected: Google. Add a password to use email and password on this same account."
+          : hasPassword
+            ? "Connected: Email + password. Link Google to use Google sign-in on this same account."
+            : "Link a sign-in method to make this account easier to access.";
     }
   }
 
@@ -335,7 +339,11 @@
     }
     try {
       await cloud.ready();
-      await cloud.getRedirectResult();
+      try {
+        await cloud.getRedirectResult();
+      } catch (redirectError) {
+        console.warn("FoodieHub Google redirect result was not completed:", redirectError);
+      }
       cloud.onAuthStateChanged(async user => {
         state.firebaseUser = user || null;
         if (user) {
@@ -439,7 +447,7 @@
       "auth/invalid-credential": "Email or password is incorrect.",
       "auth/wrong-password": "Email or password is incorrect.",
       "auth/user-not-found": "No account was found with this email.",
-      "auth/email-already-in-use": "This email already has an account. Try signing in instead.",
+      "auth/email-already-in-use": "This email already has an account. Sign in with its existing method, then link a password in Sign-in methods.",
       "auth/weak-password": "Choose a stronger password with at least 10 characters.",
       "auth/too-many-requests": "Too many attempts. Please try again later.",
       "auth/network-request-failed": "Network error. Check your internet connection.",
@@ -2148,7 +2156,7 @@
       : "Demo history is matched against your saved mobile number and stays in this browser only. It is not synced across devices or accounts.";
   }
   async function openMyDashboard(){
-    if(state.backendOnline && state.auth && state.auth.user){
+    if(state.backendOnline && state.auth && state.auth.token && state.auth.user){
       try{
         const result=await request("/api/auth/orders");
         state.orders=Array.isArray(result.orders)?result.orders.map(order=>({...order,phone:state.auth.user.phone})):[];
