@@ -62,3 +62,48 @@
   border-color: var(--glass-border);
   color: var(--ink);
 }
+
+.account-signin-methods {
+  margin: 0 0 22px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+}
+.account-signin-methods .saved-addresses-heading {
+  margin-bottom: 8px;
+}
+.account-signin-methods-copy {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.account-method-button {
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+}
+.account-link-password-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.account-link-password-form .form-field {
+  color: var(--muted);
+  font-size: 12px;
+}
+.account-link-password-form .form-field strong {
+  color: var(--ink);
+  font-weight: 800;
+}
+.account-method-message {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+:root[data-theme="dark"] .account-signin-methods {
+  background: var(--paper-deep);
+  border-color: var(--glass-border);
+}
