@@ -174,3 +174,72 @@
   color: var(--ink);
   font: inherit;
 }
+
+
+/* Password strength feedback */
+.password-strength {
+  display: grid;
+  gap: 7px;
+  margin: -2px 0 2px;
+}
+.password-strength-track {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+.password-strength-track i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--orange-dark);
+  transition: width .2s ease, background .2s ease;
+}
+.password-strength[data-strength="1"] .password-strength-track i,
+.password-strength[data-strength="2"] .password-strength-track i { background: #d97757; }
+.password-strength[data-strength="3"] .password-strength-track i { background: #d5a33d; }
+.password-strength[data-strength="4"] .password-strength-track i { background: #6c9b65; }
+.password-strength[data-strength="5"] .password-strength-track i { background: #39845a; }
+.password-strength small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.email-verification-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--paper);
+}
+.email-verification-notice strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+}
+.email-verification-notice p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.email-verification-notice .button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.email-verification-notice[hidden] { display: none !important; }
+:root[data-theme="dark"] .email-verification-notice {
+  background: var(--paper-deep);
+  border-color: var(--glass-border);
+}
+@media (max-width: 520px) {
+  .email-verification-notice { align-items: flex-start; flex-direction: column; }
+}
