@@ -2331,6 +2331,27 @@
   }
 
   function bindEvents() {
+    $("[data-password-toggle]").forEach(button => {
+      const input = document.getElementById(button.dataset.passwordToggle);
+      if (!input) return;
+      const setVisibility = visible => {
+        input.type = visible ? "text" : "password";
+        button.setAttribute("aria-pressed", String(visible));
+        button.setAttribute("aria-label", visible ? "Hide password" : "Show password");
+        button.title = visible ? "Hide password" : "Show password";
+        const showIcon = button.querySelector("[data-eye-show]");
+        const hideIcon = button.querySelector("[data-eye-hide]");
+        if (showIcon) showIcon.hidden = visible;
+        if (hideIcon) hideIcon.hidden = !visible;
+      };
+      button.addEventListener("click", () => setVisibility(input.type === "password"));
+      if (input.form) {
+        input.form.addEventListener("reset", () => {
+          window.setTimeout(() => setVisibility(false), 0);
+        });
+      }
+    });
+
     $("#openCart").addEventListener("click", openCart);
     const mobileOpenCart = $("#mobileOpenCart");
     if (mobileOpenCart) mobileOpenCart.addEventListener("click", openCart);
