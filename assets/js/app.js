@@ -93,6 +93,7 @@
     profile: readStore(STORAGE.profile, { name: "", phone: "", email: "", address: "" }),
     auth: readStore(STORAGE.auth, { token: "", user: null, expiresAt: 0 }),
     addresses: [],
+    firebaseUser: null,
     customizations: readStore("foodiehub.customizations.v1", {}),
     imageFallbacks: {},
     currentCustomizer: null,
@@ -190,22 +191,31 @@
     renderProfile();
   }
 
+  function isCustomerSignedIn() {
+    return Boolean(state.firebaseUser || (state.auth && state.auth.token && state.auth.user));
+  }
+
+  function isFirebaseAccountAvailable() {
+    return Boolean(window.FOODIEHUB_CLOUD && window.FOODIEHUB_CLOUD.available);
+  }
+
   function renderAccountUI() {
-    const signedIn = Boolean(state.auth && state.auth.token && state.auth.user);
+    const signedIn = isCustomerSignedIn();
+    const firebaseAvailable = isFirebaseAccountAvailable();
     const authPanel = $("#accountAuthPanel");
     const offlineNote = $("#accountOfflineNote");
     const profileForm = $("#profileForm");
     const addressPanel = $("#savedAddressesPanel");
     const logoutButton = $("#accountLogoutButton");
-    if (authPanel) authPanel.hidden = !state.backendOnline || signedIn;
+    const googleButton = $("#googleSignInButton");
+    if (authPanel) authPanel.hidden = signedIn || (!firebaseAvailable && !state.backendOnline);
+    if (googleButton) googleButton.hidden = !firebaseAvailable;
     if (offlineNote) {
-      offlineNote.hidden = Boolean(state.backendOnline);
+      offlineNote.hidden = Boolean(firebaseAvailable || state.backendOnline);
       const note = offlineNote.querySelector("p");
-      if (note) note.textContent = signedIn
-        ? "The account server is temporarily unavailable. Your saved account data is shown, but changes cannot sync right now."
-        : "Customer accounts and cloud-saved addresses need the FoodieHub API connection. You can still save details on this device.";
+      if (note) note.textContent = "Sign in with Google or email and password to sync your profile and saved addresses across devices.";
     }
-    if (profileForm) profileForm.hidden = Boolean(state.backendOnline && !signedIn);
+    if (profileForm) profileForm.hidden = Boolean((firebaseAvailable || state.backendOnline) && !signedIn);
     if (addressPanel) addressPanel.hidden = !signedIn;
     if (logoutButton) logoutButton.hidden = !signedIn;
     const emailInput = profileForm && profileForm.elements.namedItem("email");
@@ -237,6 +247,88 @@
       const address = entry.address || {};
       return '<article class="account-address-card"><div class="account-address-top"><strong>' + escapeHTML(entry.label || "Address") + '</strong><span>Saved</span></div><p>' + escapeHTML(formatDeliveryAddress(address)) + '</p><div class="account-address-actions"><button type="button" data-address-use="' + escapeHTML(entry.id) + '">Use for checkout</button><button type="button" data-address-delete="' + escapeHTML(entry.id) + '">Remove</button></div></article>';
     }).join("");
+  }
+
+  async function syncFirebaseCustomerAccount(user) {
+    const cloud = window.FOODIEHUB_CLOUD;
+    if (!cloud || !cloud.available || !user) return;
+    let result = await cloud.loadAccount(user);
+    if (!result.exists) {
+      result = await cloud.saveAccount(user, {
+        name: user.displayName || "",
+        email: user.email || "",
+        phone: "",
+        address: "",
+        addressDetails: {},
+        addressLabel: "Home"
+      });
+    }
+    const savedProfile = result.profile || {};
+    state.firebaseUser = user;
+    state.addresses = Array.isArray(result.addresses) ? result.addresses : [];
+    state.profile = {
+      ...state.profile,
+      name: savedProfile.name || user.displayName || "",
+      phone: savedProfile.phone || "",
+      email: user.email || savedProfile.email || "",
+      addressDetails: savedProfile.addressDetails || {},
+      address: savedProfile.address || ""
+    };
+    if (!Object.values(state.profile.addressDetails || {}).some(value => String(value || "").trim()) && state.addresses.length) {
+      state.profile.addressDetails = state.addresses[0].address || {};
+      state.profile.address = formatDeliveryAddress(state.addresses[0].address || {});
+    }
+    if (!state.auth.token) {
+      state.auth.user = normalizeAccountUser({
+        id: user.uid,
+        name: state.profile.name,
+        email: state.profile.email,
+        phone: state.profile.phone
+      });
+    }
+    const profileForm = $("#profileForm");
+    if (profileForm) {
+      ["name", "phone", "email"].forEach(field => {
+        const control = profileForm.elements.namedItem(field);
+        if (control) control.value = state.profile[field] || "";
+      });
+      fillAddressFields(profileForm, state.profile.addressDetails || {});
+      updateAddressPreview("profileForm", "profileAddressPreview");
+    }
+    saveStore(STORAGE.profile, state.profile);
+    renderProfile();
+    renderCart();
+  }
+
+  async function initializeFirebaseAuth() {
+    const cloud = window.FOODIEHUB_CLOUD;
+    if (!cloud || !cloud.available) {
+      renderAccountUI();
+      return;
+    }
+    try {
+      await cloud.ready();
+      await cloud.getRedirectResult();
+      cloud.onAuthStateChanged(async user => {
+        state.firebaseUser = user || null;
+        if (user) {
+          try {
+            await syncFirebaseCustomerAccount(user);
+          } catch (error) {
+            $("#accountAuthError").textContent = error.message || "Your cloud account could not be loaded.";
+            showToast("Your account data could not sync. Check the Firestore rules.", "error");
+          }
+        } else if (!state.auth.token) {
+          state.addresses = [];
+          state.auth.user = null;
+        }
+        renderProfile();
+      });
+    } catch (error) {
+      console.error("FoodieHub Firebase sign-in could not start:", error);
+      showToast("Account sign-in is temporarily unavailable.", "error");
+      renderAccountUI();
+    }
   }
 
   async function syncCustomerAccount() {
@@ -313,6 +405,24 @@
     $("#accountAuthError").textContent = "";
   }
 
+  function friendlyAuthError(error) {
+    const code = String(error && error.code || "");
+    const messages = {
+      "auth/invalid-email": "Enter a valid email address.",
+      "auth/invalid-credential": "Email or password is incorrect.",
+      "auth/wrong-password": "Email or password is incorrect.",
+      "auth/user-not-found": "No account was found with this email.",
+      "auth/email-already-in-use": "This email already has an account. Try signing in instead.",
+      "auth/weak-password": "Choose a stronger password with at least 10 characters.",
+      "auth/too-many-requests": "Too many attempts. Please try again later.",
+      "auth/network-request-failed": "Network error. Check your internet connection.",
+      "auth/popup-closed-by-user": "Google sign-in was closed before it finished.",
+      "auth/unauthorized-domain": "This website domain is not authorized in Firebase Authentication.",
+      "auth/account-exists-with-different-credential": "This email already uses another sign-in method. Sign in with that method first."
+    };
+    return messages[code] || (error && error.message) || "Sign-in could not be completed.";
+  }
+
   async function handleCustomerLogin(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -322,16 +432,69 @@
     submit.textContent = "Signing in…";
     $("#accountAuthError").textContent = "";
     try {
-      const session = await request("/api/auth/login", { method: "POST", body: JSON.stringify(values) });
-      setCustomerSession(session);
-      await syncCustomerAccount();
+      const cloud = window.FOODIEHUB_CLOUD;
+      if (cloud && cloud.available) {
+        const user = await cloud.signInWithEmail(values.email, values.password);
+        await syncFirebaseCustomerAccount(user);
+      } else if (state.backendOnline) {
+        const session = await request("/api/auth/login", { method: "POST", body: JSON.stringify(values) });
+        setCustomerSession(session);
+        await syncCustomerAccount();
+      } else {
+        throw new Error("Account sign-in is unavailable right now. Refresh the page and try again.");
+      }
       $("#profileMessage").textContent = "You are signed in. Your account details are synced.";
       showToast("Welcome back to FoodieHub.");
     } catch (error) {
-      $("#accountAuthError").textContent = error.message || "Sign in could not be completed.";
+      $("#accountAuthError").textContent = friendlyAuthError(error);
     } finally {
       submit.disabled = false;
       submit.innerHTML = 'Sign in securely <span aria-hidden="true">→</span>';
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    const button = $("#googleSignInButton");
+    const cloud = window.FOODIEHUB_CLOUD;
+    if (!cloud || !cloud.available) {
+      $("#accountAuthError").textContent = "Google sign-in is unavailable. Refresh the page and try again.";
+      return;
+    }
+    button.disabled = true;
+    button.textContent = "Connecting to Google…";
+    $("#accountAuthError").textContent = "";
+    try {
+      const user = await cloud.signInWithGoogle();
+      if (!user) return;
+      await syncFirebaseCustomerAccount(user);
+      $("#profileMessage").textContent = "You are signed in with Google. Your account details are synced.";
+      showToast("Welcome to FoodieHub.");
+    } catch (error) {
+      $("#accountAuthError").textContent = friendlyAuthError(error);
+    } finally {
+      button.disabled = false;
+      button.innerHTML = '<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.74 7.18l7.66 5.94c4.48-4.14 7.12-10.24 7.12-17.59Z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.81l-7.66-5.94c-2.13 1.43-4.86 2.27-8.25 2.27-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg> Continue with Google';
+    }
+  }
+
+  async function handlePasswordReset() {
+    const email = String($("#customerLoginForm").elements.namedItem("email").value || "").trim();
+    if (!email) {
+      $("#accountAuthError").textContent = "Enter your email address first, then choose Forgot password.";
+      return;
+    }
+    try {
+      if (window.FOODIEHUB_CLOUD && window.FOODIEHUB_CLOUD.available) {
+        await window.FOODIEHUB_CLOUD.sendPasswordReset(email);
+      } else if (state.backendOnline) {
+        throw new Error("Password reset is not available for legacy server accounts.");
+      } else {
+        throw new Error("Password reset is unavailable right now.");
+      }
+      $("#accountAuthError").textContent = "";
+      showToast("Password reset email sent. Check your inbox.");
+    } catch (error) {
+      $("#accountAuthError").textContent = friendlyAuthError(error);
     }
   }
 
@@ -344,14 +507,33 @@
     submit.textContent = "Creating account…";
     $("#accountAuthError").textContent = "";
     try {
-      const session = await request("/api/auth/register", { method: "POST", body: JSON.stringify(values) });
-      setCustomerSession(session);
-      await syncCustomerAccount();
+      const cloud = window.FOODIEHUB_CLOUD;
+      if (cloud && cloud.available) {
+        if (String(values.password || "").length < 10) {
+          throw new Error("Choose a password with at least 10 characters.");
+        }
+        const user = await cloud.registerWithEmail(values.name, values.email, values.password);
+        await cloud.saveAccount(user, {
+          name: values.name,
+          email: values.email,
+          phone: values.phone || "",
+          address: "",
+          addressDetails: {},
+          addressLabel: "Home"
+        });
+        await syncFirebaseCustomerAccount(user);
+      } else if (state.backendOnline) {
+        const session = await request("/api/auth/register", { method: "POST", body: JSON.stringify(values) });
+        setCustomerSession(session);
+        await syncCustomerAccount();
+      } else {
+        throw new Error("Account registration is unavailable right now. Refresh the page and try again.");
+      }
       form.reset();
       $("#profileMessage").textContent = "Your FoodieHub account is ready.";
       showToast("Your FoodieHub account has been created.");
     } catch (error) {
-      $("#accountAuthError").textContent = error.message || "Account registration could not be completed.";
+      $("#accountAuthError").textContent = friendlyAuthError(error);
     } finally {
       submit.disabled = false;
       submit.innerHTML = 'Create my account <span aria-hidden="true">→</span>';
@@ -360,8 +542,11 @@
 
   async function handleCustomerLogout() {
     try {
+      const cloud = window.FOODIEHUB_CLOUD;
+      if (state.firebaseUser && cloud && cloud.available) await cloud.signOut();
       if (state.backendOnline && state.auth.token) await request("/api/auth/logout", { method: "POST" });
     } catch (_) {}
+    state.firebaseUser = null;
     clearCustomerSession();
     showToast("You have signed out.");
   }
@@ -465,7 +650,7 @@
 
   function renderProfile() {
     const name = String(state.profile.name || "").trim();
-    const signedIn = Boolean(state.auth && state.auth.token && state.auth.user);
+    const signedIn = isCustomerSignedIn();
     $("#profileTriggerLabel").textContent = name ? name.split(/\s+/)[0] : (signedIn ? "Account" : "Profile");
     $("#openProfile").setAttribute("aria-label", signedIn ? "Open your FoodieHub account" : (name ? "Open profile for " + name : "Open your profile"));
     const savedAddress = String(state.profile.address || "").trim();
@@ -482,7 +667,7 @@
   function openProfile(options = {}) {
     renderAccountUI();
     const form = $("#profileForm");
-    if (state.backendOnline && !(state.auth && state.auth.user)) {
+    if ((isFirebaseAccountAvailable() || state.backendOnline) && !isCustomerSignedIn()) {
       $("#profileDialog").classList.remove("address-focus-mode");
       showAccountAuthMode("login");
       $("#accountAuthError").textContent = "";
@@ -533,6 +718,62 @@
     const email = String(values.get("email") || "").trim();
     const addressDetails = readAddressDetails(values);
     const address = formatDeliveryAddress(addressDetails) || state.profile.address || "";
+
+    if (state.firebaseUser && window.FOODIEHUB_CLOUD && window.FOODIEHUB_CLOUD.available) {
+      if (name.length < 2) {
+        $("#profileError").textContent = "Enter your full name.";
+        return;
+      }
+      if (phone && !/^[6-9]\d{9}$/.test(phone)) {
+        $("#profileError").textContent = "Enter a valid 10-digit Indian mobile number, or leave it blank.";
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = "Saving to your account…";
+      $("#profileError").textContent = "";
+      try {
+        const result = await window.FOODIEHUB_CLOUD.saveAccount(state.firebaseUser, {
+          name,
+          email: state.firebaseUser.email || email,
+          phone,
+          addressDetails,
+          address,
+          addressLabel: String(values.get("addressLabel") || "Home")
+        });
+        state.addresses = Array.isArray(result.addresses) ? result.addresses : [];
+        state.profile = {
+          name,
+          phone,
+          email: state.firebaseUser.email || email,
+          addressDetails,
+          address
+        };
+        if (!state.auth.token) {
+          state.auth.user = normalizeAccountUser({
+            id: state.firebaseUser.uid,
+            name,
+            phone,
+            email: state.firebaseUser.email || email
+          });
+        }
+        saveStore(STORAGE.profile, state.profile);
+        renderProfile();
+        updateAddressPreview("profileForm", "profileAddressPreview");
+        $("#profileError").textContent = "";
+        $("#profileMessage").textContent = result.addressSaved
+          ? "Your account and delivery address are synced across devices."
+          : "Your account details are synced. Complete the address fields to save a delivery address.";
+        showToast(result.addressSaved ? "Account and address synced." : "Account details synced.");
+      } catch (error) {
+        $("#profileError").textContent = friendlyAuthError(error);
+      } finally {
+        submit.disabled = false;
+        submit.innerHTML = $("#profileDialog").classList.contains("address-focus-mode")
+          ? 'Save delivery address <span aria-hidden="true">✓</span>'
+          : 'Save profile <span aria-hidden="true">✓</span>';
+      }
+      return;
+    }
 
     if (state.auth && state.auth.token) {
       if (!state.backendOnline) {
@@ -629,7 +870,11 @@
       if (!entry) return;
       deleteButton.disabled = true;
       try {
-        await request("/api/auth/addresses/" + encodeURIComponent(entry.id), { method: "DELETE" });
+        if (state.firebaseUser && window.FOODIEHUB_CLOUD && window.FOODIEHUB_CLOUD.available) {
+          await window.FOODIEHUB_CLOUD.deleteAddress(state.firebaseUser, entry.id);
+        } else {
+          await request("/api/auth/addresses/" + encodeURIComponent(entry.id), { method: "DELETE" });
+        }
         state.addresses = state.addresses.filter(item => item.id !== entry.id);
         renderSavedAddresses();
         showToast("Saved address removed.");
@@ -2018,6 +2263,8 @@
     $("#profileForm").addEventListener("submit", saveProfile);
     $("#customerLoginForm").addEventListener("submit", handleCustomerLogin);
     $("#customerRegisterForm").addEventListener("submit", handleCustomerRegister);
+    $("#googleSignInButton").addEventListener("click", handleGoogleSignIn);
+    $("#forgotPasswordButton").addEventListener("click", handlePasswordReset);
     $("#authSignInTab").addEventListener("click",()=>showAccountAuthMode("login"));
     $("#authRegisterTab").addEventListener("click",()=>showAccountAuthMode("register"));
     $("#savedAddressesList").addEventListener("click",handleSavedAddressClick);
@@ -2162,6 +2409,7 @@
     if(storyImage)protectFoodPhoto(storyImage,{name:"Fresh from the kitchen",category:"Indian"});
     try {
       await checkBackend();
+      await initializeFirebaseAuth();
       await restoreCustomerSession();
       renderAccountUI();
       state.menu = await loadMenu();
