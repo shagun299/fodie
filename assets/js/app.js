@@ -2377,7 +2377,7 @@
   }
 
   function bindEvents() {
-    $("[data-password-toggle]").forEach(button => {
+    $$("[data-password-toggle]").forEach(button => {
       const input = document.getElementById(button.dataset.passwordToggle);
       if (!input) return;
       const setVisibility = visible => {
