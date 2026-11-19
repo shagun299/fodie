@@ -160,6 +160,34 @@
       }
     }
 
+    async function linkGoogleToCurrentUser() {
+      await ready();
+      if (!auth.currentUser) throw new Error("Sign in before linking another method.");
+      const provider = new firebaseSDK.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      try {
+        const result = await auth.currentUser.linkWithPopup(provider);
+        return result.user;
+      } catch (error) {
+        if (error && error.code === "auth/popup-blocked") {
+          await auth.currentUser.linkWithRedirect(provider);
+          return null;
+        }
+        throw error;
+      }
+    }
+
+    async function linkPasswordToCurrentUser(password) {
+      await ready();
+      const user = auth.currentUser;
+      if (!user || !user.email) throw new Error("This account does not have an email address.");
+      const value = String(password || "");
+      if (value.length < 10) throw new Error("Choose a password with at least 10 characters.");
+      const credential = firebaseSDK.auth.EmailAuthProvider.credential(user.email, value);
+      const result = await user.linkWithCredential(credential);
+      return result.user;
+    }
+
     async function sendPasswordReset(email) {
       await ready();
       return auth.sendPasswordResetEmail(String(email || "").trim());
@@ -188,6 +216,8 @@
       signInWithEmail,
       registerWithEmail,
       signInWithGoogle,
+      linkGoogleToCurrentUser,
+      linkPasswordToCurrentUser,
       sendPasswordReset,
       signOut,
       onAuthStateChanged,
