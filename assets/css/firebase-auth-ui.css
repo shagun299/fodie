@@ -168,3 +168,9 @@
 :root[data-theme="dark"] .password-visibility-toggle:focus-visible {
   background: rgba(255,255,255,.08);
 }
+
+.password-field > label {
+  display: block;
+  color: var(--ink);
+  font: inherit;
+}
