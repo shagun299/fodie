@@ -511,6 +511,16 @@
     </form>
 
     <section class="saved-addresses-panel" id="savedAddressesPanel" hidden>
+      <div class="account-signin-methods" id="accountSigninMethods" hidden>
+        <div class="saved-addresses-heading"><div><span class="drawer-kicker">ACCOUNT ACCESS</span><h3>Sign-in methods</h3></div></div>
+        <p class="account-signin-methods-copy">Link Google and email + password so either method opens this same FoodieHub account.</p>
+        <button class="button button-quiet account-method-button" id="linkGoogleButton" type="button">Link Google to this account</button>
+        <form class="account-link-password-form" id="linkPasswordForm">
+          <label class="form-field">Add a password for <strong id="linkPasswordEmail">your account email</strong><input name="password" type="password" placeholder="At least 10 characters" minlength="10" maxlength="200" autocomplete="new-password" required></label>
+          <button class="button button-quiet account-method-button" type="submit">Add email + password</button>
+        </form>
+        <p class="account-method-message" id="accountMethodsMessage" role="status" aria-live="polite"></p>
+      </div>
       <div class="saved-addresses-heading"><div><span class="drawer-kicker">YOUR PLACES</span><h3>Saved addresses</h3></div><span id="savedAddressesCount">0 saved</span></div>
       <div class="saved-addresses-list" id="savedAddressesList" aria-live="polite"></div>
       <button class="button button-quiet account-logout-button" id="accountLogoutButton" type="button">Sign out</button>
