@@ -208,6 +208,8 @@
     const addressPanel = $("#savedAddressesPanel");
     const logoutButton = $("#accountLogoutButton");
     const googleButton = $("#googleSignInButton");
+    const verificationNotice = $("#emailVerificationNotice");
+    if (verificationNotice) verificationNotice.hidden = !(state.firebaseUser && state.firebaseUser.email && !state.firebaseUser.emailVerified);
     if (authPanel) authPanel.hidden = signedIn || (!firebaseAvailable && !state.backendOnline);
     if (googleButton) googleButton.hidden = !firebaseAvailable;
     if (offlineNote) {
@@ -357,6 +359,7 @@
           state.addresses = [];
           state.auth.user = null;
         }
+        renderAccountUI();
         renderProfile();
       });
     } catch (error) {
@@ -427,6 +430,26 @@
         renderAccountUI();
       }
     }
+  }
+
+  function updatePasswordStrength() {
+    const input = $("#customerRegisterPassword");
+    const meter = $("#passwordStrength");
+    if (!input || !meter) return;
+    const value = input.value || "";
+    const checks = [value.length >= 10, /[a-z]/.test(value), /[A-Z]/.test(value), /\d/.test(value), /[^A-Za-z0-9]/.test(value)];
+    const score = checks.filter(Boolean).length;
+    const labels = ["Enter a password to check its strength.", "Very weak", "Weak", "Fair", "Good", "Strong"];
+    meter.dataset.strength = String(score);
+    meter.querySelector("i").style.width = (score * 20) + "%";
+    meter.querySelector("small").textContent = value ? labels[score] : labels[0];
+  }
+
+  function validatePasswordMatch() {
+    const password = $("#customerRegisterPassword");
+    const confirm = $("#customerRegisterConfirmPassword");
+    if (!password || !confirm) return;
+    confirm.setCustomValidity(confirm.value && confirm.value !== password.value ? "Passwords do not match." : "");
   }
 
   function showAccountAuthMode(mode) {
@@ -588,12 +611,16 @@
     submit.textContent = "Creating account…";
     $("#accountAuthError").textContent = "";
     try {
+      if (String(values.password || "").length < 10) throw new Error("Choose a password with at least 10 characters.");
+      if (values.password !== values.confirmPassword) throw new Error("The passwords do not match. Please check both fields.");
       const cloud = window.FOODIEHUB_CLOUD;
       if (cloud && cloud.available) {
-        if (String(values.password || "").length < 10) {
-          throw new Error("Choose a password with at least 10 characters.");
-        }
         const user = await cloud.registerWithEmail(values.name, values.email, values.password);
+        try {
+          await cloud.sendEmailVerification();
+        } catch (verificationError) {
+          console.warn("FoodieHub verification email could not be sent:", verificationError);
+        }
         await cloud.saveAccount(user, {
           name: values.name,
           email: values.email,
@@ -604,6 +631,7 @@
         });
         await syncFirebaseCustomerAccount(user);
       } else if (state.backendOnline) {
+        delete values.confirmPassword;
         const session = await request("/api/auth/register", { method: "POST", body: JSON.stringify(values) });
         setCustomerSession(session);
         await syncCustomerAccount();
@@ -611,13 +639,31 @@
         throw new Error("Account registration is unavailable right now. Refresh the page and try again.");
       }
       form.reset();
-      $("#profileMessage").textContent = "Your FoodieHub account is ready.";
-      showToast("Your FoodieHub account has been created.");
+      renderAccountUI();
+      $("#profileMessage").textContent = "Your FoodieHub account is ready. Please check your inbox to verify your email.";
+      showToast("Account created. Check your inbox for the verification link.");
     } catch (error) {
       $("#accountAuthError").textContent = friendlyAuthError(error);
     } finally {
       submit.disabled = false;
       submit.innerHTML = 'Create my account <span aria-hidden="true">→</span>';
+    }
+  }
+
+  async function handleResendVerification() {
+    const button = $("#resendVerificationButton");
+    const cloud = window.FOODIEHUB_CLOUD;
+    if (!cloud || !cloud.available || !state.firebaseUser) return;
+    button.disabled = true;
+    button.textContent = "Sending…";
+    try {
+      await cloud.sendEmailVerification();
+      showToast("Verification email sent. Check your inbox and spam folder.");
+    } catch (error) {
+      $("#profileMessage").textContent = friendlyAuthError(error);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Resend email";
     }
   }
 
@@ -2365,6 +2411,10 @@
     $("#profileForm").addEventListener("submit", saveProfile);
     $("#customerLoginForm").addEventListener("submit", handleCustomerLogin);
     $("#customerRegisterForm").addEventListener("submit", handleCustomerRegister);
+    $("#resendVerificationButton").addEventListener("click", handleResendVerification);
+    $("#customerRegisterPassword").addEventListener("input", updatePasswordStrength);
+    $("#customerRegisterConfirmPassword").addEventListener("input", validatePasswordMatch);
+    $("#customerRegisterPassword").addEventListener("input", validatePasswordMatch);
     $("#googleSignInButton").addEventListener("click", handleGoogleSignIn);
     $("#forgotPasswordButton").addEventListener("click", handlePasswordReset);
     $("#linkGoogleButton").addEventListener("click", handleLinkGoogle);
