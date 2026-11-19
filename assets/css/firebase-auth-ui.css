@@ -107,3 +107,64 @@
   background: var(--paper-deep);
   border-color: var(--glass-border);
 }
+
+
+/* Show / hide password controls */
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
+.password-input-wrap input {
+  width: 100%;
+  min-width: 0;
+  padding-right: 48px;
+}
+.password-visibility-toggle {
+  position: absolute;
+  z-index: 2;
+  right: 7px;
+  top: 50%;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease;
+}
+.password-visibility-toggle:hover,
+.password-visibility-toggle:focus-visible {
+  color: var(--ink);
+  background: var(--surface-tint);
+}
+.password-visibility-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.password-visibility-toggle svg {
+  display: block;
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.password-visibility-toggle svg[hidden] {
+  display: none !important;
+}
+.password-visibility-toggle:active {
+  transform: translateY(-50%) scale(.94);
+}
+:root[data-theme="dark"] .password-visibility-toggle:hover,
+:root[data-theme="dark"] .password-visibility-toggle:focus-visible {
+  background: rgba(255,255,255,.08);
+}
