@@ -193,6 +193,21 @@
       return auth.sendPasswordResetEmail(String(email || "").trim());
     }
 
+    async function sendEmailVerification() {
+      await ready();
+      if (!auth.currentUser) throw new Error("Sign in before requesting email verification.");
+      if (auth.currentUser.emailVerified) return false;
+      await auth.currentUser.sendEmailVerification();
+      return true;
+    }
+
+    async function refreshCurrentUser() {
+      await ready();
+      if (!auth.currentUser) return null;
+      await auth.currentUser.reload();
+      return auth.currentUser;
+    }
+
     async function signOut() {
       await ready();
       return auth.signOut();
@@ -219,6 +234,8 @@
       linkGoogleToCurrentUser,
       linkPasswordToCurrentUser,
       sendPasswordReset,
+      sendEmailVerification,
+      refreshCurrentUser,
       signOut,
       onAuthStateChanged,
       getRedirectResult
