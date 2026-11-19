@@ -1818,7 +1818,7 @@ async function runViewport(browser, viewport) {
         await houseField.click();
         const focusStyle = await houseField.evaluate(element => {
           const style = getComputedStyle(element);
-          const rgb = style.borderTopColor.match(/\\d+/g)?.map(Number) || [];
+          const rgb = style.borderTopColor.match(/\d+/g)?.map(Number) || [];
           return {
             theme:document.documentElement.dataset.theme || "light",
             outlineStyle:style.outlineStyle,
