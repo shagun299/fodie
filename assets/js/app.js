@@ -218,6 +218,7 @@
     if (profileForm) profileForm.hidden = Boolean((firebaseAvailable || state.backendOnline) && !signedIn);
     if (addressPanel) addressPanel.hidden = !signedIn;
     if (logoutButton) logoutButton.hidden = !signedIn;
+    renderAccountSignInMethods();
     const emailInput = profileForm && profileForm.elements.namedItem("email");
     if (emailInput) emailInput.readOnly = signedIn;
     const storageNote = $("#profileStorageNote");
@@ -232,6 +233,32 @@
     if (introCopy) introCopy.textContent = signedIn ? "Update your details and manage saved delivery addresses." : "Save your details for a faster checkout next time.";
     const title = $("#profileTitle");
     if (title) title.textContent = signedIn ? "Your account" : "Your profile";
+  }
+
+  function renderAccountSignInMethods() {
+    const panel = $("#accountSigninMethods");
+    const googleButton = $("#linkGoogleButton");
+    const passwordForm = $("#linkPasswordForm");
+    const passwordEmail = $("#linkPasswordEmail");
+    const message = $("#accountMethodsMessage");
+    if (!panel) return;
+    const user = state.firebaseUser;
+    panel.hidden = !user;
+    if (!user) return;
+    const providers = (user.providerData || []).map(item => item.providerId);
+    const hasGoogle = providers.includes("google.com");
+    const hasPassword = providers.includes("password");
+    if (googleButton) googleButton.hidden = hasGoogle;
+    if (passwordForm) passwordForm.hidden = hasPassword;
+    if (passwordEmail) passwordEmail.textContent = user.email || "your account email";
+    if (message) {
+      const connected = [];
+      if (hasGoogle) connected.push("Google");
+      if (hasPassword) connected.push("Email + password");
+      message.textContent = connected.length
+        ? "Connected: " + connected.join(" and ") + ". Both methods use this same FoodieHub account."
+        : "Link a sign-in method to make this account easier to access.";
+    }
   }
 
   function renderSavedAddresses() {
@@ -418,7 +445,10 @@
       "auth/network-request-failed": "Network error. Check your internet connection.",
       "auth/popup-closed-by-user": "Google sign-in was closed before it finished.",
       "auth/unauthorized-domain": "This website domain is not authorized in Firebase Authentication.",
-      "auth/account-exists-with-different-credential": "This email already uses another sign-in method. Sign in with that method first."
+      "auth/account-exists-with-different-credential": "This email already uses another sign-in method. Sign in with that method first.",
+      "auth/credential-already-in-use": "This sign-in method is already linked to another FoodieHub account.",
+      "auth/provider-already-linked": "This sign-in method is already linked to this account.",
+      "auth/requires-recent-login": "Please sign in again, then retry linking this method."
     };
     return messages[code] || (error && error.message) || "Sign-in could not be completed.";
   }
@@ -474,6 +504,51 @@
     } finally {
       button.disabled = false;
       button.innerHTML = '<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.74 7.18l7.66 5.94c4.48-4.14 7.12-10.24 7.12-17.59Z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.81l-7.66-5.94c-2.13 1.43-4.86 2.27-8.25 2.27-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg> Continue with Google';
+    }
+  }
+
+  async function handleLinkGoogle() {
+    const cloud = window.FOODIEHUB_CLOUD;
+    const button = $("#linkGoogleButton");
+    if (!cloud || !cloud.available || !state.firebaseUser) return;
+    button.disabled = true;
+    button.textContent = "Linking Google…";
+    $("#accountMethodsMessage").textContent = "";
+    try {
+      const user = await cloud.linkGoogleToCurrentUser();
+      if (!user) return;
+      await syncFirebaseCustomerAccount(user);
+      showToast("Google is now linked to this FoodieHub account.");
+    } catch (error) {
+      $("#accountMethodsMessage").textContent = friendlyAuthError(error);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Link Google to this account";
+      renderAccountSignInMethods();
+    }
+  }
+
+  async function handleLinkPassword(event) {
+    event.preventDefault();
+    const cloud = window.FOODIEHUB_CLOUD;
+    const form = event.currentTarget;
+    const submit = form.querySelector('button[type="submit"]');
+    const password = String(new FormData(form).get("password") || "");
+    if (!cloud || !cloud.available || !state.firebaseUser) return;
+    submit.disabled = true;
+    submit.textContent = "Adding password…";
+    $("#accountMethodsMessage").textContent = "";
+    try {
+      const user = await cloud.linkPasswordToCurrentUser(password);
+      await syncFirebaseCustomerAccount(user);
+      form.reset();
+      showToast("Email and password are now linked to this account.");
+    } catch (error) {
+      $("#accountMethodsMessage").textContent = friendlyAuthError(error);
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Add email + password";
+      renderAccountSignInMethods();
     }
   }
 
@@ -2265,6 +2340,8 @@
     $("#customerRegisterForm").addEventListener("submit", handleCustomerRegister);
     $("#googleSignInButton").addEventListener("click", handleGoogleSignIn);
     $("#forgotPasswordButton").addEventListener("click", handlePasswordReset);
+    $("#linkGoogleButton").addEventListener("click", handleLinkGoogle);
+    $("#linkPasswordForm").addEventListener("submit", handleLinkPassword);
     $("#authSignInTab").addEventListener("click",()=>showAccountAuthMode("login"));
     $("#authRegisterTab").addEventListener("click",()=>showAccountAuthMode("register"));
     $("#savedAddressesList").addEventListener("click",handleSavedAddressClick);
