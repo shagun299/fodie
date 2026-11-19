@@ -1,0 +1,64 @@
+/* Firebase account sign-in controls */
+.account-google-button {
+  width: 100%;
+  min-height: 48px;
+  margin: 18px 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(46, 35, 22, .06);
+}
+.account-google-button svg {
+  display: block;
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+}
+.account-google-button:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+.account-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 16px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-align: center;
+}
+.account-auth-divider::before,
+.account-auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
+.account-password-reset {
+  display: block;
+  margin: 10px 0 0 auto;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--orange-dark);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.account-password-reset:hover {
+  text-decoration: underline;
+}
+:root[data-theme="dark"] .account-google-button {
+  background: var(--paper-deep);
+  border-color: var(--glass-border);
+  color: var(--ink);
+}
