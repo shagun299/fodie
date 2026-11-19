@@ -524,7 +524,6 @@
     } finally {
       button.disabled = false;
       button.textContent = "Link Google to this account";
-      renderAccountSignInMethods();
     }
   }
 
@@ -548,7 +547,6 @@
     } finally {
       submit.disabled = false;
       submit.textContent = "Add email + password";
-      renderAccountSignInMethods();
     }
   }
 
