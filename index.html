@@ -31,8 +31,13 @@
   <link rel="stylesheet" href="./assets/css/mobile-app-redesign-v1.css?v=mobile-app-redesign-v4-20261117">
   <link rel="stylesheet" href="./assets/css/mobile-interaction-polish-v1.css?v=compact-sheets-spacing-actions-v2-20261118">
   <link rel="stylesheet" href="./assets/css/apple-premium-refresh-v1.css?v=apple-premium-refresh-v2-instant-detail-close-20261118">
+  <link rel="stylesheet" href="./assets/css/firebase-auth-ui.css?v=firebase-auth-ui-v1">
   <script src="./assets/js/config.js"></script>
-  <script defer src="./assets/js/app.js?v=foodiehub-app-v8-soft-theme-transition-20261114"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/13.4.0/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/13.4.0/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore-compat.js"></script>
+  <script defer src="./assets/js/firebase-account.js?v=firebase-auth-firestore-v1"></script>
+  <script defer src="./assets/js/app.js?v=firebase-auth-firestore-v1"></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -429,6 +434,11 @@
         <span class="account-auth-mark" aria-hidden="true">F</span>
         <div><span class="drawer-kicker">YOUR FOODIEHUB ACCOUNT</span><h3>Good to see you.</h3><p>Sign in to keep your details, addresses and orders together across devices.</p></div>
       </div>
+      <button class="button button-quiet account-google-button" id="googleSignInButton" type="button">
+        <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.74 7.18l7.66 5.94c4.48-4.14 7.12-10.24 7.12-17.59Z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.81l-7.66-5.94c-2.13 1.43-4.86 2.27-8.25 2.27-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg>
+        Continue with Google
+      </button>
+      <p class="account-auth-divider"><span>OR USE EMAIL AND PASSWORD</span></p>
       <div class="account-auth-tabs" role="tablist" aria-label="Account access">
         <button class="account-auth-tab is-active" id="authSignInTab" type="button" role="tab" aria-selected="true">Sign in</button>
         <button class="account-auth-tab" id="authRegisterTab" type="button" role="tab" aria-selected="false">Create account</button>
@@ -437,16 +447,17 @@
         <label class="form-field">Email address<input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></label>
         <label class="form-field">Password<input name="password" type="password" placeholder="Your password" autocomplete="current-password" required></label>
         <button class="button button-primary account-auth-submit" type="submit">Sign in securely <span aria-hidden="true">→</span></button>
+        <button class="account-password-reset" id="forgotPasswordButton" type="button">Forgot password?</button>
       </form>
       <form id="customerRegisterForm" class="account-auth-form" hidden>
         <div class="form-grid">
           <label class="form-field form-field-full">Full name<input name="name" type="text" placeholder="Your name" minlength="2" maxlength="80" autocomplete="name" required></label>
-          <label class="form-field form-field-full">Mobile number<input name="phone" type="tel" placeholder="10-digit Indian mobile number" inputmode="numeric" pattern="[6-9][0-9]{9}" minlength="10" maxlength="10" autocomplete="tel" required></label>
+          <label class="form-field form-field-full">Mobile number <span class="optional-label">Optional</span><input name="phone" type="tel" placeholder="10-digit mobile number" inputmode="numeric" pattern="[6-9][0-9]{9}" minlength="10" maxlength="10" autocomplete="tel"></label>
           <label class="form-field form-field-full">Email address<input name="email" type="email" placeholder="you@example.com" autocomplete="email" required></label>
           <label class="form-field form-field-full">Create password<input name="password" type="password" placeholder="At least 10 characters" minlength="10" maxlength="200" autocomplete="new-password" required></label>
         </div>
         <button class="button button-primary account-auth-submit" type="submit">Create my account <span aria-hidden="true">→</span></button>
-        <p class="account-password-hint">Use at least 10 characters. Your password is securely hashed on the server.</p>
+        <p class="account-password-hint">Use at least 10 characters. Your account is secured by Firebase Authentication.</p>
       </form>
       <p class="form-error account-auth-error" id="accountAuthError" role="alert" aria-live="polite"></p>
     </section>
