@@ -690,7 +690,7 @@ app.get("/api/admin/analytics", requireAdmin, async (req, res) => {
       "SELECT " + weekBucket + " AS bucket,",
       "COUNT(*) AS orders, " + revenueExpression + " AS revenue",
       "FROM orders GROUP BY bucket ORDER BY bucket DESC LIMIT 52"
-    ].join(" ")).all().reverse();
+    ].join(" ")).all()).reverse();
     const totalOrders = Number(summary.total_orders || 0);
     const activeMonths = Number(summary.active_months || 0);
     const activeWeeks = Number(summary.active_weeks || 0);
