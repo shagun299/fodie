@@ -59,7 +59,9 @@ class PostgresDatabase {
     const compiled = compilePostgres(sql, values);
     const executor = this.transactions.getStore() || this.pool;
     try {
-      return compiled.params.length\n        ? await executor.query(compiled.text, compiled.params)\n        : await executor.query(compiled.text);
+      return compiled.params.length
+        ? await executor.query(compiled.text, compiled.params)
+        : await executor.query(compiled.text);
     } catch (error) {
       throw normalizePgError(error);
     }
