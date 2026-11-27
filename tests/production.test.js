@@ -1,25 +1,28 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const express = require("express");
 const Database = require("better-sqlite3");
 const createProductionBackend = require("../server/production");
 
-async function fixture(t) {
+async function fixture(t, options = {}) {
   const old = {
     JWT_SECRET: process.env.JWT_SECRET,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
     ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH,
-    NODE_ENV: process.env.NODE_ENV
+    NODE_ENV: process.env.NODE_ENV,
+    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID
   };
   process.env.NODE_ENV = "test";
+  process.env.FIREBASE_PROJECT_ID = "foodiehub-test";
   process.env.JWT_SECRET = "foodiehub-test-secret-with-more-than-32-characters";
   process.env.ADMIN_EMAIL = "admin@example.test";
   process.env.ADMIN_PASSWORD_HASH = await createProductionBackend.hashPassword("FoodieHubTestPass123!");
   const app = express();
   app.use(express.json());
   const db = new Database(":memory:");
-  db.exec("CREATE TABLE orders (order_number TEXT PRIMARY KEY, created_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'confirmed', payment_status TEXT NOT NULL DEFAULT 'pending', items_json TEXT NOT NULL DEFAULT '[]'); CREATE TABLE subscribers (email TEXT PRIMARY KEY, created_at TEXT NOT NULL);");
+  db.exec("CREATE TABLE orders (order_number TEXT PRIMARY KEY, created_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'confirmed', payment_status TEXT NOT NULL DEFAULT 'pending', items_json TEXT NOT NULL DEFAULT '[]'); CREATE TABLE subscribers (email TEXT PRIMARY KEY, created_at TEXT NOT NULL); ALTER TABLE orders ADD COLUMN subtotal REAL; ALTER TABLE orders ADD COLUMN coupon_code TEXT; ALTER TABLE orders ADD COLUMN coupon_discount REAL; ALTER TABLE orders ADD COLUMN delivery_fee REAL; ALTER TABLE orders ADD COLUMN tax REAL; ALTER TABLE orders ADD COLUMN total REAL; ALTER TABLE orders ADD COLUMN payment_method TEXT;");
   const menu = [{ id: "test-bowl", name: "Test Bowl", category: "Bowls", price: 200, originalPrice: 250, isVeg: true, description: "Test item", prepTime: 15, tags: [] }];
   const productById = new Map(menu.map(item => [item.id, item]));
   let backend;
@@ -28,7 +31,7 @@ async function fixture(t) {
     if (backend && backend.verifyAdminToken(token)) return next();
     return res.status(401).json({ error: "Unauthorized" });
   };
-  backend = createProductionBackend({ app, db, menu, productById, requireAdmin: adminGuard, razorpayRequest: async () => ({}) });
+  backend = createProductionBackend({ app, db, menu, productById, requireAdmin: adminGuard, razorpayRequest: async () => ({}), fetchFirebaseCertificates: options.fetchFirebaseCertificates });
   const server = await new Promise(resolve => {
     const instance = app.listen(0, "127.0.0.1", () => resolve(instance));
   });
