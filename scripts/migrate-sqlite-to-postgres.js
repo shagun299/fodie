@@ -91,7 +91,7 @@ async function migrateSqliteToPostgres(options) {
     for (const table of TABLES) {
       const details = inspectSourceTable(sqlite, table);
       if (!details) {
-        source.push({ table, skipped: true, rows: 0 });
+        source.push({ table, skipped: true, rows: [], columns: [], primaryKeys: [] });
         continue;
       }
       await inspectTargetTable(client, table, details.columns);
