@@ -123,3 +123,20 @@ test("JWT tokens reject a modified signature", async () => {
   const changed = token.slice(0, -1) + (token.endsWith("a") ? "b" : "a");
   assert.equal(createProductionBackend.verifyToken(changed, secret), null);
 });
+
+test("logout-all revokes every active customer session", async t => {
+  const { base, db } = await fixture(t);
+  const created = await post(base, "/api/auth/register", {
+    name: "Sessions Test", email: "sessions@example.test", phone: "9876543210", password: "CustomerTestPass123!"
+  });
+  const account = await created.json();
+  const second = await post(base, "/api/auth/login", { email: "sessions@example.test", password: "CustomerTestPass123!" });
+  const secondSession = await second.json();
+  const response = await post(base, "/api/auth/logout-all", {}, account.token);
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.sessionsRevoked, 2);
+  assert.equal((await fetch(base + "/api/auth/me", { headers: { Authorization: "Bearer " + account.token } })).status, 401);
+  assert.equal((await fetch(base + "/api/auth/me", { headers: { Authorization: "Bearer " + secondSession.token } })).status, 401);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE subject_id = ? AND revoked_at IS NULL").get(account.user.id).count, 0);
+});
