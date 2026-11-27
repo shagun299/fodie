@@ -220,6 +220,7 @@ async function calculateOrder(items, couponCode) {
   };
 }
 async function requireAdmin(req, res, next) {
+  try {
   const expected = process.env.ADMIN_API_KEY;
   const provided = String(req.get("authorization") || req.get("x-admin-key") || "").replace(/^Bearer\s+/i, "");
   if (production && await production.verifyAdminToken(provided)) return next();
@@ -230,6 +231,7 @@ async function requireAdmin(req, res, next) {
     return res.status(401).json({ error: "Invalid admin credentials." });
   }
   return next();
+  } catch (error) { return next(error); }
 }
 function createOrderNumber() {
   return "FH-" + crypto.randomBytes(4).toString("hex").toUpperCase();
@@ -686,7 +688,7 @@ app.get("/api/admin/analytics", requireAdmin, async (req, res) => {
     ].join(" ")).all()).reverse();
     const weekly = (await db.prepare([
       "SELECT " + weekBucket + " AS bucket,",
-      "COUNT(*) AS orders, ROUND(COALESCE(SUM(total), 0), 2) AS revenue",
+      "COUNT(*) AS orders, " + revenueExpression + " AS revenue",
       "FROM orders GROUP BY bucket ORDER BY bucket DESC LIMIT 52"
     ].join(" ")).all().reverse();
     const totalOrders = Number(summary.total_orders || 0);
