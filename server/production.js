@@ -294,6 +294,9 @@ function createProductionBackend(options) {
       return next();
     }
 
+    // The legacy admin API key is not a JWT; leave it for the dedicated admin guard.
+    if (token.split(".").length !== 3) return next();
+
     verifyFirebaseBearerToken(token).then(firebaseClaims => {
       if (!firebaseClaims) {
         return res.status(401).json({ error: "The sign-in session is invalid or has expired." });
