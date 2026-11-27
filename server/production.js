@@ -68,6 +68,40 @@ function verifyToken(token, secret) {
   }
 }
 
+function verifyFirebaseIdToken(token, projectId, certificates) {
+  try {
+    const parts = String(token || "").split(".");
+    if (parts.length !== 3 || !projectId) return null;
+    if (parts.some(part => !/^[A-Za-z0-9_-]+$/.test(part))) return null;
+
+    const header = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+    const claims = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    if (!header || header.alg !== "RS256" || typeof header.kid !== "string") return null;
+
+    const certificate = certificates && certificates[header.kid];
+    if (!certificate) return null;
+    const publicKey = String(certificate).includes("BEGIN CERTIFICATE")
+      ? new crypto.X509Certificate(certificate).publicKey
+      : crypto.createPublicKey(certificate);
+    const signature = Buffer.from(parts[2], "base64url");
+    if (signature.length !== 256 && signature.length !== 384 && signature.length !== 512) return null;
+    if (!crypto.verify("RSA-SHA256", Buffer.from(parts[0] + "." + parts[1]), publicKey, signature)) return null;
+
+    const now = Math.floor(Date.now() / 1000);
+    if (claims.aud !== projectId ||
+        claims.iss !== "https://securetoken.google.com/" + projectId ||
+        typeof claims.sub !== "string" || !claims.sub || claims.sub.length > 128 ||
+        !Number.isFinite(claims.exp) || claims.exp <= now ||
+        !Number.isFinite(claims.iat) || claims.iat > now + 300 ||
+        (Number.isFinite(claims.auth_time) && claims.auth_time > now + 300)) {
+      return null;
+    }
+    return claims;
+  } catch (_) {
+    return null;
+  }
+}
+
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -94,6 +128,49 @@ function createProductionBackend(options) {
   const razorpayRequest = options.razorpayRequest;
   const secret = process.env.JWT_SECRET || crypto.randomBytes(48).toString("hex");
   const sessionSeconds = Math.max(3600, Math.min(2592000, Number(process.env.AUTH_TOKEN_TTL_SECONDS || 604800)));
+  const firebaseProjectId = String(process.env.FIREBASE_PROJECT_ID || "").trim();
+  const fetchFirebaseCertificates = options.fetchFirebaseCertificates || (() => fetch(
+    "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
+  ));
+  let firebaseCertificates = null;
+  let firebaseCertificatesExpiresAt = 0;
+
+  async function getFirebaseCertificates() {
+    if (firebaseCertificates && Date.now() < firebaseCertificatesExpiresAt) return firebaseCertificates;
+    let response;
+    try {
+      response = await fetchFirebaseCertificates();
+    } catch (_) {
+      throw httpError("Customer identity verification is temporarily unavailable. Please retry.", 503);
+    }
+    if (!response || !response.ok) {
+      throw httpError("Customer identity verification is temporarily unavailable. Please retry.", 503);
+    }
+    let certificates;
+    try {
+      certificates = await response.json();
+    } catch (_) {
+      throw httpError("Customer identity verification is temporarily unavailable. Please retry.", 503);
+    }
+    if (!certificates || typeof certificates !== "object" || !Object.keys(certificates).length) {
+      throw httpError("Customer identity verification is temporarily unavailable. Please retry.", 503);
+    }
+    const cacheControl = response.headers && response.headers.get
+      ? String(response.headers.get("cache-control") || "")
+      : "";
+    const maxAgeMatch = cacheControl.match(/max-age=(\\d+)/i);
+    const maxAgeSeconds = maxAgeMatch ? Math.max(60, Number(maxAgeMatch[1])) : 3600;
+    firebaseCertificates = certificates;
+    firebaseCertificatesExpiresAt = Date.now() + maxAgeSeconds * 1000;
+    return firebaseCertificates;
+  }
+
+  async function verifyFirebaseBearerToken(token) {
+    if (!firebaseProjectId) return null;
+    const certificates = await getFirebaseCertificates();
+    return verifyFirebaseIdToken(token, firebaseProjectId, certificates);
+  }
+
 
   if (process.env.NODE_ENV === "production") {
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -205,15 +282,45 @@ function createProductionBackend(options) {
 
   function attachOptionalUser(req, res, next) {
     const token = bearerToken(req);
-    const claims = token ? lookupSession(token) : null;
+    if (!token) return next();
+
+    const claims = lookupSession(token);
     if (claims) {
       req.auth = claims;
       if (claims.role === "customer") {
         const user = db.prepare("SELECT id, name, email, phone, created_at FROM users WHERE id = ? AND is_active = 1").get(claims.sub);
         if (user) req.user = user;
       }
+      return next();
     }
-    next();
+
+    verifyFirebaseBearerToken(token).then(firebaseClaims => {
+      if (!firebaseClaims) {
+        return res.status(401).json({ error: "The sign-in session is invalid or has expired." });
+      }
+      req.auth = {
+        sub: firebaseClaims.sub,
+        role: "customer",
+        provider: "firebase",
+        exp: firebaseClaims.exp
+      };
+      req.user = {
+        id: firebaseClaims.sub,
+        name: String(firebaseClaims.name || ""),
+        email: normalizeEmail(firebaseClaims.email),
+        phone: normalizePhone(firebaseClaims.phone_number),
+        created_at: null,
+        provider: "firebase"
+      };
+      return next();
+    }).catch(error => {
+      const status = Number(error && error.status) === 503 ? 503 : 401;
+      return res.status(status).json({
+        error: status === 503
+          ? "Customer identity verification is temporarily unavailable. Please retry."
+          : "The sign-in session is invalid or has expired."
+      });
+    });
   }
 
   function verifyAdminToken(token) {
@@ -289,7 +396,18 @@ function createProductionBackend(options) {
 
   app.post("/api/auth/register", (req, res) => registerCustomer(req, res).catch(() => res.status(500).json({ error: "Account registration could not be completed." })));
   app.post("/api/auth/login", (req, res) => loginCustomer(req, res).catch(() => res.status(500).json({ error: "Sign in could not be completed." })));
-  app.get("/api/auth/me", requireCustomer, (req, res) => res.json({ user: req.user }));
+  app.get("/api/auth/me", requireCustomer, (req, res) => {
+    if (req.auth && req.auth.provider === "firebase") {
+      return res.json({ user: {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email,
+        phone: req.user.phone,
+        created_at: null
+      } });
+    }
+    return res.json({ user: req.user });
+  });
   app.post("/api/auth/logout", requireCustomer, (req, res) => {
     db.prepare("UPDATE auth_sessions SET revoked_at = ? WHERE jti = ? AND revoked_at IS NULL").run(now(), req.auth.jti);
     return res.json({ ok: true });
@@ -854,3 +972,4 @@ module.exports.hashPassword = hashPassword;
 module.exports.verifyPassword = verifyPassword;
 module.exports.signToken = signToken;
 module.exports.verifyToken = verifyToken;
+module.exports.verifyFirebaseIdToken = verifyFirebaseIdToken;
