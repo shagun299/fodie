@@ -338,7 +338,7 @@ function createProductionBackend(options) {
     const body = req.body || {};
     const label = String(body.label || "Home").trim().slice(0, 30) || "Home";
     const address = body.address;
-    const requiredAddressFields = ["house", "street", "area", "town", "city", "district", "state"];
+    const requiredAddressFields = ["house", "street", "area", "city"];
     const completeAddress = address && typeof address === "object" &&
       requiredAddressFields.every(key => String(address[key] || "").trim().length > 0) &&
       /^[1-9]\d{5}$/.test(String(address.pincode || ""));
