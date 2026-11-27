@@ -294,26 +294,23 @@ function validateCustomer(customer) {
     street: String(rawAddress.street || "").trim(),
     area: String(rawAddress.area || "").trim(),
     landmark: String(rawAddress.landmark || "").trim(),
-    town: String(rawAddress.town || "").trim(),
     city: String(rawAddress.city || "").trim(),
-    district: String(rawAddress.district || "").trim(),
-    state: String(rawAddress.state || "").trim(),
     pincode: String(rawAddress.pincode || "").replace(/\D/g, "")
   };
   if (name.length < 2 || name.length > 80) { const error = new Error("Please enter a valid name."); error.status = 400; throw error; }
   if (!/^[6-9]\d{9}$/.test(phone)) { const error = new Error("Please enter a valid 10-digit Indian mobile number."); error.status = 400; throw error; }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { const error = new Error("Please enter a valid email address."); error.status = 400; throw error; }
-  const requiredAddressFields = ["house", "street", "area", "town", "city", "district", "state"];
+  const requiredAddressFields = ["house", "street", "area", "city"];
   const missing = requiredAddressFields.filter(field => !addressDetails[field]);
-  if (missing.length) { const error = new Error("Complete the house, street, area, town, city, district and state address fields."); error.status = 400; throw error; }
+  if (missing.length) { const error = new Error("Complete the house, street, area and city address fields."); error.status = 400; throw error; }
   if (!/^[1-9]\d{5}$/.test(addressDetails.pincode)) { const error = new Error("Enter a valid 6-digit Indian PIN code."); error.status = 400; throw error; }
-  const places = [...new Set([addressDetails.town, addressDetails.city, addressDetails.district].filter(Boolean))];
+  const places = [addressDetails.city].filter(Boolean);
   const address = [
     [addressDetails.house, addressDetails.building].filter(Boolean).join(", "),
     [addressDetails.street, addressDetails.area].filter(Boolean).join(", "),
     addressDetails.landmark ? "Near " + addressDetails.landmark : "",
     places.join(", "),
-    addressDetails.state + " - " + addressDetails.pincode
+    addressDetails.pincode
   ].filter(Boolean).join(", ");
   if (address.length > 500) { const error = new Error("Please shorten your delivery address."); error.status = 400; throw error; }
   return { name, phone, email, address, addressDetails };
