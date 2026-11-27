@@ -183,7 +183,7 @@ async function createProductionBackend(options) {
   }
 
   if (db.dialect === "sqlite") {
-  db.exec([
+  await db.exec([
     "CREATE TABLE IF NOT EXISTS users (",
     "id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL COLLATE NOCASE UNIQUE,",
     "phone TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 1,",
@@ -223,9 +223,9 @@ async function createProductionBackend(options) {
 
   if (db.dialect === "sqlite") {
   const orderColumns = new Set(db.pragma("table_info(orders)").map(column => column.name));
-  if (!orderColumns.has("user_id")) db.exec("ALTER TABLE orders ADD COLUMN user_id TEXT");
-  if (!orderColumns.has("razorpay_payment_id")) db.exec("ALTER TABLE orders ADD COLUMN razorpay_payment_id TEXT");
-  db.exec("CREATE INDEX IF NOT EXISTS idx_orders_user_created ON orders(user_id, created_at DESC)");
+  if (!orderColumns.has("user_id")) await db.exec("ALTER TABLE orders ADD COLUMN user_id TEXT");
+  if (!orderColumns.has("razorpay_payment_id")) await db.exec("ALTER TABLE orders ADD COLUMN razorpay_payment_id TEXT");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_orders_user_created ON orders(user_id, created_at DESC)");
   }
 
   const now = () => new Date().toISOString();
