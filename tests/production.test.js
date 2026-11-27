@@ -330,10 +330,10 @@ test("Firebase ID token verifier validates signature, issuer, audience and expir
   assert.equal(createProductionBackend.verifyFirebaseIdToken(valid, "another-project", certificates), null);
   assert.equal(createProductionBackend.verifyFirebaseIdToken(expired, "foodiehub-test", certificates), null);
   assert.equal(createProductionBackend.verifyFirebaseIdToken(wrongAudience, "foodiehub-test", certificates), null);
-  assert.equal(
-    createProductionBackend.verifyFirebaseIdToken(valid.slice(0, -1) + (valid.endsWith("a") ? "b" : "a"), "foodiehub-test", certificates),
-    null
-  );
+  const tokenParts = valid.split(".");
+  const signature = tokenParts[2];
+  tokenParts[2] = (signature[0] === "A" ? "B" : "A") + signature.slice(1);
+  assert.equal(createProductionBackend.verifyFirebaseIdToken(tokenParts.join("."), "foodiehub-test", certificates), null);
 });
 
 test("Firebase customer token unlocks account profile and only that UID's order history", async t => {
