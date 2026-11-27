@@ -734,7 +734,7 @@
     if (dialog && dialog.open) dialog.close();
   }
 
-  const ADDRESS_FIELDS=["house","building","street","area","landmark","town","city","district","state","pincode"];
+  const ADDRESS_FIELDS=["house","building","street","area","landmark","city","pincode"];
   function readAddressDetails(formData){
     const details={};
     ADDRESS_FIELDS.forEach(field=>{details[field]=String(formData.get(field)||"").trim();});
@@ -742,13 +742,13 @@
   }
   function formatDeliveryAddress(details){
     const d=details||{};
-    const places=[...new Set([d.town,d.city,d.district].filter(Boolean))];
+    const places=[d.city].filter(Boolean);
     const lines=[
       [d.house,d.building].filter(Boolean).join(", "),
       [d.street,d.area].filter(Boolean).join(", "),
       d.landmark?("Near "+d.landmark):"",
       places.join(", "),
-      [d.state].filter(Boolean).join("")+(d.pincode?" - "+d.pincode:"")
+      d.pincode
     ].filter(Boolean);
     return lines.join(", ");
   }
