@@ -708,25 +708,34 @@ app.get("/api/admin/analytics", requireAdmin, (req, res) => {
 });
 
 app.patch("/api/admin/orders/:orderNumber", requireAdmin, (req, res) => {
-  const allowedStatuses = ["confirmed", "preparing", "out_for_delivery", "delivered", "cancelled"];
   const status = String((req.body || {}).status || "");
   const orderNumber = String(req.params.orderNumber || "").toUpperCase();
-  if (!allowedStatuses.includes(status)) return res.status(400).json({ error: "That order status is not supported." });
+  const transitions = {
+    confirmed: ["preparing", "cancelled"],
+    preparing: ["out_for_delivery"],
+    out_for_delivery: ["delivered"],
+    delivered: [],
+    cancelled: [],
+    failed: [],
+    payment_pending: [],
+    payment_creating: []
+  };
+  if (!Object.prototype.hasOwnProperty.call(transitions, status)) return res.status(400).json({ error: "That order status is not supported." });
   const existing = db.prepare("SELECT status, payment_status FROM orders WHERE order_number = ?").get(orderNumber);
   if (!existing) return res.status(404).json({ error: "Order not found." });
-  if (existing.status === "delivered" || existing.status === "cancelled") return res.status(409).json({ error: "This order has already reached a final status." });
-  if (status === "cancelled" && existing.payment_status === "paid") return res.status(409).json({ error: "This order has a captured online payment. Use the refund action instead of direct cancellation." });
-  if (status === "cancelled" && ["preparing", "out_for_delivery"].includes(existing.status)) {
-    return res.status(409).json({ error: "This order cannot be cancelled after kitchen preparation or dispatch has started." });
+  if (!transitions[existing.status] || !transitions[existing.status].includes(status)) {
+    return res.status(409).json({ error: "Invalid order status transition from " + existing.status + " to " + status + "." });
   }
+  if (status === "cancelled" && existing.payment_status === "paid") return res.status(409).json({ error: "This order has a captured online payment. Use the refund action instead of direct cancellation." });
   const updateOrder = db.transaction(() => {
-    db.prepare("UPDATE orders SET status = ? WHERE order_number = ?").run(status, orderNumber);
+    const changed = db.prepare("UPDATE orders SET status = ? WHERE order_number = ? AND status = ?").run(status, orderNumber, existing.status);
+    if (!changed.changes) throw new Error("Order status changed concurrently. Reload the order and try again.");
     if (status === "cancelled") {
       production.releaseInventory(orderNumber);
       production.releaseCoupon(orderNumber);
     }
   });
-  updateOrder();
+  try { updateOrder(); } catch (error) { return res.status(409).json({ error: error.message || "Order status could not be changed." }); }
   production.audit("admin", "order.status_changed", "order", orderNumber, { from: existing.status, to: status });
   return res.json({ ok: true, orderNumber, status });
 });
