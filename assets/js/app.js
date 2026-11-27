@@ -925,7 +925,7 @@
         });
         state.auth.user = normalizeAccountUser(updated.user || { ...state.auth.user, name, phone });
         state.profile = { name, phone, email: state.auth.user.email || email, addressDetails, address };
-        const requiredFields = ["house", "street", "area", "town", "city", "district", "state"];
+        const requiredFields = ["house", "street", "area", "city"];
         const completeAddress = requiredFields.every(field => String(addressDetails[field] || "").trim()) &&
           /^[1-9]\d{5}$/.test(String(addressDetails.pincode || ""));
         let addressSaved = false;
