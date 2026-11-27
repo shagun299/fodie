@@ -90,7 +90,7 @@ class PostgresDatabase {
     await this.query(sql);
   }
 
-  async transaction(callback) {
+  transaction(callback) {
     return async (...args) => {
       const client = await this.pool.connect();
       try {
