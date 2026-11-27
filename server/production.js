@@ -294,6 +294,36 @@ function createProductionBackend(options) {
     db.prepare("UPDATE auth_sessions SET revoked_at = ? WHERE jti = ? AND revoked_at IS NULL").run(now(), req.auth.jti);
     return res.json({ ok: true });
   });
+
+  app.post("/api/auth/password", requireCustomer, async (req, res) => {
+    try {
+      const body = req.body || {};
+      const currentPassword = String(body.currentPassword || "");
+      const newPassword = String(body.newPassword || "");
+      if (newPassword.length < 12 || newPassword.length > 200) {
+        return res.status(400).json({ error: "New password must contain at least 12 characters." });
+      }
+      const account = db.prepare("SELECT password_hash FROM users WHERE id = ? AND is_active = 1").get(req.user.id);
+      if (!account || !(await verifyPassword(currentPassword, account.password_hash))) {
+        return res.status(401).json({ error: "Current password is incorrect." });
+      }
+      if (currentPassword === newPassword) {
+        return res.status(400).json({ error: "Choose a new password different from your current password." });
+      }
+      const newHash = await hashPassword(newPassword);
+      const changedAt = now();
+      const changePassword = db.transaction(() => {
+        db.prepare("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?").run(newHash, changedAt, req.user.id);
+        db.prepare("UPDATE auth_sessions SET revoked_at = ? WHERE subject_id = ? AND role = 'customer' AND revoked_at IS NULL").run(changedAt, req.user.id);
+      });
+      changePassword();
+      const session = createSession(req.user.id, "customer");
+      audit(req.user.id, "customer.password_changed", "user", req.user.id);
+      return res.json({ ok: true, ...session, message: "Password updated. Other active sessions have been signed out." });
+    } catch (_) {
+      return res.status(500).json({ error: "Password could not be updated." });
+    }
+  });
   app.patch("/api/auth/me", requireCustomer, (req, res) => {
     const name = String((req.body || {}).name || "").trim();
     const phone = normalizePhone((req.body || {}).phone);
