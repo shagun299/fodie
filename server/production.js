@@ -814,10 +814,15 @@ function createProductionBackend(options) {
         tx();
       }
     } else if (row && event === "payment.failed") {
+      // A delayed failure event must not undo a captured payment or release stock
+      // that has already been consumed by a successful payment event.
       const tx = db.transaction(() => {
-        db.prepare("UPDATE orders SET payment_status = 'failed', status = 'failed' WHERE order_number = ? AND payment_status != 'paid'").run(row.order_number);
-        releaseInventory(row.order_number);
-        releaseCoupon(row.order_number);
+        const failed = db.prepare("UPDATE orders SET payment_status = 'failed', status = 'failed' WHERE order_number = ? AND status IN ('payment_pending', 'payment_creating') AND payment_status NOT IN ('paid', 'refunded')").run(row.order_number);
+        if (failed.changes) {
+          releaseInventory(row.order_number);
+          releaseCoupon(row.order_number);
+          audit("system", "payment.webhook_failed", "order", row.order_number, { event });
+        }
       });
       tx();
     }
