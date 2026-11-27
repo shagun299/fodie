@@ -140,3 +140,156 @@ test("logout-all revokes every active customer session", async t => {
   assert.equal((await fetch(base + "/api/auth/me", { headers: { Authorization: "Bearer " + secondSession.token } })).status, 401);
   assert.equal(db.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE subject_id = ? AND revoked_at IS NULL").get(account.user.id).count, 0);
 });
+
+test("live API integration: registered customer can save an address, place COD order, track it and use admin order controls", async t => {
+  const { spawn } = require("node:child_process");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const net = require("node:net");
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "foodiehub-integration-"));
+  const port = await new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", () => {
+      const selectedPort = probe.address().port;
+      probe.close(error => error ? reject(error) : resolve(selectedPort));
+    });
+  });
+  const child = spawn(process.execPath, ["server/index.js"], {
+    cwd: path.resolve(__dirname, ".."),
+    env: {
+      ...process.env,
+      NODE_ENV: "test",
+      PORT: String(port),
+      DATA_DIR: dataDir,
+      ALLOWED_ORIGINS: "",
+      JWT_SECRET: "foodiehub-integration-test-secret-with-over-32-characters",
+      ADMIN_API_KEY: "foodiehub-integration-admin-key-for-tests"
+    },
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  let startupOutput = "";
+  child.stdout.on("data", chunk => { startupOutput = (startupOutput + chunk.toString()).slice(-6000); });
+  child.stderr.on("data", chunk => { startupOutput = (startupOutput + chunk.toString()).slice(-6000); });
+  t.after(async () => {
+    if (child.exitCode === null && child.signalCode === null) {
+      const exited = new Promise(resolve => child.once("exit", resolve));
+      child.kill("SIGTERM");
+      await Promise.race([exited, new Promise(resolve => setTimeout(resolve, 3000))]);
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    }
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  const base = "http://127.0.0.1:" + port;
+  let healthy = false;
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    if (child.exitCode !== null) break;
+    try {
+      const response = await fetch(base + "/api/health");
+      if (response.ok) {
+        healthy = true;
+        break;
+      }
+    } catch (_) {}
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  assert.equal(healthy, true, "API did not start successfully. " + startupOutput);
+
+  const send = (route, body, token, headers = {}) => fetch(base + route, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: "Bearer " + token } : {}),
+      ...headers
+    },
+    body: JSON.stringify(body)
+  });
+
+  const unique = require("node:crypto").randomUUID().replace(/-/g, "");
+  const email = "cod-qa-" + unique + "@example.test";
+  const phone = "9876543210";
+  const registered = await send("/api/auth/register", {
+    name: "COD QA Customer",
+    email,
+    phone,
+    password: "CodQaCustomerPass123!"
+  });
+  assert.equal(registered.status, 201);
+  const account = await registered.json();
+  assert.ok(account.token);
+
+  const profile = await fetch(base + "/api/auth/me", {
+    headers: { Authorization: "Bearer " + account.token }
+  });
+  assert.equal(profile.status, 200);
+  assert.equal((await profile.json()).user.email, email);
+
+  const address = {
+    house: "12A",
+    building: "",
+    street: "QA Street",
+    area: "Test Colony",
+    landmark: "",
+    city: "Meerut",
+    pincode: "250001"
+  };
+  const savedAddress = await send("/api/auth/addresses", { label: "Home", address }, account.token);
+  assert.equal(savedAddress.status, 201);
+  const addressList = await fetch(base + "/api/auth/addresses", {
+    headers: { Authorization: "Bearer " + account.token }
+  });
+  assert.equal(addressList.status, 200);
+  assert.equal((await addressList.json()).addresses.length, 1);
+
+  const menuResponse = await fetch(base + "/api/menu");
+  assert.equal(menuResponse.status, 200);
+  const menu = await menuResponse.json();
+  assert.ok(menu.items.length > 0);
+  const payload = {
+    customer: { name: "COD QA Customer", email, phone, addressDetails: address },
+    items: [{ productId: menu.items[0].id, quantity: 1, customizations: {} }],
+    couponCode: "",
+    paymentMethod: "cod"
+  };
+  const idempotencyKey = unique.slice(0, 32);
+  const createdOrder = await send("/api/orders", payload, account.token, { "Idempotency-Key": idempotencyKey });
+  assert.equal(createdOrder.status, 201);
+  const order = await createdOrder.json();
+  assert.ok(order.orderNumber);
+  assert.equal(order.status, "confirmed");
+  assert.equal(order.paymentMethod, "cod");
+
+  const repeatedOrder = await send("/api/orders", payload, account.token, { "Idempotency-Key": idempotencyKey });
+  assert.equal(repeatedOrder.status, 200);
+  assert.equal((await repeatedOrder.json()).orderNumber, order.orderNumber);
+
+  const history = await fetch(base + "/api/auth/orders", {
+    headers: { Authorization: "Bearer " + account.token }
+  });
+  assert.equal(history.status, 200);
+  const historyData = await history.json();
+  assert.equal(historyData.count, 1);
+  assert.equal(historyData.orders[0].orderNumber, order.orderNumber);
+
+  const tracking = await fetch(base + "/api/orders/track?order=" + encodeURIComponent(order.orderNumber) + "&phone=" + phone);
+  assert.equal(tracking.status, 200);
+  assert.equal((await tracking.json()).orderNumber, order.orderNumber);
+
+  const adminHeaders = { Authorization: "Bearer foodiehub-integration-admin-key-for-tests" };
+  const adminOrders = await fetch(base + "/api/admin/orders", { headers: adminHeaders });
+  assert.equal(adminOrders.status, 200);
+  assert.equal((await adminOrders.json()).count, 1);
+
+  const changeStatus = (status) => fetch(base + "/api/admin/orders/" + encodeURIComponent(order.orderNumber), {
+    method: "PATCH",
+    headers: { ...adminHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({ status })
+  });
+  assert.equal((await changeStatus("delivered")).status, 409);
+  assert.equal((await changeStatus("preparing")).status, 200);
+  assert.equal((await changeStatus("out_for_delivery")).status, 200);
+  assert.equal((await changeStatus("delivered")).status, 200);
+});
+
