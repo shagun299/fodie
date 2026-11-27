@@ -229,11 +229,11 @@ async function createProductionBackend(options) {
   }
 
   const now = () => new Date().toISOString();
-  const seedMenu = await db.prepare("INSERT OR IGNORE INTO menu_catalog (product_id, data_json, is_active, updated_at) VALUES (?, ?, 1, ?)");
-  const seedStock = await db.prepare("INSERT OR IGNORE INTO inventory (product_id, quantity, updated_at) VALUES (?, NULL, ?)");
+  const seedMenu = db.prepare("INSERT OR IGNORE INTO menu_catalog (product_id, data_json, is_active, updated_at) VALUES (?, ?, 1, ?)");
+  const seedStock = db.prepare("INSERT OR IGNORE INTO inventory (product_id, quantity, updated_at) VALUES (?, NULL, ?)");
   for (const item of menu) {
-    seedMenu.run(item.id, JSON.stringify(item), now());
-    seedStock.run(item.id, now());
+    await seedMenu.run(item.id, JSON.stringify(item), now());
+    await seedStock.run(item.id, now());
   }
   const savedMenu = await db.prepare("SELECT product_id, data_json, is_active FROM menu_catalog").all();
   const activeProductIds = new Set(savedMenu.filter(row => Number(row.is_active) === 1).map(row => row.product_id));
@@ -249,7 +249,7 @@ async function createProductionBackend(options) {
     }
   }
 
-  const seedCoupon = await db.prepare([
+  const seedCoupon = db.prepare([
     "INSERT OR IGNORE INTO coupons",
     "(code, discount_type, discount_value, max_discount, min_order, max_uses, used_count, active, created_at, updated_at)",
     "VALUES (?, ?, ?, ?, ?, NULL, 0, 1, ?, ?)"
