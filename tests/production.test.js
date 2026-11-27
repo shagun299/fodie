@@ -296,3 +296,71 @@ test("live API integration: registered customer can save an address, place COD o
   assert.equal((await changeStatus("delivered")).status, 200);
 });
 
+function makeFirebaseTestToken(privateKey, overrides = {}) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT", kid: "foodiehub-test-key" };
+  const claims = {
+    iss: "https://securetoken.google.com/foodiehub-test",
+    aud: "foodiehub-test",
+    auth_time: now,
+    sub: "firebase-customer-123",
+    iat: now,
+    exp: now + 3600,
+    email: "firebase@example.test",
+    email_verified: true,
+    name: "Firebase Customer",
+    phone_number: "+919876543210",
+    ...overrides
+  };
+  const encode = value => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const input = encode(header) + "." + encode(claims);
+  return input + "." + crypto.sign("RSA-SHA256", Buffer.from(input), privateKey).toString("base64url");
+}
+
+test("Firebase ID token verifier validates signature, issuer, audience and expiry", () => {
+  const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const certificate = publicKey.export({ type: "spki", format: "pem" });
+  const certificates = { "foodiehub-test-key": certificate };
+  const valid = makeFirebaseTestToken(privateKey);
+  const expired = makeFirebaseTestToken(privateKey, { exp: Math.floor(Date.now() / 1000) - 1 });
+  const wrongAudience = makeFirebaseTestToken(privateKey, { aud: "another-project" });
+  const validClaims = createProductionBackend.verifyFirebaseIdToken(valid, "foodiehub-test", certificates);
+
+  assert.equal(validClaims.sub, "firebase-customer-123");
+  assert.equal(createProductionBackend.verifyFirebaseIdToken(valid, "another-project", certificates), null);
+  assert.equal(createProductionBackend.verifyFirebaseIdToken(expired, "foodiehub-test", certificates), null);
+  assert.equal(createProductionBackend.verifyFirebaseIdToken(wrongAudience, "foodiehub-test", certificates), null);
+  assert.equal(
+    createProductionBackend.verifyFirebaseIdToken(valid.slice(0, -1) + (valid.endsWith("a") ? "b" : "a"), "foodiehub-test", certificates),
+    null
+  );
+});
+
+test("Firebase customer token unlocks account profile and only that UID's order history", async t => {
+  const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const certificate = publicKey.export({ type: "spki", format: "pem" });
+  const { base, db } = await fixture(t, {
+    fetchFirebaseCertificates: async () => ({
+      ok: true,
+      headers: { get: () => "public, max-age=3600" },
+      json: async () => ({ "foodiehub-test-key": certificate })
+    })
+  });
+  const token = makeFirebaseTestToken(privateKey);
+  const headers = { Authorization: "Bearer " + token };
+  const profile = await fetch(base + "/api/auth/me", { headers });
+  assert.equal(profile.status, 200);
+  const profileData = await profile.json();
+  assert.equal(profileData.user.id, "firebase-customer-123");
+  assert.equal(profileData.user.email, "firebase@example.test");
+
+  db.prepare("INSERT INTO orders (order_number, created_at, user_id, total) VALUES (?, ?, ?, ?)")
+    .run("FH-FIREBASE-ORDER", new Date().toISOString(), "firebase-customer-123", 249);
+  db.prepare("INSERT INTO orders (order_number, created_at, user_id, total) VALUES (?, ?, ?, ?)")
+    .run("FH-OTHER-ORDER", new Date().toISOString(), "another-customer", 199);
+  const history = await fetch(base + "/api/auth/orders", { headers });
+  assert.equal(history.status, 200);
+  const result = await history.json();
+  assert.equal(result.count, 1);
+  assert.equal(result.orders[0].orderNumber, "FH-FIREBASE-ORDER");
+});
