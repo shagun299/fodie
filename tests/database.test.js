@@ -52,3 +52,20 @@ test("PostgreSQL adapter preserves explicit conflict handling and converts scala
   assert.match(update.text, /GREATEST\(0, used_count - \$1\)/);
   assert.deepEqual(update.params, [1, "2026-11-27T00:00:00.000Z", "FOOD25"]);
 });
+
+test("SQLite migration helper derives primary keys and source rows without modifying the source", () => {
+  const Database = require("better-sqlite3");
+  const { inspectSourceTable, buildUpsertSql } = require("../scripts/migrate-sqlite-to-postgres");
+  const sqlite = new Database(":memory:");
+  try {
+    sqlite.exec("CREATE TABLE demo (id TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO demo (id, value) VALUES ('a', 'kept');");
+    const table = inspectSourceTable(sqlite, "demo");
+    assert.deepEqual(table.columns, ["id", "value"]);
+    assert.deepEqual(table.primaryKeys, ["id"]);
+    assert.deepEqual(table.rows, [{ id: "a", value: "kept" }]);
+    assert.match(buildUpsertSql("demo", table.columns, table.primaryKeys), /ON CONFLICT \("id"\) DO UPDATE SET "value" = EXCLUDED\."value"/);
+    assert.equal(sqlite.prepare("SELECT value FROM demo WHERE id = 'a'").get().value, "kept");
+  } finally {
+    sqlite.close();
+  }
+});
