@@ -86,8 +86,8 @@ function round(value) {
 function cleanPhone(value) {
   return String(value || "").replace(/\D/g, "").slice(-10);
 }
-function calculateCoupon(code, subtotal) {
-  if (production) return production.calculateCoupon(code, subtotal);
+async function calculateCoupon(code, subtotal) {
+  if (production) return await production.calculateCoupon(code, subtotal);
   return { code: "", discount: 0 };
 }
 function calculateCustomization(product, input) {
@@ -262,7 +262,8 @@ app.get("/api/menu", async (req, res) => {
   const query = String(req.query.q || "").trim().toLowerCase();
   const category = String(req.query.category || "All");
   const diet = String(req.query.diet || "all");
-  const inventory = new Map(await db.prepare("SELECT product_id, quantity FROM inventory").all().map(row => [row.product_id, row.quantity]));
+  const inventoryRows = await db.prepare("SELECT product_id, quantity FROM inventory").all();
+  const inventory = new Map(inventoryRows.map(row => [row.product_id, row.quantity]));
   const items = menu.filter(item => {
     const matchesActive = production.isProductActive(item.id);
     const matchesCategory = category === "All" || item.category === category;
@@ -417,13 +418,13 @@ app.post("/api/payments/create-order", async (req, res, next) => {
     const bill = await calculateOrder(body.items, body.couponCode);
     const orderNumber = createOrderNumber();
     const createdAt = new Date().toISOString();
-    const insertPendingOrder = await db.prepare([
+    const insertPendingOrder = db.prepare([
       "INSERT INTO orders (order_number, customer_name, phone, email, address, address_json, items_json, subtotal, coupon_code, coupon_discount, delivery_fee, tax, total, payment_method, payment_status, status, created_at, gateway_order_id, user_id, idempotency_key, idempotency_fingerprint)",
       "VALUES (@orderNumber, @name, @phone, @email, @address, @addressJson, @itemsJson, @subtotal, @couponCode, @couponDiscount, @deliveryFee, @tax, @total, 'razorpay', 'created', 'payment_creating', @createdAt, NULL, @userId, @idempotencyKey, @fingerprint)"
     ].join(" "));
     const reservePaymentOrder = db.transaction(async () => {
       await production.reserveInventory(orderNumber, bill.items, 20);
-      insertPendingOrder.run({
+      await insertPendingOrder.run({
         orderNumber, ...customer, addressJson: JSON.stringify(customer.addressDetails), itemsJson: JSON.stringify(bill.items),
         subtotal: bill.subtotal, couponCode: bill.couponCode, couponDiscount: bill.couponDiscount,
         deliveryFee: bill.deliveryFee, tax: bill.tax, total: bill.total, createdAt,
@@ -432,7 +433,7 @@ app.post("/api/payments/create-order", async (req, res, next) => {
       });
       await production.claimCoupon(bill.couponCode, orderNumber);
     });
-    reservePaymentOrder();
+    await reservePaymentOrder();
 
     try {
       const gatewayOrder = await razorpayRequest("/orders", {
@@ -461,7 +462,7 @@ app.post("/api/payments/create-order", async (req, res, next) => {
         await production.releaseCoupon(orderNumber);
         await db.prepare("UPDATE orders SET payment_status = 'failed', status = 'failed' WHERE order_number = ? AND payment_status = 'created'").run(orderNumber);
       });
-      releaseFailedAttempt();
+      await releaseFailedAttempt();
       throw error;
     }
   } catch (error) { return next(error); }
@@ -558,7 +559,7 @@ app.post("/api/payments/verify", async (req, res, next) => {
       }
       await production.consumeInventory(row.order_number);
     });
-    confirmPayment();
+    await confirmPayment();
     return res.json({
       orderNumber: row.order_number, status: "confirmed", total: row.total, paymentStatus: "paid",
       paymentMethod: "razorpay", message: "Payment captured and verified securely. Your order is confirmed."
@@ -599,13 +600,13 @@ app.post("/api/orders", async (req, res, next) => {
     const bill = await calculateOrder(body.items, body.couponCode);
     const orderNumber = createOrderNumber();
     const createdAt = new Date().toISOString();
-    const insertDeliveryOrder = await db.prepare([
+    const insertDeliveryOrder = db.prepare([
       "INSERT INTO orders (order_number, customer_name, phone, email, address, address_json, items_json, subtotal, coupon_code, coupon_discount, delivery_fee, tax, total, payment_method, payment_status, status, created_at, user_id, idempotency_key, idempotency_fingerprint)",
       "VALUES (@orderNumber, @name, @phone, @email, @address, @addressJson, @itemsJson, @subtotal, @couponCode, @couponDiscount, @deliveryFee, @tax, @total, @paymentMethod, 'pending', 'confirmed', @createdAt, @userId, @idempotencyKey, @fingerprint)"
     ].join(" "));
     const saveDeliveryOrder = db.transaction(async () => {
       await production.reserveInventory(orderNumber, bill.items, null);
-      insertDeliveryOrder.run({
+      await insertDeliveryOrder.run({
         orderNumber, name, phone, email, address, addressJson: JSON.stringify(customer.addressDetails),
         itemsJson: JSON.stringify(bill.items), subtotal: bill.subtotal, couponCode: bill.couponCode,
         couponDiscount: bill.couponDiscount, deliveryFee: bill.deliveryFee, tax: bill.tax, total: bill.total,
@@ -615,7 +616,7 @@ app.post("/api/orders", async (req, res, next) => {
       await production.claimCoupon(bill.couponCode, orderNumber);
       await production.consumeInventory(orderNumber);
     });
-    saveDeliveryOrder();
+    await saveDeliveryOrder();
     res.status(201).json({
       ...publicOrder({ order_number: orderNumber, status: "confirmed", total: bill.total, payment_method: paymentMethod, payment_status: "pending", created_at: createdAt }),
       items: bill.items,
@@ -730,7 +731,7 @@ app.patch("/api/admin/orders/:orderNumber", requireAdmin, async (req, res) => {
       await production.releaseCoupon(orderNumber);
     }
   });
-  try { updateOrder(); } catch (error) { return res.status(409).json({ error: error.message || "Order status could not be changed." }); }
+  try { await updateOrder(); } catch (error) { return res.status(409).json({ error: error.message || "Order status could not be changed." }); }
   await production.audit("admin", "order.status_changed", "order", orderNumber, { from: existing.status, to: status });
   return res.json({ ok: true, orderNumber, status });
 });
