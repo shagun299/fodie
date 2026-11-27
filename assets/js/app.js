@@ -148,7 +148,13 @@
   }
 
   async function request(path, options = {}) {
-    const authHeaders = state.auth && state.auth.token ? { Authorization: "Bearer " + state.auth.token } : {};
+    let bearerToken = "";
+    if (state.firebaseUser && typeof state.firebaseUser.getIdToken === "function") {
+      bearerToken = await state.firebaseUser.getIdToken();
+    } else if (state.auth && state.auth.token) {
+      bearerToken = state.auth.token;
+    }
+    const authHeaders = bearerToken ? { Authorization: "Bearer " + bearerToken } : {};
     const response = await fetch(API_BASE + path, {
       ...options,
       headers: { ...authHeaders, "Content-Type": "application/json", ...(options.headers || {}) }
@@ -327,6 +333,16 @@
       });
       fillAddressFields(profileForm, state.profile.addressDetails || {});
       updateAddressPreview("profileForm", "profileAddressPreview");
+    }
+    if (state.backendOnline) {
+      try {
+        const orderResult = await request("/api/auth/orders");
+        state.orders = Array.isArray(orderResult.orders)
+          ? orderResult.orders.map(order => ({ ...order, phone: state.profile.phone || "" }))
+          : [];
+      } catch (error) {
+        console.warn("FoodieHub customer order history could not sync:", error);
+      }
     }
     saveStore(STORAGE.profile, state.profile);
     renderProfile();
