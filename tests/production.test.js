@@ -26,12 +26,14 @@ async function fixture(t, options = {}) {
   const menu = [{ id: "test-bowl", name: "Test Bowl", category: "Bowls", price: 200, originalPrice: 250, isVeg: true, description: "Test item", prepTime: 15, tags: [] }];
   const productById = new Map(menu.map(item => [item.id, item]));
   let backend;
-  const adminGuard = (req, res, next) => {
+  const adminGuard = async (req, res, next) => {
     const token = String(req.get("authorization") || "").replace(/^Bearer\s+/i, "");
-    if (backend && backend.verifyAdminToken(token)) return next();
-    return res.status(401).json({ error: "Unauthorized" });
+    try {
+      if (backend && await backend.verifyAdminToken(token)) return next();
+      return res.status(401).json({ error: "Unauthorized" });
+    } catch (error) { return next(error); }
   };
-  backend = createProductionBackend({ app, db, menu, productById, requireAdmin: adminGuard, razorpayRequest: async () => ({}), fetchFirebaseCertificates: options.fetchFirebaseCertificates });
+  backend = await createProductionBackend({ app, db, menu, productById, requireAdmin: adminGuard, razorpayRequest: async () => ({}), fetchFirebaseCertificates: options.fetchFirebaseCertificates });
   const server = await new Promise(resolve => {
     const instance = app.listen(0, "127.0.0.1", () => resolve(instance));
   });
@@ -102,20 +104,20 @@ test("admin login issues a session accepted by protected inventory API", async t
 
 test("coupon validation is database-backed and usage can be released", async t => {
   const { backend, db } = await fixture(t);
-  assert.equal(backend.calculateCoupon("FOOD25", 300).discount, 75);
-  assert.throws(() => backend.calculateCoupon("FOOD25", 200), /minimum subtotal/i);
-  backend.claimCoupon("FOOD25", "FH-COUPON-TEST");
+  assert.equal((await backend.calculateCoupon("FOOD25", 300)).discount, 75);
+  await assert.rejects(() => backend.calculateCoupon("FOOD25", 200), /minimum subtotal/i);
+  await backend.claimCoupon("FOOD25", "FH-COUPON-TEST");
   assert.equal(db.prepare("SELECT used_count FROM coupons WHERE code = 'FOOD25'").get().used_count, 1);
-  backend.releaseCoupon("FH-COUPON-TEST");
+  await backend.releaseCoupon("FH-COUPON-TEST");
   assert.equal(db.prepare("SELECT used_count FROM coupons WHERE code = 'FOOD25'").get().used_count, 0);
 });
 
 test("inventory is reserved atomically and restored on cancellation", async t => {
   const { backend, db } = await fixture(t);
   db.prepare("UPDATE inventory SET quantity = 5 WHERE product_id = 'test-bowl'").run();
-  backend.reserveInventory("FH-STOCK-TEST", [{ productId: "test-bowl", quantity: 2 }], null);
+  await backend.reserveInventory("FH-STOCK-TEST", [{ productId: "test-bowl", quantity: 2 }], null);
   assert.equal(db.prepare("SELECT quantity FROM inventory WHERE product_id = 'test-bowl'").get().quantity, 3);
-  backend.releaseInventory("FH-STOCK-TEST");
+  await backend.releaseInventory("FH-STOCK-TEST");
   assert.equal(db.prepare("SELECT quantity FROM inventory WHERE product_id = 'test-bowl'").get().quantity, 5);
 });
 

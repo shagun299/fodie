@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto = require("crypto");
+const { adaptDatabase } = require("./database");
 const { promisify } = require("util");
 const scryptAsync = promisify(crypto.scrypt);
 const rateLimitPackage = require("express-rate-limit");
@@ -119,9 +120,9 @@ function makeSlug(value) {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70);
 }
 
-function createProductionBackend(options) {
+async function createProductionBackend(options) {
   const app = options.app;
-  const db = options.db;
+  const db = adaptDatabase(options.db);
   const menu = options.menu;
   const productById = options.productById;
   const requireAdmin = options.requireAdmin;
@@ -181,7 +182,8 @@ function createProductionBackend(options) {
     }
   }
 
-  db.exec([
+  if (db.dialect === "sqlite") {
+  await db.exec([
     "CREATE TABLE IF NOT EXISTS users (",
     "id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL COLLATE NOCASE UNIQUE,",
     "phone TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 1,",
@@ -217,20 +219,24 @@ function createProductionBackend(options) {
     "CREATE TABLE IF NOT EXISTS webhook_events (",
     "event_id TEXT PRIMARY KEY, event_type TEXT NOT NULL, received_at TEXT NOT NULL);"
   ].join(" "));
+  }
 
+  if (db.dialect === "sqlite") {
   const orderColumns = new Set(db.pragma("table_info(orders)").map(column => column.name));
-  if (!orderColumns.has("user_id")) db.exec("ALTER TABLE orders ADD COLUMN user_id TEXT");
-  if (!orderColumns.has("razorpay_payment_id")) db.exec("ALTER TABLE orders ADD COLUMN razorpay_payment_id TEXT");
-  db.exec("CREATE INDEX IF NOT EXISTS idx_orders_user_created ON orders(user_id, created_at DESC)");
+  if (!orderColumns.has("user_id")) await db.exec("ALTER TABLE orders ADD COLUMN user_id TEXT");
+  if (!orderColumns.has("razorpay_payment_id")) await db.exec("ALTER TABLE orders ADD COLUMN razorpay_payment_id TEXT");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_orders_user_created ON orders(user_id, created_at DESC)");
+  }
 
   const now = () => new Date().toISOString();
   const seedMenu = db.prepare("INSERT OR IGNORE INTO menu_catalog (product_id, data_json, is_active, updated_at) VALUES (?, ?, 1, ?)");
   const seedStock = db.prepare("INSERT OR IGNORE INTO inventory (product_id, quantity, updated_at) VALUES (?, NULL, ?)");
   for (const item of menu) {
-    seedMenu.run(item.id, JSON.stringify(item), now());
-    seedStock.run(item.id, now());
+    await seedMenu.run(item.id, JSON.stringify(item), now());
+    await seedStock.run(item.id, now());
   }
-  const savedMenu = db.prepare("SELECT product_id, data_json, is_active FROM menu_catalog").all();
+  const savedMenu = await db.prepare("SELECT product_id, data_json, is_active FROM menu_catalog").all();
+  const activeProductIds = new Set(savedMenu.filter(row => Number(row.is_active) === 1).map(row => row.product_id));
   for (const row of savedMenu) {
     try {
       const item = JSON.parse(row.data_json);
@@ -249,27 +255,27 @@ function createProductionBackend(options) {
     "VALUES (?, ?, ?, ?, ?, NULL, 0, 1, ?, ?)"
   ].join(" "));
   const seededAt = now();
-  [
+  for (const item of [
     ["HUB50", "percent", 50, 200, 699],
     ["FOOD25", "percent", 25, 100, 299],
     ["COMBO10", "percent", 10, 150, 199],
     ["REWARD25", "fixed", 25, 25, 249]
-  ].forEach(item => seedCoupon.run(item[0], item[1], item[2], item[3], item[4], seededAt, seededAt));
+  ]) await seedCoupon.run(item[0], item[1], item[2], item[3], item[4], seededAt, seededAt);
 
-  function createSession(subjectId, role) {
+  async function createSession(subjectId, role) {
     const issuedAt = Math.floor(Date.now() / 1000);
     const expiresAt = issuedAt + sessionSeconds;
     const jti = crypto.randomUUID();
     const token = signToken({ sub: subjectId, role, jti, iat: issuedAt, exp: expiresAt }, secret);
-    db.prepare("INSERT INTO auth_sessions (jti, subject_id, role, expires_at, created_at) VALUES (?, ?, ?, ?, ?)")
+    await db.prepare("INSERT INTO auth_sessions (jti, subject_id, role, expires_at, created_at) VALUES (?, ?, ?, ?, ?)")
       .run(jti, subjectId, role, new Date(expiresAt * 1000).toISOString(), now());
     return { token, expiresIn: sessionSeconds };
   }
 
-  function lookupSession(token) {
+  async function lookupSession(token) {
     const claims = verifyToken(token, secret);
     if (!claims || !claims.jti || !claims.sub || !claims.role) return null;
-    const session = db.prepare("SELECT jti, subject_id, role, expires_at, revoked_at FROM auth_sessions WHERE jti = ?").get(claims.jti);
+    const session = await db.prepare("SELECT jti, subject_id, role, expires_at, revoked_at FROM auth_sessions WHERE jti = ?").get(claims.jti);
     if (!session || session.revoked_at || Date.parse(session.expires_at) <= Date.now()) return null;
     if (session.subject_id !== claims.sub || session.role !== claims.role) return null;
     return claims;
@@ -280,24 +286,25 @@ function createProductionBackend(options) {
     return header.replace(/^Bearer\s+/i, "").trim();
   }
 
-  function attachOptionalUser(req, res, next) {
-    const token = bearerToken(req);
-    if (!token) return next();
+  async function attachOptionalUser(req, res, next) {
+    try {
+      const token = bearerToken(req);
+      if (!token) return next();
 
-    const claims = lookupSession(token);
-    if (claims) {
-      req.auth = claims;
-      if (claims.role === "customer") {
-        const user = db.prepare("SELECT id, name, email, phone, created_at FROM users WHERE id = ? AND is_active = 1").get(claims.sub);
-        if (user) req.user = user;
+      const claims = await lookupSession(token);
+      if (claims) {
+        req.auth = claims;
+        if (claims.role === "customer") {
+          const user = await db.prepare("SELECT id, name, email, phone, created_at FROM users WHERE id = ? AND is_active = 1").get(claims.sub);
+          if (user) req.user = user;
+        }
+        return next();
       }
-      return next();
-    }
 
-    // The legacy admin API key is not a JWT; leave it for the dedicated admin guard.
-    if (token.split(".").length !== 3) return next();
+      // The legacy admin API key is not a JWT; leave it for the dedicated admin guard.
+      if (token.split(".").length !== 3) return next();
 
-    verifyFirebaseBearerToken(token).then(firebaseClaims => {
+      const firebaseClaims = await verifyFirebaseBearerToken(token);
       if (!firebaseClaims) {
         return res.status(401).json({ error: "The sign-in session is invalid or has expired." });
       }
@@ -316,18 +323,19 @@ function createProductionBackend(options) {
         provider: "firebase"
       };
       return next();
-    }).catch(error => {
-      const status = Number(error && error.status) === 503 ? 503 : 401;
+    } catch (error) {
+      const status = Number(error && error.status) === 503 ? 503 : 500;
+      if (status >= 500 && status !== 503) return next(error);
       return res.status(status).json({
         error: status === 503
           ? "Customer identity verification is temporarily unavailable. Please retry."
           : "The sign-in session is invalid or has expired."
       });
-    });
+    }
   }
 
-  function verifyAdminToken(token) {
-    const claims = lookupSession(token);
+  async function verifyAdminToken(token) {
+    const claims = await lookupSession(token);
     return Boolean(claims && claims.role === "admin");
   }
 
@@ -336,8 +344,8 @@ function createProductionBackend(options) {
     next();
   }
 
-  function audit(actor, action, entityType, entityId, details) {
-    db.prepare("INSERT INTO audit_logs (id, actor, action, entity_type, entity_id, details_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+  async function audit(actor, action, entityType, entityId, details) {
+    await db.prepare("INSERT INTO audit_logs (id, actor, action, entity_type, entity_id, details_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
       .run(crypto.randomUUID(), String(actor || "system"), action, entityType, String(entityId), details ? JSON.stringify(details) : null, now());
   }
 
@@ -355,10 +363,10 @@ function createProductionBackend(options) {
     const id = crypto.randomUUID();
     try {
       const passwordHash = await hashPassword(password);
-      db.prepare("INSERT INTO users (id, name, email, phone, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      await db.prepare("INSERT INTO users (id, name, email, phone, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
         .run(id, name, email, phone, passwordHash, createdAt, createdAt);
-      const session = createSession(id, "customer");
-      audit(id, "customer.registered", "user", id);
+      const session = await createSession(id, "customer");
+      await audit(id, "customer.registered", "user", id);
       return res.status(201).json({
         ...session,
         user: { id, name, email, phone, createdAt }
@@ -374,11 +382,11 @@ function createProductionBackend(options) {
     const email = normalizeEmail(body.email);
     const password = String(body.password || "");
     if (!validEmail(email) || !password) return res.status(400).json({ error: "Enter your registered email and password." });
-    const user = db.prepare("SELECT id, name, email, phone, password_hash, is_active, created_at FROM users WHERE email = ?").get(email);
+    const user = await db.prepare("SELECT id, name, email, phone, password_hash, is_active, created_at FROM users WHERE email = ?").get(email);
     if (!user || !user.is_active || !(await verifyPassword(password, user.password_hash))) {
       return res.status(401).json({ error: "Email or password is incorrect." });
     }
-    const session = createSession(user.id, "customer");
+    const session = await createSession(user.id, "customer");
     return res.json({
       ...session,
       user: { id: user.id, name: user.name, email: user.email, phone: user.phone, createdAt: user.created_at }
@@ -399,7 +407,7 @@ function createProductionBackend(options) {
 
   app.post("/api/auth/register", (req, res) => registerCustomer(req, res).catch(() => res.status(500).json({ error: "Account registration could not be completed." })));
   app.post("/api/auth/login", (req, res) => loginCustomer(req, res).catch(() => res.status(500).json({ error: "Sign in could not be completed." })));
-  app.get("/api/auth/me", requireCustomer, (req, res) => {
+  app.get("/api/auth/me", requireCustomer, async (req, res) => {
     if (req.auth && req.auth.provider === "firebase") {
       return res.json({ user: {
         id: req.user.id,
@@ -411,16 +419,16 @@ function createProductionBackend(options) {
     }
     return res.json({ user: req.user });
   });
-  app.post("/api/auth/logout", requireCustomer, (req, res) => {
-    db.prepare("UPDATE auth_sessions SET revoked_at = ? WHERE jti = ? AND revoked_at IS NULL").run(now(), req.auth.jti);
+  app.post("/api/auth/logout", requireCustomer, async (req, res) => {
+    await db.prepare("UPDATE auth_sessions SET revoked_at = ? WHERE jti = ? AND revoked_at IS NULL").run(now(), req.auth.jti);
     return res.json({ ok: true });
   });
 
-  app.post("/api/auth/logout-all", requireCustomer, (req, res) => {
+  app.post("/api/auth/logout-all", requireCustomer, async (req, res) => {
     const revokedAt = now();
-    const result = db.prepare("UPDATE auth_sessions SET revoked_at = ? WHERE subject_id = ? AND role = 'customer' AND revoked_at IS NULL")
+    const result = await db.prepare("UPDATE auth_sessions SET revoked_at = ? WHERE subject_id = ? AND role = 'customer' AND revoked_at IS NULL")
       .run(revokedAt, req.user.id);
-    audit(req.user.id, "customer.sessions_revoked", "user", req.user.id, { sessionsRevoked: result.changes });
+    await audit(req.user.id, "customer.sessions_revoked", "user", req.user.id, { sessionsRevoked: result.changes });
     return res.json({ ok: true, sessionsRevoked: result.changes });
   });
 
@@ -432,7 +440,7 @@ function createProductionBackend(options) {
       if (newPassword.length < 12 || newPassword.length > 200) {
         return res.status(400).json({ error: "New password must contain at least 12 characters." });
       }
-      const account = db.prepare("SELECT password_hash FROM users WHERE id = ? AND is_active = 1").get(req.user.id);
+      const account = await db.prepare("SELECT password_hash FROM users WHERE id = ? AND is_active = 1").get(req.user.id);
       if (!account || !(await verifyPassword(currentPassword, account.password_hash))) {
         return res.status(401).json({ error: "Current password is incorrect." });
       }
@@ -441,34 +449,34 @@ function createProductionBackend(options) {
       }
       const newHash = await hashPassword(newPassword);
       const changedAt = now();
-      const changePassword = db.transaction(() => {
-        db.prepare("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?").run(newHash, changedAt, req.user.id);
-        db.prepare("UPDATE auth_sessions SET revoked_at = ? WHERE subject_id = ? AND role = 'customer' AND revoked_at IS NULL").run(changedAt, req.user.id);
+      const changePassword = db.transaction(async () => {
+        await db.prepare("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?").run(newHash, changedAt, req.user.id);
+        await db.prepare("UPDATE auth_sessions SET revoked_at = ? WHERE subject_id = ? AND role = 'customer' AND revoked_at IS NULL").run(changedAt, req.user.id);
       });
-      changePassword();
-      const session = createSession(req.user.id, "customer");
-      audit(req.user.id, "customer.password_changed", "user", req.user.id);
+      await changePassword();
+      const session = await createSession(req.user.id, "customer");
+      await audit(req.user.id, "customer.password_changed", "user", req.user.id);
       return res.json({ ok: true, ...session, message: "Password updated. Other active sessions have been signed out." });
     } catch (_) {
       return res.status(500).json({ error: "Password could not be updated." });
     }
   });
-  app.patch("/api/auth/me", requireCustomer, (req, res) => {
+  app.patch("/api/auth/me", requireCustomer, async (req, res) => {
     const name = String((req.body || {}).name || "").trim();
     const phone = normalizePhone((req.body || {}).phone);
     if (name.length < 2 || name.length > 80) return res.status(400).json({ error: "Enter a valid name." });
     if (!/^[6-9]\d{9}$/.test(phone)) return res.status(400).json({ error: "Enter a valid 10-digit Indian mobile number." });
     try {
-      db.prepare("UPDATE users SET name = ?, phone = ?, updated_at = ? WHERE id = ?").run(name, phone, now(), req.user.id);
-      return res.json({ user: db.prepare("SELECT id, name, email, phone, created_at FROM users WHERE id = ?").get(req.user.id) });
+      await db.prepare("UPDATE users SET name = ?, phone = ?, updated_at = ? WHERE id = ?").run(name, phone, now(), req.user.id);
+      return res.json({ user: await db.prepare("SELECT id, name, email, phone, created_at FROM users WHERE id = ?").get(req.user.id) });
     } catch (error) {
       if (String(error.code || "").startsWith("SQLITE_CONSTRAINT")) return res.status(409).json({ error: "That mobile number is already linked to another account." });
       return res.status(500).json({ error: "Profile could not be updated." });
     }
   });
 
-  app.get("/api/auth/orders", requireCustomer, (req, res) => {
-    const rows = db.prepare("SELECT order_number, items_json, subtotal, coupon_code, coupon_discount, delivery_fee, tax, total, payment_method, payment_status, status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 100").all(req.user.id);
+  app.get("/api/auth/orders", requireCustomer, async (req, res) => {
+    const rows = await db.prepare("SELECT order_number, items_json, subtotal, coupon_code, coupon_discount, delivery_fee, tax, total, payment_method, payment_status, status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 100").all(req.user.id);
     return res.json({
       count: rows.length,
       orders: rows.map(row => ({
@@ -488,12 +496,12 @@ function createProductionBackend(options) {
     });
   });
 
-  app.get("/api/auth/addresses", requireCustomer, (req, res) => {
-    const rows = db.prepare("SELECT id, label, address_json, created_at FROM user_addresses WHERE user_id = ? ORDER BY created_at DESC").all(req.user.id);
+  app.get("/api/auth/addresses", requireCustomer, async (req, res) => {
+    const rows = await db.prepare("SELECT id, label, address_json, created_at FROM user_addresses WHERE user_id = ? ORDER BY created_at DESC").all(req.user.id);
     return res.json({ addresses: rows.map(row => ({ id: row.id, label: row.label, address: JSON.parse(row.address_json), createdAt: row.created_at })) });
   });
 
-  app.post("/api/auth/addresses", requireCustomer, (req, res) => {
+  app.post("/api/auth/addresses", requireCustomer, async (req, res) => {
     const body = req.body || {};
     const label = String(body.label || "Home").trim().slice(0, 30) || "Home";
     const address = body.address;
@@ -503,13 +511,13 @@ function createProductionBackend(options) {
       /^[1-9]\d{5}$/.test(String(address.pincode || ""));
     if (!completeAddress) return res.status(400).json({ error: "Provide all required structured address fields and a valid PIN code." });
     const id = crypto.randomUUID();
-    db.prepare("INSERT INTO user_addresses (id, user_id, label, address_json, created_at) VALUES (?, ?, ?, ?, ?)")
+    await db.prepare("INSERT INTO user_addresses (id, user_id, label, address_json, created_at) VALUES (?, ?, ?, ?, ?)")
       .run(id, req.user.id, label, JSON.stringify(address), now());
     return res.status(201).json({ id, label, address });
   });
 
-  app.delete("/api/auth/addresses/:id", requireCustomer, (req, res) => {
-    const result = db.prepare("DELETE FROM user_addresses WHERE id = ? AND user_id = ?").run(String(req.params.id), req.user.id);
+  app.delete("/api/auth/addresses/:id", requireCustomer, async (req, res) => {
+    const result = await db.prepare("DELETE FROM user_addresses WHERE id = ? AND user_id = ?").run(String(req.params.id), req.user.id);
     if (!result.changes) return res.status(404).json({ error: "Saved address not found." });
     return res.json({ ok: true });
   });
@@ -524,19 +532,19 @@ function createProductionBackend(options) {
       if (email !== expectedEmail || !(await verifyPassword(password, passwordHash))) {
         return res.status(401).json({ error: "Admin email or password is incorrect." });
       }
-      const session = createSession("foodiehub-admin", "admin");
-      audit("foodiehub-admin", "admin.login", "session", "foodiehub-admin");
+      const session = await createSession("foodiehub-admin", "admin");
+      await audit("foodiehub-admin", "admin.login", "session", "foodiehub-admin");
       return res.json({ ...session, role: "admin" });
     } catch (_) {
       return res.status(500).json({ error: "Admin sign in could not be completed." });
     }
   });
 
-  app.post("/api/coupons/validate", (req, res) => {
+  app.post("/api/coupons/validate", async (req, res) => {
     try {
       const subtotal = Number((req.body || {}).subtotal);
       if (!Number.isFinite(subtotal) || subtotal < 0) return res.status(400).json({ error: "Enter a valid order subtotal." });
-      const result = calculateCoupon((req.body || {}).code, subtotal);
+      const result = await calculateCoupon((req.body || {}).code, subtotal);
       if (!result.code) return res.status(404).json({ error: "That coupon code is not available." });
       return res.json({ ...result, subtotal, discountedSubtotal: Math.max(0, subtotal - result.discount) });
     } catch (error) {
@@ -544,14 +552,14 @@ function createProductionBackend(options) {
     }
   });
 
-  function getCoupon(code) {
-    return db.prepare("SELECT * FROM coupons WHERE code = ?").get(String(code || "").trim().toUpperCase());
+  async function getCoupon(code) {
+    return await db.prepare("SELECT * FROM coupons WHERE code = ?").get(String(code || "").trim().toUpperCase());
   }
 
-  function calculateCoupon(code, subtotal) {
+  async function calculateCoupon(code, subtotal) {
     const normalized = String(code || "").trim().toUpperCase();
     if (!normalized) return { code: "", discount: 0 };
-    const coupon = getCoupon(normalized);
+    const coupon = await getCoupon(normalized);
     if (!coupon || !coupon.active) throw httpError("That coupon code is not available.", 400);
     const current = Date.now();
     if (coupon.starts_at && Date.parse(coupon.starts_at) > current) throw httpError("That coupon is not active yet.", 400);
@@ -565,82 +573,81 @@ function createProductionBackend(options) {
     return { code: normalized, discount: Math.min(Number(subtotal), Math.round((capped + Number.EPSILON) * 100) / 100) };
   }
 
-  function claimCoupon(code, orderNumber) {
+  async function claimCoupon(code, orderNumber) {
     const normalized = String(code || "").trim().toUpperCase();
     if (!normalized) return;
     const current = now();
-    const result = db.prepare([
+    const result = await db.prepare([
       "UPDATE coupons SET used_count = used_count + 1, updated_at = ?",
       "WHERE code = ? AND active = 1 AND (max_uses IS NULL OR used_count < max_uses)",
       "AND (starts_at IS NULL OR starts_at <= ?) AND (expires_at IS NULL OR expires_at >= ?)"
     ].join(" ")).run(current, normalized, current, current);
     if (!result.changes) throw httpError("That coupon is no longer available. Please review your bag.", 409);
-    db.prepare("INSERT INTO order_coupons (order_number, coupon_code, status) VALUES (?, ?, 'claimed')").run(orderNumber, normalized);
+    await db.prepare("INSERT INTO order_coupons (order_number, coupon_code, status) VALUES (?, ?, 'claimed')").run(orderNumber, normalized);
   }
 
-  function releaseCoupon(orderNumber) {
-    const row = db.prepare("SELECT coupon_code, status FROM order_coupons WHERE order_number = ?").get(orderNumber);
+  async function releaseCoupon(orderNumber) {
+    const row = await db.prepare("SELECT coupon_code, status FROM order_coupons WHERE order_number = ?").get(orderNumber);
     if (!row || row.status !== "claimed") return;
-    db.prepare("UPDATE coupons SET used_count = MAX(0, used_count - 1), updated_at = ? WHERE code = ?").run(now(), row.coupon_code);
-    db.prepare("UPDATE order_coupons SET status = 'released' WHERE order_number = ?").run(orderNumber);
+    await db.prepare("UPDATE coupons SET used_count = MAX(0, used_count - 1), updated_at = ? WHERE code = ?").run(now(), row.coupon_code);
+    await db.prepare("UPDATE order_coupons SET status = 'released' WHERE order_number = ?").run(orderNumber);
   }
 
   function isProductActive(productId) {
-    const row = db.prepare("SELECT is_active FROM menu_catalog WHERE product_id = ?").get(productId);
-    return Boolean(row && row.is_active === 1);
+    return activeProductIds.has(productId);
   }
 
-  function reserveInventory(orderNumber, items, expiryMinutes) {
+  async function reserveInventory(orderNumber, items, expiryMinutes) {
     const totals = new Map();
     for (const item of items || []) {
       totals.set(item.productId, (totals.get(item.productId) || 0) + Number(item.quantity || 0));
     }
     const expiry = expiryMinutes ? new Date(Date.now() + expiryMinutes * 60000).toISOString() : null;
     for (const [productId, quantity] of totals.entries()) {
-      const inventoryRow = db.prepare("SELECT quantity FROM inventory WHERE product_id = ?").get(productId);
+      const inventoryRow = await db.prepare("SELECT quantity FROM inventory WHERE product_id = ?").get(productId);
       if (!inventoryRow) throw httpError("A menu item is no longer available.", 409);
       if (!isProductActive(productId)) throw httpError("A menu item is currently unavailable.", 409);
       if (inventoryRow.quantity !== null) {
-        const updated = db.prepare("UPDATE inventory SET quantity = quantity - ?, updated_at = ? WHERE product_id = ? AND quantity >= ?")
+        const updated = await db.prepare("UPDATE inventory SET quantity = quantity - ?, updated_at = ? WHERE product_id = ? AND quantity >= ?")
           .run(quantity, now(), productId, quantity);
         if (!updated.changes) throw httpError("One of your selected dishes has just sold out. Please update your bag.", 409);
       }
-      db.prepare("INSERT INTO order_inventory (order_number, product_id, quantity, status, expires_at) VALUES (?, ?, ?, 'held', ?)")
+      await db.prepare("INSERT INTO order_inventory (order_number, product_id, quantity, status, expires_at) VALUES (?, ?, ?, 'held', ?)")
         .run(orderNumber, productId, quantity, expiry);
     }
   }
 
-  function consumeInventory(orderNumber) {
-    db.prepare("UPDATE order_inventory SET status = 'consumed', expires_at = NULL WHERE order_number = ? AND status = 'held'").run(orderNumber);
+  async function consumeInventory(orderNumber) {
+    await db.prepare("UPDATE order_inventory SET status = 'consumed', expires_at = NULL WHERE order_number = ? AND status = 'held'").run(orderNumber);
   }
 
-  function releaseInventory(orderNumber) {
-    const rows = db.prepare("SELECT product_id, quantity FROM order_inventory WHERE order_number = ? AND status IN ('held', 'consumed')").all(orderNumber);
+  async function releaseInventory(orderNumber) {
+    const rows = await db.prepare("SELECT product_id, quantity FROM order_inventory WHERE order_number = ? AND status IN ('held', 'consumed')").all(orderNumber);
     for (const row of rows) {
-      db.prepare("UPDATE inventory SET quantity = quantity + ?, updated_at = ? WHERE product_id = ? AND quantity IS NOT NULL")
+      await db.prepare("UPDATE inventory SET quantity = quantity + ?, updated_at = ? WHERE product_id = ? AND quantity IS NOT NULL")
         .run(row.quantity, now(), row.product_id);
     }
-    db.prepare("UPDATE order_inventory SET status = 'released', expires_at = NULL WHERE order_number = ? AND status IN ('held', 'consumed')").run(orderNumber);
+    await db.prepare("UPDATE order_inventory SET status = 'released', expires_at = NULL WHERE order_number = ? AND status IN ('held', 'consumed')").run(orderNumber);
   }
 
-  function expirePaymentReservations() {
-    const expired = db.prepare("SELECT DISTINCT order_number FROM order_inventory WHERE status = 'held' AND expires_at IS NOT NULL AND expires_at <= ?").all(now());
+  async function expirePaymentReservations() {
+    const expired = await db.prepare("SELECT DISTINCT order_number FROM order_inventory WHERE status = 'held' AND expires_at IS NOT NULL AND expires_at <= ?").all(now());
     if (!expired.length) return;
-    const expire = db.transaction(() => {
+    const expire = db.transaction(async () => {
       for (const item of expired) {
-        releaseInventory(item.order_number);
-        releaseCoupon(item.order_number);
-        db.prepare("UPDATE orders SET status = 'failed', payment_status = 'expired' WHERE order_number = ? AND status = 'payment_pending'").run(item.order_number);
+        await releaseInventory(item.order_number);
+        await releaseCoupon(item.order_number);
+        await db.prepare("UPDATE orders SET status = 'failed', payment_status = 'expired' WHERE order_number = ? AND status = 'payment_pending'").run(item.order_number);
       }
     });
-    expire();
+    await expire();
   }
 
-  function updateMenuItem(productId, updated, active) {
+  async function updateMenuItem(productId, updated, active) {
     const existing = productById.get(productId);
     if (!existing && !updated) throw httpError("Menu item not found.", 404);
     const item = updated || existing;
-    db.prepare([
+    await db.prepare([
       "INSERT INTO menu_catalog (product_id, data_json, is_active, updated_at) VALUES (?, ?, ?, ?)",
       "ON CONFLICT(product_id) DO UPDATE SET data_json = excluded.data_json, is_active = excluded.is_active, updated_at = excluded.updated_at"
     ].join(" ")).run(productId, JSON.stringify(item), active ? 1 : 0, now());
@@ -651,22 +658,23 @@ function createProductionBackend(options) {
       menu.push(item);
     }
     productById.set(productId, item);
-    db.prepare("INSERT OR IGNORE INTO inventory (product_id, quantity, updated_at) VALUES (?, NULL, ?)").run(productId, now());
+    if (active) activeProductIds.add(productId); else activeProductIds.delete(productId);
+    await db.prepare("INSERT OR IGNORE INTO inventory (product_id, quantity, updated_at) VALUES (?, NULL, ?)").run(productId, now());
     return item;
   }
 
-  app.get("/api/admin/menu", requireAdmin, (req, res) => {
-    const rows = db.prepare("SELECT product_id, data_json, is_active, updated_at FROM menu_catalog ORDER BY product_id").all();
+  app.get("/api/admin/menu", requireAdmin, async (req, res) => {
+    const rows = await db.prepare("SELECT product_id, data_json, is_active, updated_at FROM menu_catalog ORDER BY product_id").all();
     return res.json({
-      items: rows.map(row => {
+      items: await Promise.all(rows.map(async row => {
         const item = JSON.parse(row.data_json);
-        const stock = db.prepare("SELECT quantity FROM inventory WHERE product_id = ?").get(row.product_id);
+        const stock = await db.prepare("SELECT quantity FROM inventory WHERE product_id = ?").get(row.product_id);
         return { ...item, isActive: Boolean(row.is_active), stockQuantity: stock ? stock.quantity : null, updatedAt: row.updated_at };
-      })
+      }))
     });
   });
 
-  app.post("/api/admin/menu", requireAdmin, (req, res) => {
+  app.post("/api/admin/menu", requireAdmin, async (req, res) => {
     const body = req.body || {};
     const id = makeSlug(body.id || body.name);
     const name = String(body.name || "").trim();
@@ -689,12 +697,12 @@ function createProductionBackend(options) {
       image: String(body.image || "").trim()
     };
     if (item.image && !/^https?:\/\//i.test(item.image)) return res.status(400).json({ error: "Food image must use a valid HTTPS or HTTP URL." });
-    updateMenuItem(id, item, true);
-    audit("admin", "menu.created", "menu_item", id, { name, price });
+    await updateMenuItem(id, item, true);
+    await audit("admin", "menu.created", "menu_item", id, { name, price });
     return res.status(201).json({ item });
   });
 
-  app.patch("/api/admin/menu/:productId", requireAdmin, (req, res) => {
+  app.patch("/api/admin/menu/:productId", requireAdmin, async (req, res) => {
     const id = String(req.params.productId || "");
     const existing = productById.get(id);
     if (!existing) return res.status(404).json({ error: "Menu item not found." });
@@ -716,33 +724,33 @@ function createProductionBackend(options) {
     if (updated.name.length < 2 || !updated.category || updated.price < 1 || (updated.image && !/^https?:\/\//i.test(updated.image))) {
       return res.status(400).json({ error: "Check the dish name, category, price and image URL." });
     }
-    const row = db.prepare("SELECT is_active FROM menu_catalog WHERE product_id = ?").get(id);
-    updateMenuItem(id, updated, row ? Boolean(row.is_active) : true);
-    audit("admin", "menu.updated", "menu_item", id, { price: updated.price });
+    const row = await db.prepare("SELECT is_active FROM menu_catalog WHERE product_id = ?").get(id);
+    await updateMenuItem(id, updated, row ? Boolean(row.is_active) : true);
+    await audit("admin", "menu.updated", "menu_item", id, { price: updated.price });
     return res.json({ item: updated });
   });
 
-  app.patch("/api/admin/menu/:productId/availability", requireAdmin, (req, res) => {
+  app.patch("/api/admin/menu/:productId/availability", requireAdmin, async (req, res) => {
     const id = String(req.params.productId || "");
     const body = req.body || {};
-    const row = db.prepare("SELECT data_json FROM menu_catalog WHERE product_id = ?").get(id);
+    const row = await db.prepare("SELECT data_json FROM menu_catalog WHERE product_id = ?").get(id);
     if (!row) return res.status(404).json({ error: "Menu item not found." });
     const active = Boolean(body.available);
-    db.prepare("UPDATE menu_catalog SET is_active = ?, updated_at = ? WHERE product_id = ?").run(active ? 1 : 0, now(), id);
-    audit("admin", "menu.availability_changed", "menu_item", id, { active });
+    await db.prepare("UPDATE menu_catalog SET is_active = ?, updated_at = ? WHERE product_id = ?").run(active ? 1 : 0, now(), id);
+    await audit("admin", "menu.availability_changed", "menu_item", id, { active });
     return res.json({ productId: id, available: active });
   });
 
-  app.delete("/api/admin/menu/:productId", requireAdmin, (req, res) => {
+  app.delete("/api/admin/menu/:productId", requireAdmin, async (req, res) => {
     const id = String(req.params.productId || "");
-    const result = db.prepare("UPDATE menu_catalog SET is_active = 0, updated_at = ? WHERE product_id = ?").run(now(), id);
+    const result = await db.prepare("UPDATE menu_catalog SET is_active = 0, updated_at = ? WHERE product_id = ?").run(now(), id);
     if (!result.changes) return res.status(404).json({ error: "Menu item not found." });
-    audit("admin", "menu.archived", "menu_item", id);
+    await audit("admin", "menu.archived", "menu_item", id);
     return res.json({ ok: true, productId: id, active: false });
   });
 
-  app.get("/api/admin/inventory", requireAdmin, (req, res) => {
-    const rows = db.prepare("SELECT i.product_id, i.quantity, i.updated_at, m.data_json, m.is_active FROM inventory i JOIN menu_catalog m ON m.product_id = i.product_id ORDER BY i.product_id").all();
+  app.get("/api/admin/inventory", requireAdmin, async (req, res) => {
+    const rows = await db.prepare("SELECT i.product_id, i.quantity, i.updated_at, m.data_json, m.is_active FROM inventory i JOIN menu_catalog m ON m.product_id = i.product_id ORDER BY i.product_id").all();
     return res.json({
       inventory: rows.map(row => {
         const item = JSON.parse(row.data_json);
@@ -751,24 +759,24 @@ function createProductionBackend(options) {
     });
   });
 
-  app.patch("/api/admin/inventory/:productId", requireAdmin, (req, res) => {
+  app.patch("/api/admin/inventory/:productId", requireAdmin, async (req, res) => {
     const id = String(req.params.productId || "");
     const quantity = (req.body || {}).quantity;
     if (!(quantity === null || (Number.isInteger(quantity) && quantity >= 0 && quantity <= 50000))) {
       return res.status(400).json({ error: "Stock quantity must be a non-negative whole number or null for untracked stock." });
     }
-    const result = db.prepare("UPDATE inventory SET quantity = ?, updated_at = ? WHERE product_id = ?").run(quantity, now(), id);
+    const result = await db.prepare("UPDATE inventory SET quantity = ?, updated_at = ? WHERE product_id = ?").run(quantity, now(), id);
     if (!result.changes) return res.status(404).json({ error: "Inventory item not found." });
-    audit("admin", "inventory.updated", "menu_item", id, { quantity });
+    await audit("admin", "inventory.updated", "menu_item", id, { quantity });
     return res.json({ productId: id, quantity, tracked: quantity !== null });
   });
 
-  app.get("/api/admin/coupons", requireAdmin, (req, res) => {
-    const coupons = db.prepare("SELECT code, discount_type AS discountType, discount_value AS discountValue, max_discount AS maxDiscount, min_order AS minimumOrder, max_uses AS maxUses, used_count AS usedCount, starts_at AS startsAt, expires_at AS expiresAt, active FROM coupons ORDER BY code").all();
+  app.get("/api/admin/coupons", requireAdmin, async (req, res) => {
+    const coupons = await db.prepare("SELECT code, discount_type AS discountType, discount_value AS discountValue, max_discount AS maxDiscount, min_order AS minimumOrder, max_uses AS maxUses, used_count AS usedCount, starts_at AS startsAt, expires_at AS expiresAt, active FROM coupons ORDER BY code").all();
     return res.json({ coupons });
   });
 
-  app.post("/api/admin/coupons", requireAdmin, (req, res) => {
+  app.post("/api/admin/coupons", requireAdmin, async (req, res) => {
     const body = req.body || {};
     const code = String(body.code || "").trim().toUpperCase();
     const type = String(body.discountType || "percent");
@@ -781,9 +789,9 @@ function createProductionBackend(options) {
     }
     const createdAt = now();
     try {
-      db.prepare("INSERT INTO coupons (code, discount_type, discount_value, max_discount, min_order, max_uses, used_count, starts_at, expires_at, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, 1, ?, ?)")
+      await db.prepare("INSERT INTO coupons (code, discount_type, discount_value, max_discount, min_order, max_uses, used_count, starts_at, expires_at, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, 1, ?, ?)")
         .run(code, type, value, maximum, min, maxUses, body.startsAt || null, body.expiresAt || null, createdAt, createdAt);
-      audit("admin", "coupon.created", "coupon", code);
+      await audit("admin", "coupon.created", "coupon", code);
       return res.status(201).json({ ok: true, code });
     } catch (error) {
       if (String(error.code || "").startsWith("SQLITE_CONSTRAINT")) return res.status(409).json({ error: "That coupon code already exists." });
@@ -791,9 +799,9 @@ function createProductionBackend(options) {
     }
   });
 
-  app.patch("/api/admin/coupons/:code", requireAdmin, (req, res) => {
+  app.patch("/api/admin/coupons/:code", requireAdmin, async (req, res) => {
     const code = String(req.params.code || "").trim().toUpperCase();
-    const existing = getCoupon(code);
+    const existing = await getCoupon(code);
     if (!existing) return res.status(404).json({ error: "Coupon not found." });
     const body = req.body || {};
     const active = body.active === undefined ? existing.active : (body.active ? 1 : 0);
@@ -811,22 +819,22 @@ function createProductionBackend(options) {
     }
     if (startsAt && Number.isNaN(Date.parse(startsAt))) return res.status(400).json({ error: "Coupon start date is invalid." });
     if (expiresAt && Number.isNaN(Date.parse(expiresAt))) return res.status(400).json({ error: "Coupon expiry date is invalid." });
-    db.prepare("UPDATE coupons SET active = ?, starts_at = ?, expires_at = ?, discount_type = ?, discount_value = ?, min_order = ?, max_discount = ?, max_uses = ?, updated_at = ? WHERE code = ?")
+    await db.prepare("UPDATE coupons SET active = ?, starts_at = ?, expires_at = ?, discount_type = ?, discount_value = ?, min_order = ?, max_discount = ?, max_uses = ?, updated_at = ? WHERE code = ?")
       .run(active, startsAt, expiresAt, type, value, minimum, maximum, maxUses, now(), code);
-    audit("admin", "coupon.updated", "coupon", code, { active: Boolean(active), discountType: type, discountValue: value });
+    await audit("admin", "coupon.updated", "coupon", code, { active: Boolean(active), discountType: type, discountValue: value });
     return res.json({ ok: true, code, active: Boolean(active) });
   });
 
-  app.delete("/api/admin/coupons/:code", requireAdmin, (req, res) => {
+  app.delete("/api/admin/coupons/:code", requireAdmin, async (req, res) => {
     const code = String(req.params.code || "").trim().toUpperCase();
-    const result = db.prepare("UPDATE coupons SET active = 0, updated_at = ? WHERE code = ?").run(now(), code);
+    const result = await db.prepare("UPDATE coupons SET active = 0, updated_at = ? WHERE code = ?").run(now(), code);
     if (!result.changes) return res.status(404).json({ error: "Coupon not found." });
-    audit("admin", "coupon.disabled", "coupon", code);
+    await audit("admin", "coupon.disabled", "coupon", code);
     return res.json({ ok: true, code, active: false });
   });
 
-  app.get("/api/admin/customers", requireAdmin, (req, res) => {
-    const rows = db.prepare([
+  app.get("/api/admin/customers", requireAdmin, async (req, res) => {
+    const rows = await db.prepare([
       "SELECT u.id, u.name, u.email, u.phone, u.created_at, COUNT(o.order_number) AS total_orders,",
       "COALESCE(SUM(CASE WHEN o.payment_status = 'paid' OR o.payment_method IN ('cod','upi_at_door') THEN o.total ELSE 0 END), 0) AS order_value",
       "FROM users u LEFT JOIN orders o ON o.user_id = u.id GROUP BY u.id ORDER BY u.created_at DESC LIMIT 200"
@@ -834,18 +842,18 @@ function createProductionBackend(options) {
     return res.json({ customers: rows });
   });
 
-  app.get("/api/admin/newsletter", requireAdmin, (req, res) => {
-    const subscribers = db.prepare("SELECT email, created_at AS createdAt FROM subscribers ORDER BY created_at DESC LIMIT 500").all();
+  app.get("/api/admin/newsletter", requireAdmin, async (req, res) => {
+    const subscribers = await db.prepare("SELECT email, created_at AS createdAt FROM subscribers ORDER BY created_at DESC LIMIT 500").all();
     return res.json({ subscribers });
   });
 
-  app.get("/api/admin/audit-logs", requireAdmin, (req, res) => {
-    const logs = db.prepare("SELECT actor, action, entity_type AS entityType, entity_id AS entityId, details_json AS details, created_at AS createdAt FROM audit_logs ORDER BY created_at DESC LIMIT 200").all();
+  app.get("/api/admin/audit-logs", requireAdmin, async (req, res) => {
+    const logs = await db.prepare("SELECT actor, action, entity_type AS entityType, entity_id AS entityId, details_json AS details, created_at AS createdAt FROM audit_logs ORDER BY created_at DESC LIMIT 200").all();
     return res.json({ logs: logs.map(row => ({ ...row, details: row.details ? JSON.parse(row.details) : null })) });
   });
 
-  app.get("/api/admin/orders/:orderNumber", requireAdmin, (req, res) => {
-    const row = db.prepare("SELECT * FROM orders WHERE order_number = ?").get(String(req.params.orderNumber || "").toUpperCase());
+  app.get("/api/admin/orders/:orderNumber", requireAdmin, async (req, res) => {
+    const row = await db.prepare("SELECT * FROM orders WHERE order_number = ?").get(String(req.params.orderNumber || "").toUpperCase());
     if (!row) return res.status(404).json({ error: "Order not found." });
     return res.json({
       orderNumber: row.order_number, customer: { name: row.customer_name, phone: row.phone, email: row.email },
@@ -859,7 +867,7 @@ function createProductionBackend(options) {
 
   app.post("/api/admin/orders/:orderNumber/refund", requireAdmin, async (req, res) => {
     const orderNumber = String(req.params.orderNumber || "").toUpperCase();
-    const row = db.prepare("SELECT order_number, total, payment_status, razorpay_payment_id FROM orders WHERE order_number = ?").get(orderNumber);
+    const row = await db.prepare("SELECT order_number, total, payment_status, razorpay_payment_id FROM orders WHERE order_number = ?").get(orderNumber);
     if (!row) return res.status(404).json({ error: "Order not found." });
     if (row.payment_status === "refunded") return res.json({ ok: true, orderNumber, paymentStatus: "refunded", message: "This order has already been refunded." });
     if (row.payment_status !== "paid" || !row.razorpay_payment_id) return res.status(409).json({ error: "Only captured online payments can be refunded from this dashboard." });
@@ -868,13 +876,13 @@ function createProductionBackend(options) {
       const refund = await razorpayRequest("/payments/" + encodeURIComponent(row.razorpay_payment_id) + "/refund", {
         method: "POST", body: { amount: Math.round(Number(row.total) * 100), notes: { foodiehub_order_number: orderNumber } }
       });
-      const completeRefund = db.transaction(() => {
-        db.prepare("UPDATE orders SET payment_status = 'refunded', status = 'cancelled' WHERE order_number = ?").run(orderNumber);
-        releaseInventory(orderNumber);
-        releaseCoupon(orderNumber);
+      const completeRefund = db.transaction(async () => {
+        await db.prepare("UPDATE orders SET payment_status = 'refunded', status = 'cancelled' WHERE order_number = ?").run(orderNumber);
+        await releaseInventory(orderNumber);
+        await releaseCoupon(orderNumber);
       });
-      completeRefund();
-      audit("admin", "order.refunded", "order", orderNumber, { refundId: refund.id });
+      await completeRefund();
+      await audit("admin", "order.refunded", "order", orderNumber, { refundId: refund.id });
       return res.json({ ok: true, orderNumber, paymentStatus: "refunded", refundId: refund.id });
     } catch (error) {
       return res.status(error.status || 502).json({ error: error.message || "The refund could not be completed." });
@@ -892,7 +900,7 @@ function createProductionBackend(options) {
     }
     const eventId = String(req.get("x-razorpay-event-id") || crypto.createHash("sha256").update(rawBody).digest("hex"));
     const event = String((req.body || {}).event || "unknown");
-    const saved = db.prepare("INSERT OR IGNORE INTO webhook_events (event_id, event_type, received_at) VALUES (?, ?, ?)")
+    const saved = await db.prepare("INSERT OR IGNORE INTO webhook_events (event_id, event_type, received_at) VALUES (?, ?, ?)")
       .run(eventId, event, now());
     if (!saved.changes) return res.json({ received: true, duplicate: true });
 
@@ -900,14 +908,14 @@ function createProductionBackend(options) {
     const payment = payload.payment && payload.payment.entity ? payload.payment.entity : {};
     const paymentOrderId = payment.order_id || (payload.order && payload.order.entity && payload.order.entity.id);
     const row = paymentOrderId
-      ? db.prepare("SELECT order_number, status, payment_status, total FROM orders WHERE gateway_order_id = ?").get(paymentOrderId)
+      ? await db.prepare("SELECT order_number, status, payment_status, total FROM orders WHERE gateway_order_id = ?").get(paymentOrderId)
       : null;
 
     const eventAmount = Number(payment.amount || (payload.order && payload.order.entity && payload.order.entity.amount) || 0);
     const eventCurrency = String(payment.currency || (payload.order && payload.order.entity && payload.order.entity.currency) || "").toUpperCase();
     if (row && ["payment.captured", "order.paid"].includes(event) && row.payment_status !== "refunded") {
       if (eventAmount !== Math.round(Number(row.total) * 100) || eventCurrency !== "INR") {
-        audit("system", "payment.webhook_amount_mismatch", "order", row.order_number, { event, eventAmount, eventCurrency });
+        await audit("system", "payment.webhook_amount_mismatch", "order", row.order_number, { event, eventAmount, eventCurrency });
         return res.status(202).json({ received: true, ignored: true });
       }
       if (["failed", "cancelled"].includes(row.status)) {
@@ -916,42 +924,42 @@ function createProductionBackend(options) {
             await razorpayRequest("/payments/" + encodeURIComponent(payment.id) + "/refund", {
               method: "POST", body: { amount: Math.round(Number(row.total) * 100), notes: { foodiehub_order_number: row.order_number, reason: "Order reservation expired or order cancelled" } }
             });
-            db.prepare("UPDATE orders SET payment_status = 'refunded', status = 'cancelled', razorpay_payment_id = ? WHERE order_number = ?")
+            await db.prepare("UPDATE orders SET payment_status = 'refunded', status = 'cancelled', razorpay_payment_id = ? WHERE order_number = ?")
               .run(payment.id, row.order_number);
-            audit("system", "payment.late_capture_refunded", "order", row.order_number);
+            await audit("system", "payment.late_capture_refunded", "order", row.order_number);
           } else {
-            db.prepare("UPDATE orders SET payment_status = 'refund_required' WHERE order_number = ?").run(row.order_number);
+            await db.prepare("UPDATE orders SET payment_status = 'refund_required' WHERE order_number = ?").run(row.order_number);
           }
         } catch (error) {
-          db.prepare("UPDATE orders SET payment_status = 'refund_required' WHERE order_number = ?").run(row.order_number);
-          audit("system", "payment.refund_required", "order", row.order_number, { message: error.message });
+          await db.prepare("UPDATE orders SET payment_status = 'refund_required' WHERE order_number = ?").run(row.order_number);
+          await audit("system", "payment.refund_required", "order", row.order_number, { message: error.message });
         }
       } else {
-        const tx = db.transaction(() => {
-          db.prepare("UPDATE orders SET payment_status = 'paid', status = CASE WHEN status = 'payment_pending' THEN 'confirmed' ELSE status END, razorpay_payment_id = ? WHERE order_number = ?")
+        const tx = db.transaction(async () => {
+          await db.prepare("UPDATE orders SET payment_status = 'paid', status = CASE WHEN status = 'payment_pending' THEN 'confirmed' ELSE status END, razorpay_payment_id = ? WHERE order_number = ?")
             .run(payment.id || null, row.order_number);
-          consumeInventory(row.order_number);
+          await consumeInventory(row.order_number);
         });
-        tx();
+        await tx();
       }
     } else if (row && event === "payment.failed") {
       // A delayed failure event must not undo a captured payment or release stock
       // that has already been consumed by a successful payment event.
-      const tx = db.transaction(() => {
-        const failed = db.prepare("UPDATE orders SET payment_status = 'failed', status = 'failed' WHERE order_number = ? AND status IN ('payment_pending', 'payment_creating') AND payment_status NOT IN ('paid', 'refunded')").run(row.order_number);
+      const tx = db.transaction(async () => {
+        const failed = await db.prepare("UPDATE orders SET payment_status = 'failed', status = 'failed' WHERE order_number = ? AND status IN ('payment_pending', 'payment_creating') AND payment_status NOT IN ('paid', 'refunded')").run(row.order_number);
         if (failed.changes) {
-          releaseInventory(row.order_number);
-          releaseCoupon(row.order_number);
-          audit("system", "payment.webhook_failed", "order", row.order_number, { event });
+          await releaseInventory(row.order_number);
+          await releaseCoupon(row.order_number);
+          await audit("system", "payment.webhook_failed", "order", row.order_number, { event });
         }
       });
-      tx();
+      await tx();
     }
     return res.json({ received: true });
   });
 
   const cleanupTimer = setInterval(() => {
-    try { expirePaymentReservations(); } catch (error) { console.error("Reservation cleanup failed:", error); }
+    expirePaymentReservations().catch(error => console.error("Reservation cleanup failed:", error));
   }, 5 * 60 * 1000);
   if (cleanupTimer.unref) cleanupTimer.unref();
 
