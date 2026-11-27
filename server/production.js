@@ -295,6 +295,14 @@ function createProductionBackend(options) {
     return res.json({ ok: true });
   });
 
+  app.post("/api/auth/logout-all", requireCustomer, (req, res) => {
+    const revokedAt = now();
+    const result = db.prepare("UPDATE auth_sessions SET revoked_at = ? WHERE subject_id = ? AND role = 'customer' AND revoked_at IS NULL")
+      .run(revokedAt, req.user.id);
+    audit(req.user.id, "customer.sessions_revoked", "user", req.user.id, { sessionsRevoked: result.changes });
+    return res.json({ ok: true, sessionsRevoked: result.changes });
+  });
+
   app.post("/api/auth/password", requireCustomer, async (req, res) => {
     try {
       const body = req.body || {};
