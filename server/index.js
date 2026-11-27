@@ -657,24 +657,35 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
 app.get("/api/admin/analytics", requireAdmin, async (req, res) => {
   try {
     // Orders are stored in UTC ISO format; dashboard periods are grouped in India time.
-    const localDateTime = "datetime(created_at, '+5 hours', '+30 minutes')";
+    const localDateTime = db.dialect === "postgres"
+      ? "(created_at::timestamptz AT TIME ZONE 'UTC' + INTERVAL '5 hours 30 minutes')"
+      : "datetime(created_at, '+5 hours', '+30 minutes')";
+    const monthBucket = db.dialect === "postgres"
+      ? "to_char(" + localDateTime + ", 'YYYY-MM')"
+      : "strftime('%Y-%m', " + localDateTime + ")";
+    const weekBucket = db.dialect === "postgres"
+      ? "date_trunc('week', " + localDateTime + ")::date"
+      : "date(" + localDateTime + ", 'weekday 0', '-6 days')";
+    const revenueExpression = db.dialect === "postgres"
+      ? "ROUND(COALESCE(SUM(total), 0)::numeric, 2)"
+      : "ROUND(COALESCE(SUM(total), 0), 2)";
     const summary = await db.prepare([
       "SELECT COUNT(*) AS total_orders,",
       "COALESCE(SUM(total), 0) AS gross_sales,",
       "COALESCE(AVG(total), 0) AS average_order,",
       "SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered_orders,",
       "SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_orders,",
-      "COUNT(DISTINCT strftime('%Y-%m', " + localDateTime + ")) AS active_months,",
-      "COUNT(DISTINCT date(" + localDateTime + ", 'weekday 0', '-6 days')) AS active_weeks",
+      "COUNT(DISTINCT " + monthBucket + ") AS active_months,",
+      "COUNT(DISTINCT " + weekBucket + ") AS active_weeks",
       "FROM orders"
     ].join(" ")).get();
-    const monthly = await db.prepare([
-      "SELECT strftime('%Y-%m', " + localDateTime + ") AS bucket,",
-      "COUNT(*) AS orders, ROUND(COALESCE(SUM(total), 0), 2) AS revenue",
+    const monthly = (await db.prepare([
+      "SELECT " + monthBucket + " AS bucket,",
+      "COUNT(*) AS orders, " + revenueExpression + " AS revenue",
       "FROM orders GROUP BY bucket ORDER BY bucket DESC LIMIT 36"
-    ].join(" ")).all().reverse();
-    const weekly = await db.prepare([
-      "SELECT date(" + localDateTime + ", 'weekday 0', '-6 days') AS bucket,",
+    ].join(" ")).all()).reverse();
+    const weekly = (await db.prepare([
+      "SELECT " + weekBucket + " AS bucket,",
       "COUNT(*) AS orders, ROUND(COALESCE(SUM(total), 0), 2) AS revenue",
       "FROM orders GROUP BY bucket ORDER BY bucket DESC LIMIT 52"
     ].join(" ")).all().reverse();
