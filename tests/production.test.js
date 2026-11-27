@@ -26,10 +26,12 @@ async function fixture(t, options = {}) {
   const menu = [{ id: "test-bowl", name: "Test Bowl", category: "Bowls", price: 200, originalPrice: 250, isVeg: true, description: "Test item", prepTime: 15, tags: [] }];
   const productById = new Map(menu.map(item => [item.id, item]));
   let backend;
-  const adminGuard = (req, res, next) => {
-    const token = String(req.get("authorization") || "").replace(/^Bearer\s+/i, "");
-    if (backend && backend.verifyAdminToken(token)) return next();
-    return res.status(401).json({ error: "Unauthorized" });
+  const adminGuard = async (req, res, next) => {
+    const token = String(req.get("authorization") || "").replace(/^Bearer\\s+/i, "");
+    try {
+      if (backend && await backend.verifyAdminToken(token)) return next();
+      return res.status(401).json({ error: "Unauthorized" });
+    } catch (error) { return next(error); }
   };
   backend = await createProductionBackend({ app, db, menu, productById, requireAdmin: adminGuard, razorpayRequest: async () => ({}), fetchFirebaseCertificates: options.fetchFirebaseCertificates });
   const server = await new Promise(resolve => {
