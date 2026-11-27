@@ -26,11 +26,10 @@
     };
 
     const addressFields = [
-      "house", "building", "street", "area", "landmark",
-      "town", "city", "district", "state", "pincode"
+      "house", "building", "street", "area", "landmark", "city", "pincode"
     ];
     const requiredAddressFields = [
-      "house", "street", "area", "town", "city", "district", "state"
+      "house", "street", "area", "city"
     ];
 
     function normalizedAddress(address) {
