@@ -27,7 +27,7 @@ async function fixture(t, options = {}) {
   const productById = new Map(menu.map(item => [item.id, item]));
   let backend;
   const adminGuard = async (req, res, next) => {
-    const token = String(req.get("authorization") || "").replace(/^Bearer\\s+/i, "");
+    const token = String(req.get("authorization") || "").replace(/^Bearer\s+/i, "");
     try {
       if (backend && await backend.verifyAdminToken(token)) return next();
       return res.status(401).json({ error: "Unauthorized" });
