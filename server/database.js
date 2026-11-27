@@ -116,37 +116,53 @@ class SqliteDatabase {
   constructor(database) {
     this.database = database;
     this.dialect = "sqlite";
+    this.transactionContext = new AsyncLocalStorage();
+    this.lockQueue = Promise.resolve();
   }
 
   pragma(statement) {
     return this.database.pragma(statement);
   }
 
-  exec(sql) {
-    return this.database.exec(sql);
+  async withLock(callback) {
+    if (this.transactionContext.getStore()) return callback();
+
+    const previous = this.lockQueue;
+    let release;
+    this.lockQueue = new Promise(resolve => { release = resolve; });
+    await previous;
+    try {
+      return await callback();
+    } finally {
+      release();
+    }
+  }
+
+  async exec(sql) {
+    return this.withLock(() => this.database.exec(sql));
   }
 
   prepare(sql) {
     const statement = this.database.prepare(sql);
     return {
-      get: (...values) => statement.get(...values),
-      all: (...values) => statement.all(...values),
-      run: (...values) => statement.run(...values)
+      get: (...values) => this.withLock(() => statement.get(...values)),
+      all: (...values) => this.withLock(() => statement.all(...values)),
+      run: (...values) => this.withLock(() => statement.run(...values))
     };
   }
 
   transaction(callback) {
-    return async (...args) => {
+    return async (...args) => this.withLock(async () => {
       this.database.exec("BEGIN");
       try {
-        const result = await callback(...args);
+        const result = await this.transactionContext.run(true, () => callback(...args));
         this.database.exec("COMMIT");
         return result;
       } catch (error) {
         try { this.database.exec("ROLLBACK"); } catch (_) {}
         throw error;
       }
-    };
+    });
   }
 
   close() {
