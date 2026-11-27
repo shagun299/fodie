@@ -69,3 +69,26 @@ test("SQLite migration helper derives primary keys and source rows without modif
     sqlite.close();
   }
 });
+
+test("SQLite adapter serializes concurrent async transactions on its shared connection", async () => {
+  const Database = require("better-sqlite3");
+  const { adaptDatabase } = require("../server/database");
+  const raw = new Database(":memory:");
+  const db = adaptDatabase(raw);
+  try {
+    await db.exec("CREATE TABLE tx_order (id TEXT PRIMARY KEY)");
+    const first = db.transaction(async () => {
+      await db.prepare("INSERT INTO tx_order (id) VALUES (?)").run("first-start");
+      await new Promise(resolve => setTimeout(resolve, 25));
+      await db.prepare("INSERT INTO tx_order (id) VALUES (?)").run("first-end");
+    });
+    const second = db.transaction(async () => {
+      await db.prepare("INSERT INTO tx_order (id) VALUES (?)").run("second");
+    });
+    await Promise.all([first(), second()]);
+    const rows = await db.prepare("SELECT id FROM tx_order ORDER BY rowid").all();
+    assert.deepEqual(rows.map(row => row.id), ["first-start", "first-end", "second"]);
+  } finally {
+    raw.close();
+  }
+});
