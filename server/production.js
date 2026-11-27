@@ -286,24 +286,25 @@ async function createProductionBackend(options) {
     return header.replace(/^Bearer\s+/i, "").trim();
   }
 
-  function attachOptionalUser(req, res, next) {
-    const token = bearerToken(req);
-    if (!token) return next();
+  async function attachOptionalUser(req, res, next) {
+    try {
+      const token = bearerToken(req);
+      if (!token) return next();
 
-    const claims = await lookupSession(token);
-    if (claims) {
-      req.auth = claims;
-      if (claims.role === "customer") {
-        const user = await db.prepare("SELECT id, name, email, phone, created_at FROM users WHERE id = ? AND is_active = 1").get(claims.sub);
-        if (user) req.user = user;
+      const claims = await lookupSession(token);
+      if (claims) {
+        req.auth = claims;
+        if (claims.role === "customer") {
+          const user = await db.prepare("SELECT id, name, email, phone, created_at FROM users WHERE id = ? AND is_active = 1").get(claims.sub);
+          if (user) req.user = user;
+        }
+        return next();
       }
-      return next();
-    }
 
-    // The legacy admin API key is not a JWT; leave it for the dedicated admin guard.
-    if (token.split(".").length !== 3) return next();
+      // The legacy admin API key is not a JWT; leave it for the dedicated admin guard.
+      if (token.split(".").length !== 3) return next();
 
-    verifyFirebaseBearerToken(token).then(firebaseClaims => {
+      const firebaseClaims = await verifyFirebaseBearerToken(token);
       if (!firebaseClaims) {
         return res.status(401).json({ error: "The sign-in session is invalid or has expired." });
       }
@@ -322,14 +323,15 @@ async function createProductionBackend(options) {
         provider: "firebase"
       };
       return next();
-    }).catch(error => {
-      const status = Number(error && error.status) === 503 ? 503 : 401;
+    } catch (error) {
+      const status = Number(error && error.status) === 503 ? 503 : 500;
+      if (status >= 500 && status !== 503) return next(error);
       return res.status(status).json({
         error: status === 503
           ? "Customer identity verification is temporarily unavailable. Please retry."
           : "The sign-in session is invalid or has expired."
       });
-    });
+    }
   }
 
   async function verifyAdminToken(token) {
@@ -638,7 +640,7 @@ async function createProductionBackend(options) {
         await db.prepare("UPDATE orders SET status = 'failed', payment_status = 'expired' WHERE order_number = ? AND status = 'payment_pending'").run(item.order_number);
       }
     });
-    expire();
+    await expire();
   }
 
   async function updateMenuItem(productId, updated, active) {
