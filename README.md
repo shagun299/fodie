@@ -6,7 +6,7 @@ FoodieHub is a responsive food-ordering application with a separate HTML/CSS/Jav
 
 GitHub Pages: https://shagun299.github.io/fodie/
 
-**Important:** GitHub Pages publishes static files only. It cannot run Node.js, SQLite, customer authentication or payment webhooks. The frontend remains in demo/local-browser mode until you deploy the API and configure its URL.
+**Important:** GitHub Pages publishes the static frontend only. The Node.js API runs separately on Render. The frontend is already configured to call the hosted API; database persistence is controlled on the API service.
 
 ## Project layout
 
@@ -19,7 +19,10 @@ GitHub Pages: https://shagun299.github.io/fodie/
 - \`data/menu.json\` — starter menu catalogue.
 - \`server/index.js\` — Express application, checkout, payment verification, order tracking and analytics.
 - \`server/production.js\` — customer/admin sessions, password hashing, address book, menu management, stock, coupons, audit logs, webhooks and refunds.
-- \`tests/production.test.js\` — backend integration and security tests.
+- \`server/database.js\` — asynchronous PostgreSQL/SQLite database adapter.
+- \`server/migrations/001_neon_postgres.sql\` — additive PostgreSQL schema migration.
+- \`scripts/migrate-sqlite-to-postgres.js\` — dry-run-first SQLite data migration utility.
+- \`tests/production.test.js\` and \`tests/database.test.js\` — backend integration, security and database-adapter tests.
 
 ## Local development
 
@@ -32,7 +35,7 @@ npm test
 npm start
 \`\`\`
 
-Open http://localhost:3000. SQLite is initialized automatically under \`server/data\` unless \`DATA_DIR\` is set.
+Open http://localhost:3000. The API uses SQLite under \`server/data\` by default. When \`DATABASE_URL\` is present, the PostgreSQL adapter is selected instead.
 
 ## Production deployment
 
@@ -49,10 +52,12 @@ Suggested Render settings:
 | Persistent disk mount | \`/var/data\` |
 | Instance count | One instance for the SQLite deployment |
 
-Add the variables from \`.env.example\` in the hosting provider's secret/environment settings. At minimum:
+Add the variables from \`.env.example\` in the hosting provider's secret/environment settings. For Neon PostgreSQL, set \`DATABASE_URL\` to the Neon pooled connection string. Keep it only in Render environment variables, never in GitHub. When \`DATABASE_URL\` is present, the API uses PostgreSQL and does not need a Render persistent disk. Without it, the API falls back to SQLite, which needs a persistent disk on Render.
+
+At minimum:
 
 1. \`NODE_ENV=production\`
-2. \`DATA_DIR=/var/data\` and attach a persistent disk at that exact path.
+2. For SQLite fallback only: \`DATA_DIR=/var/data\` and attach a persistent disk at that exact path. This is not required when using Neon.
 3. \`ALLOWED_ORIGINS=https://shagun299.github.io\` (include any custom frontend domain too).
 4. \`JWT_SECRET\` as a unique random secret of at least 32 characters.
 5. \`FIREBASE_PROJECT_ID=foodiehub-43023\` so the API can verify Firebase Authentication ID tokens used by Google/email customer sign-in.
@@ -97,7 +102,7 @@ Email/password accounts can use the API's Node.js scrypt sessions. The customer 
 - Public menu and category endpoints return only active dishes and include availability/stock metadata.
 - Admin menu APIs can add, edit, disable and archive dishes.
 - Admin inventory APIs can enable quantity tracking, update quantities and prevent checkout from overselling tracked dishes. A \`null\` quantity means stock tracking is not enabled for that dish.
-- Coupon rules live in SQLite, not only in frontend JavaScript. Admin APIs can create, edit, activate and disable coupon codes. Usage limits are claimed inside the order transaction and released for failed/cancelled orders.
+- Coupon rules live in the configured database, not only in frontend JavaScript. Admin APIs can create, edit, activate and disable coupon codes. Usage limits are claimed inside the order transaction and released for failed/cancelled orders.
 
 ### Orders and payments
 
@@ -125,12 +130,12 @@ Protected endpoints include:
 
 ## Database and scaling notes
 
-The current app uses SQLite with WAL mode and foreign keys. For a small, single-instance restaurant deployment, this is suitable only when the database directory is mounted on persistent storage and backups are configured. Keep the service to one application instance; do not run multiple API replicas against the same SQLite file. For multi-instance/high-volume operation, migrate the data layer to managed PostgreSQL before scaling.
+The backend supports Neon/PostgreSQL through \`DATABASE_URL\` and keeps SQLite as a local-development/fallback adapter. SQLite uses WAL mode and foreign keys and should only be used on Render with a persistent disk and a single API instance. PostgreSQL is the intended persistent database for the hosted API.
 
 Back up the persistent database regularly, test restoration, monitor health/error logs and set a retention policy for customer data. Protect the hosting account with MFA and rotate admin/JWT/payment secrets.
 
 ## Production readiness boundaries
 
-The backend code and API are implemented, but a production launch still requires your hosting account, persistent disk, environment secrets, Razorpay merchant approval/webhook setup and end-to-end live tests. I cannot activate those account-side resources from a GitHub commit alone.
+The backend supports both PostgreSQL and SQLite, and the Neon schema is provisioned. The live Render API has not yet been switched to Neon: set \`DATABASE_URL\` only after the current SQLite file has been backed up and migrated. Razorpay merchant approval, webhook setup and end-to-end payment tests remain a separate task.
 
-The customer sign-in interface and API bearer-token integration are now present. Firebase email verification and password-reset flows depend on the Firebase project settings and delivery configuration. The current Render service is on the Free plan and its SQLite file is on ephemeral storage, not a persistent disk. Orders and accounts stored only in that SQLite database can be lost when the service restarts, is replaced or redeploys. Do not treat this database as durable for real customer orders. Before a production launch, attach persistent storage on a paid service or migrate SQLite to an external managed database, then configure backups and test restoration. Razorpay setup and end-to-end payment tests are a separate remaining step.
+The customer sign-in interface and API bearer-token integration are present. Firebase email verification and password-reset flows still depend on Firebase project settings and delivery configuration. Render is currently using its Free service filesystem for SQLite, which is ephemeral. Neon schema setup is complete, but the SQLite-to-Neon data copy and Render \`DATABASE_URL\` cutover have not been run yet. Do not treat the current live SQLite store as durable. Use the migration utility with a verified SQLite source backup, then configure \`DATABASE_URL\` on Render and verify the live API before treating database persistence as complete. Razorpay setup and payment tests remain separate.
