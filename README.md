@@ -55,8 +55,9 @@ Add the variables from \`.env.example\` in the hosting provider's secret/environ
 2. \`DATA_DIR=/var/data\` and attach a persistent disk at that exact path.
 3. \`ALLOWED_ORIGINS=https://shagun299.github.io\` (include any custom frontend domain too).
 4. \`JWT_SECRET\` as a unique random secret of at least 32 characters.
-5. \`ADMIN_EMAIL\` and \`ADMIN_PASSWORD_HASH\`. Run \`node scripts/hash-password.js\` locally to create the scrypt hash. Do not put the plain password in GitHub.
-6. Configure \`ADMIN_API_KEY\` only if you are continuing to use the existing admin-key form in the frontend.
+5. \`FIREBASE_PROJECT_ID=foodiehub-43023\` so the API can verify Firebase Authentication ID tokens used by Google/email customer sign-in.
+6. \`ADMIN_EMAIL\` and \`ADMIN_PASSWORD_HASH\`. Run \`node scripts/hash-password.js\` locally to create the scrypt hash. Do not put the plain password in GitHub.
+7. Configure \`ADMIN_API_KEY\` as a long random secret when using the admin-key form in the frontend. Keep it only in hosting environment variables, never in GitHub or frontend config.
 
 The API deliberately refuses to start in production without a strong \`JWT_SECRET\` and an explicit \`ALLOWED_ORIGINS\` list.
 
@@ -89,7 +90,7 @@ The server calculates the order price, validates coupon eligibility, reserves tr
 - \`GET /api/auth/orders\`
 - \`GET /api/auth/addresses\`, \`POST /api/auth/addresses\`, \`DELETE /api/auth/addresses/:id\`
 
-Passwords are hashed with Node.js scrypt. Authenticated endpoints use signed, expiring bearer sessions stored in the database. Guest checkout and phone-based order tracking remain supported.
+Email/password accounts can use the API's Node.js scrypt sessions. The customer UI also supports Firebase email/password and Google sign-in; the browser attaches a Firebase ID token to API requests, and the backend verifies its RS256 signature, issuer, audience, expiry and Firebase UID. New signed-in COD orders are linked to that UID for account order history. Guest checkout and phone-based order tracking remain supported.
 
 ### Menu, stock and coupons
 
@@ -132,4 +133,4 @@ Back up the persistent database regularly, test restoration, monitor health/erro
 
 The backend code and API are implemented, but a production launch still requires your hosting account, persistent disk, environment secrets, Razorpay merchant approval/webhook setup and end-to-end live tests. I cannot activate those account-side resources from a GitHub commit alone.
 
-The current website UI continues to support guest checkout and browser-local profile/dashboard behaviour. The customer authentication and account APIs are available, but a customer-facing sign-in/account interface and attaching the bearer token from the browser checkout still need a separate frontend integration pass. Email/phone verification, password reset delivery and transactional email/SMS providers are not configured yet. Do not treat the deployment as accepting real orders until those operational steps and payment tests are complete.
+The customer sign-in interface and API bearer-token integration are now present. Firebase email verification and password-reset flows depend on the Firebase project settings and delivery configuration. The current Render service is on the Free plan and its SQLite file is on ephemeral storage, not a persistent disk. Orders and accounts stored only in that SQLite database can be lost when the service restarts, is replaced or redeploys. Do not treat this database as durable for real customer orders. Before a production launch, attach persistent storage on a paid service or migrate SQLite to an external managed database, then configure backups and test restoration. Razorpay setup and end-to-end payment tests are a separate remaining step.
