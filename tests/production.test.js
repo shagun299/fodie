@@ -68,6 +68,24 @@ test("customer registration creates a signed session and protected profile", asy
   assert.equal(rejected.status, 401);
 });
 
+test("customer password change revokes existing sessions and issues a fresh session", async t => {
+  const { base } = await fixture(t);
+  const created = await post(base, "/api/auth/register", {
+    name: "Password Test", email: "password@example.test", phone: "9876543210", password: "CustomerTestPass123!"
+  });
+  const account = await created.json();
+  const changed = await post(base, "/api/auth/password", {
+    currentPassword: "CustomerTestPass123!", newPassword: "NewCustomerPass456!"
+  }, account.token);
+  assert.equal(changed.status, 200);
+  const next = await changed.json();
+  assert.ok(next.token);
+  assert.equal((await fetch(base + "/api/auth/me", { headers: { Authorization: "Bearer " + next.token } })).status, 200);
+  assert.equal((await fetch(base + "/api/auth/me", { headers: { Authorization: "Bearer " + account.token } })).status, 401);
+  const login = await post(base, "/api/auth/login", { email: "password@example.test", password: "NewCustomerPass456!" });
+  assert.equal(login.status, 200);
+});
+
 test("admin login issues a session accepted by protected inventory API", async t => {
   const { base } = await fixture(t);
   const login = await post(base, "/api/admin/auth/login", { email: "admin@example.test", password: "FoodieHubTestPass123!" });
