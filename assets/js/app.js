@@ -2549,6 +2549,7 @@
       showToast("Select a dish, then choose View details & customise to set your portion and add-ons.");
     });
     $("#openMyDashboard").addEventListener("click", openMyDashboard);
+    $("#openAdminDashboard").addEventListener("click",()=>openDialog("adminDialog"));
     $("#myDashboardEditProfile").addEventListener("click",()=>{closeDialog("myDashboardDialog");openProfile();});
     $("#myOrdersList").addEventListener("click",handleMyDashboardAction);
     bindFeatureEvents();
