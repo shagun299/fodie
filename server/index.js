@@ -7,6 +7,7 @@ const helmet = require("helmet");
 const rateLimitPackage = require("express-rate-limit");
 const rateLimit = rateLimitPackage.rateLimit || rateLimitPackage;
 const { createDatabase } = require("./database");
+const { createMongoCatalog } = require("./mongo-catalog");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
@@ -38,6 +39,13 @@ if (db.dialect === "postgres") {
   await db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_gateway_order_id ON orders(gateway_order_id) WHERE gateway_order_id IS NOT NULL");
   await db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_idempotency_key ON orders(idempotency_key) WHERE idempotency_key IS NOT NULL");
 }
+
+const mongoCatalog = process.env.MONGODB_URI
+  ? await createMongoCatalog({
+      uri: process.env.MONGODB_URI,
+      databaseName: process.env.MONGODB_DATABASE || "foodiehub"
+    })
+  : null;
 
 const MENU_PATH = path.join(ROOT, "data", "menu.json");
 const menu = JSON.parse(fs.readFileSync(MENU_PATH, "utf8"));
@@ -249,10 +257,18 @@ function publicOrder(row) {
   };
 }
 
-production = await require("./production")({ app, db, menu, productById, requireAdmin, razorpayRequest });
+production = await require("./production")({ app, db, menu, productById, requireAdmin, razorpayRequest, mongoCatalog });
 
 app.get("/api/health", async (req, res) => {
-  res.json({ ok: true, service: "FoodieHub API", menuItems: menu.length, database: "connected", time: new Date().toISOString() });
+  res.json({
+    ok: true,
+    service: "FoodieHub API",
+    menuItems: menu.length,
+    database: "connected",
+    transactionDatabase: db.dialect,
+    catalogDatabase: mongoCatalog ? "mongodb" : db.dialect,
+    time: new Date().toISOString()
+  });
 });
 
 app.get("/api/categories", async (req, res) => {
@@ -803,7 +819,8 @@ if (process.env.NODE_ENV === "production" && !process.env.ADMIN_EMAIL && !proces
 if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 const server = app.listen(port, () => {
   console.log("FoodieHub API and website listening on port " + port);
-  console.log("Database: " + (db.dialect === "postgres" ? "Neon PostgreSQL" : path.join(DATA_DIR, "foodiehub.sqlite")));
+  console.log("Transactional database: " + (db.dialect === "postgres" ? "Neon PostgreSQL" : path.join(DATA_DIR, "foodiehub.sqlite")));
+  console.log("Menu catalog: " + (mongoCatalog ? "MongoDB Atlas" : "transactional database fallback"));
 });
 server.requestTimeout = 30000;
 server.headersTimeout = 35000;

@@ -1,9 +1,10 @@
-name: Neon PostgreSQL backend validation
+name: Neon and MongoDB backend validation
 
 on:
   push:
     branches:
       - feature/neon-postgres-backend
+      - feature/mongodb-atlas-catalog
   workflow_dispatch:
 
 permissions:
