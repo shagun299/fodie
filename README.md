@@ -139,3 +139,16 @@ Back up the persistent database regularly, test restoration, monitor health/erro
 The backend supports both PostgreSQL and SQLite, and the Neon schema is provisioned. The live Render API has not yet been switched to Neon: set \`DATABASE_URL\` only after the current SQLite file has been backed up and migrated. Razorpay merchant approval, webhook setup and end-to-end payment tests remain a separate task.
 
 The customer sign-in interface and API bearer-token integration are present. Firebase email verification and password-reset flows still depend on Firebase project settings and delivery configuration. Render is currently using its Free service filesystem for SQLite, which is ephemeral. Neon schema setup is complete, but the SQLite-to-Neon data copy and Render \`DATABASE_URL\` cutover have not been run yet. Do not treat the current live SQLite store as durable. Use the migration utility with a verified SQLite source backup, then configure \`DATABASE_URL\` on Render and verify the live API before treating database persistence as complete. Razorpay setup and payment tests remain separate.
+
+
+## Hybrid data storage: Neon + MongoDB Atlas
+
+FoodieHub uses a deliberate split rather than writing the same records to two databases:
+
+- **Neon PostgreSQL** is the system of record for customers, authentication sessions, addresses, orders, payment state, inventory, coupons, subscriptions, audit events and webhook idempotency. These records rely on relational constraints and transactions.
+- **MongoDB Atlas** stores flexible menu/product documents in the `menu_items` collection. On first connection, the API inserts missing starter products without overwriting existing catalog edits. Admin menu create/edit/archive actions write to MongoDB; stock quantities remain in Neon.
+- **SQLite** remains a local-development/fallback transaction database. SQLite on Render requires a persistent disk and a single API instance; Render Free filesystems are ephemeral.
+
+Set `DATABASE_URL` to the Neon pooled connection string, `MONGODB_URI` to the Atlas application connection string, and `MONGODB_DATABASE=foodiehub` in the hosting provider's secret environment settings. Never commit database URLs or credentials to GitHub.
+
+Do not dual-write orders or payment records to both databases. MongoDB is not a backup copy of Neon or of a previous SQLite file. Back up Neon and Atlas independently and test restoration.
