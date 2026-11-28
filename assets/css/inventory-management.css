@@ -1,0 +1,14 @@
+.admin-inventory-section{margin:24px 0 26px;padding:18px;border:1px solid var(--glass-border);border-radius:18px;background:var(--glass)}
+.admin-inventory-section .admin-table-heading{margin-bottom:8px}
+.admin-inventory-note{margin:0 0 14px;color:var(--muted);font-size:11px;line-height:1.65}
+.admin-inventory-table-wrap{max-height:390px}
+.admin-inventory-table{min-width:720px}
+.admin-stock-input{width:88px;min-height:36px;padding:0 9px;border:1px solid var(--line);border-radius:10px;background:var(--glass-strong);color:var(--ink);font:700 13px var(--sans);font-variant-numeric:tabular-nums}
+.admin-stock-input:focus{outline:2px solid var(--orange);outline-offset:2px}
+.admin-stock-status{display:inline-flex;align-items:center;min-height:25px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10px;font-weight:800;white-space:nowrap}
+.admin-stock-status.is-stocked{border-color:rgba(38,139,88,.25);background:rgba(38,139,88,.09);color:var(--green)}
+.admin-stock-status.is-low{border-color:rgba(205,139,38,.3);background:rgba(205,139,38,.1);color:#a96a15}
+.admin-stock-status.is-sold-out{border-color:rgba(204,68,68,.25);background:rgba(204,68,68,.1);color:#c44949}
+.admin-stock-status.is-unlimited{background:var(--glass);color:var(--muted)}
+.admin-inventory-table td:nth-child(4){white-space:nowrap}
+@media(max-width:640px){.admin-inventory-section{padding:13px}.admin-inventory-note{font-size:10px}.admin-inventory-table{min-width:690px}}
