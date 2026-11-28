@@ -127,6 +127,7 @@ async function createProductionBackend(options) {
   const productById = options.productById;
   const requireAdmin = options.requireAdmin;
   const razorpayRequest = options.razorpayRequest;
+  const mongoCatalog = options.mongoCatalog || null;
   const secret = process.env.JWT_SECRET || crypto.randomBytes(48).toString("hex");
   const sessionSeconds = Math.max(3600, Math.min(2592000, Number(process.env.AUTH_TOKEN_TTL_SECONDS || 604800)));
   const firebaseProjectId = String(process.env.FIREBASE_PROJECT_ID || "").trim();
@@ -229,25 +230,37 @@ async function createProductionBackend(options) {
   }
 
   const now = () => new Date().toISOString();
-  const seedMenu = db.prepare("INSERT OR IGNORE INTO menu_catalog (product_id, data_json, is_active, updated_at) VALUES (?, ?, 1, ?)");
   const seedStock = db.prepare("INSERT OR IGNORE INTO inventory (product_id, quantity, updated_at) VALUES (?, NULL, ?)");
-  for (const item of menu) {
-    await seedMenu.run(item.id, JSON.stringify(item), now());
-    await seedStock.run(item.id, now());
-  }
-  const savedMenu = await db.prepare("SELECT product_id, data_json, is_active FROM menu_catalog").all();
-  const activeProductIds = new Set(savedMenu.filter(row => Number(row.is_active) === 1).map(row => row.product_id));
-  for (const row of savedMenu) {
-    try {
-      const item = JSON.parse(row.data_json);
-      const index = menu.findIndex(entry => entry.id === row.product_id);
+  const activeProductIds = new Set();
+  if (mongoCatalog) {
+    const savedMenu = await mongoCatalog.initialize(menu);
+    for (const record of savedMenu) {
+      const item = record.item;
+      if (!item || !item.id) continue;
+      const index = menu.findIndex(entry => entry.id === item.id);
       if (index >= 0) menu[index] = item;
       else menu.push(item);
-      productById.set(row.product_id, item);
-    } catch (_) {
-      console.error("Skipped invalid saved menu record:", row.product_id);
+      productById.set(item.id, item);
+      if (record.isActive) activeProductIds.add(item.id);
+    }
+  } else {
+    const seedMenu = db.prepare("INSERT OR IGNORE INTO menu_catalog (product_id, data_json, is_active, updated_at) VALUES (?, ?, 1, ?)");
+    for (const item of menu) await seedMenu.run(item.id, JSON.stringify(item), now());
+    const savedMenu = await db.prepare("SELECT product_id, data_json, is_active FROM menu_catalog").all();
+    for (const row of savedMenu) {
+      if (Number(row.is_active) === 1) activeProductIds.add(row.product_id);
+      try {
+        const item = JSON.parse(row.data_json);
+        const index = menu.findIndex(entry => entry.id === row.product_id);
+        if (index >= 0) menu[index] = item;
+        else menu.push(item);
+        productById.set(row.product_id, item);
+      } catch (_) {
+        console.error("Skipped invalid saved menu record:", row.product_id);
+      }
     }
   }
+  for (const item of menu) await seedStock.run(item.id, now());
 
   const seedCoupon = db.prepare([
     "INSERT OR IGNORE INTO coupons",
@@ -647,10 +660,14 @@ async function createProductionBackend(options) {
     const existing = productById.get(productId);
     if (!existing && !updated) throw httpError("Menu item not found.", 404);
     const item = updated || existing;
-    await db.prepare([
-      "INSERT INTO menu_catalog (product_id, data_json, is_active, updated_at) VALUES (?, ?, ?, ?)",
-      "ON CONFLICT(product_id) DO UPDATE SET data_json = excluded.data_json, is_active = excluded.is_active, updated_at = excluded.updated_at"
-    ].join(" ")).run(productId, JSON.stringify(item), active ? 1 : 0, now());
+    if (mongoCatalog) {
+      await mongoCatalog.upsert(productId, item, active);
+    } else {
+      await db.prepare([
+        "INSERT INTO menu_catalog (product_id, data_json, is_active, updated_at) VALUES (?, ?, ?, ?)",
+        "ON CONFLICT(product_id) DO UPDATE SET data_json = excluded.data_json, is_active = excluded.is_active, updated_at = excluded.updated_at"
+      ].join(" ")).run(productId, JSON.stringify(item), active ? 1 : 0, now());
+    }
     if (existing) {
       const index = menu.findIndex(entry => entry.id === productId);
       if (index >= 0) menu[index] = item;
@@ -664,12 +681,17 @@ async function createProductionBackend(options) {
   }
 
   app.get("/api/admin/menu", requireAdmin, async (req, res) => {
-    const rows = await db.prepare("SELECT product_id, data_json, is_active, updated_at FROM menu_catalog ORDER BY product_id").all();
+    const rows = mongoCatalog
+      ? await mongoCatalog.list()
+      : await db.prepare("SELECT product_id, data_json, is_active, updated_at FROM menu_catalog ORDER BY product_id").all();
     return res.json({
       items: await Promise.all(rows.map(async row => {
-        const item = JSON.parse(row.data_json);
-        const stock = await db.prepare("SELECT quantity FROM inventory WHERE product_id = ?").get(row.product_id);
-        return { ...item, isActive: Boolean(row.is_active), stockQuantity: stock ? stock.quantity : null, updatedAt: row.updated_at };
+        const item = mongoCatalog ? row.item : JSON.parse(row.data_json);
+        const productId = mongoCatalog ? item.id : row.product_id;
+        const active = mongoCatalog ? row.isActive : Boolean(row.is_active);
+        const updatedAt = mongoCatalog ? row.updatedAt : row.updated_at;
+        const stock = await db.prepare("SELECT quantity FROM inventory WHERE product_id = ?").get(productId);
+        return { ...item, isActive: active, stockQuantity: stock ? stock.quantity : null, updatedAt };
       }))
     });
   });
@@ -724,8 +746,11 @@ async function createProductionBackend(options) {
     if (updated.name.length < 2 || !updated.category || updated.price < 1 || (updated.image && !/^https?:\/\//i.test(updated.image))) {
       return res.status(400).json({ error: "Check the dish name, category, price and image URL." });
     }
-    const row = await db.prepare("SELECT is_active FROM menu_catalog WHERE product_id = ?").get(id);
-    await updateMenuItem(id, updated, row ? Boolean(row.is_active) : true);
+    const row = mongoCatalog
+      ? await mongoCatalog.get(id)
+      : await db.prepare("SELECT is_active FROM menu_catalog WHERE product_id = ?").get(id);
+    const wasActive = mongoCatalog ? Boolean(row && row.isActive) : (row ? Boolean(row.is_active) : true);
+    await updateMenuItem(id, updated, wasActive);
     await audit("admin", "menu.updated", "menu_item", id, { price: updated.price });
     return res.json({ item: updated });
   });
@@ -733,28 +758,46 @@ async function createProductionBackend(options) {
   app.patch("/api/admin/menu/:productId/availability", requireAdmin, async (req, res) => {
     const id = String(req.params.productId || "");
     const body = req.body || {};
-    const row = await db.prepare("SELECT data_json FROM menu_catalog WHERE product_id = ?").get(id);
-    if (!row) return res.status(404).json({ error: "Menu item not found." });
+    const exists = productById.has(id);
+    if (!exists) return res.status(404).json({ error: "Menu item not found." });
     const active = Boolean(body.available);
-    await db.prepare("UPDATE menu_catalog SET is_active = ?, updated_at = ? WHERE product_id = ?").run(active ? 1 : 0, now(), id);
+    if (mongoCatalog) {
+      await mongoCatalog.setActive(id, active);
+    } else {
+      await db.prepare("UPDATE menu_catalog SET is_active = ?, updated_at = ? WHERE product_id = ?").run(active ? 1 : 0, now(), id);
+    }
+    if (active) activeProductIds.add(id); else activeProductIds.delete(id);
     await audit("admin", "menu.availability_changed", "menu_item", id, { active });
     return res.json({ productId: id, available: active });
   });
 
   app.delete("/api/admin/menu/:productId", requireAdmin, async (req, res) => {
     const id = String(req.params.productId || "");
-    const result = await db.prepare("UPDATE menu_catalog SET is_active = 0, updated_at = ? WHERE product_id = ?").run(now(), id);
-    if (!result.changes) return res.status(404).json({ error: "Menu item not found." });
+    if (!productById.has(id)) return res.status(404).json({ error: "Menu item not found." });
+    if (mongoCatalog) {
+      await mongoCatalog.setActive(id, false);
+    } else {
+      await db.prepare("UPDATE menu_catalog SET is_active = 0, updated_at = ? WHERE product_id = ?").run(now(), id);
+    }
+    activeProductIds.delete(id);
     await audit("admin", "menu.archived", "menu_item", id);
     return res.json({ ok: true, productId: id, active: false });
   });
 
   app.get("/api/admin/inventory", requireAdmin, async (req, res) => {
-    const rows = await db.prepare("SELECT i.product_id, i.quantity, i.updated_at, m.data_json, m.is_active FROM inventory i JOIN menu_catalog m ON m.product_id = i.product_id ORDER BY i.product_id").all();
+    const rows = await db.prepare("SELECT product_id, quantity, updated_at FROM inventory ORDER BY product_id").all();
     return res.json({
-      inventory: rows.map(row => {
-        const item = JSON.parse(row.data_json);
-        return { productId: row.product_id, name: item.name, category: item.category, quantity: row.quantity, tracked: row.quantity !== null, available: Boolean(row.is_active) && (row.quantity === null || row.quantity > 0), updatedAt: row.updated_at };
+      inventory: rows.filter(row => productById.has(row.product_id)).map(row => {
+        const item = productById.get(row.product_id);
+        return {
+          productId: row.product_id,
+          name: item.name,
+          category: item.category,
+          quantity: row.quantity,
+          tracked: row.quantity !== null,
+          available: isProductActive(row.product_id) && (row.quantity === null || row.quantity > 0),
+          updatedAt: row.updated_at
+        };
       })
     });
   });
