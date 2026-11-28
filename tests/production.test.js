@@ -91,15 +91,52 @@ test("customer password change revokes existing sessions and issues a fresh sess
   assert.equal(login.status, 200);
 });
 
-test("admin login issues a session accepted by protected inventory API", async t => {
-  const { base } = await fixture(t);
+test("admin login can view, update and reset protected inventory stock", async t => {
+  const { base, db } = await fixture(t);
   const login = await post(base, "/api/admin/auth/login", { email: "admin@example.test", password: "FoodieHubTestPass123!" });
   assert.equal(login.status, 200);
   const session = await login.json();
   assert.equal(session.role, "admin");
-  const inventory = await fetch(base + "/api/admin/inventory", { headers: { Authorization: "Bearer " + session.token } });
+  const headers = { Authorization: "Bearer " + session.token, "Content-Type": "application/json" };
+  const inventory = await fetch(base + "/api/admin/inventory", { headers });
   assert.equal(inventory.status, 200);
-  assert.equal((await inventory.json()).inventory[0].productId, "test-bowl");
+  const original = (await inventory.json()).inventory[0];
+  assert.equal(original.productId, "test-bowl");
+  assert.equal(original.quantity, null);
+  assert.equal(original.tracked, false);
+
+  const denied = await fetch(base + "/api/admin/inventory/test-bowl", {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quantity: 15 })
+  });
+  assert.equal(denied.status, 401);
+
+  const updated = await fetch(base + "/api/admin/inventory/test-bowl", {
+    method: "PATCH", headers, body: JSON.stringify({ quantity: 15 })
+  });
+  assert.equal(updated.status, 200);
+  assert.deepEqual(await updated.json(), { productId: "test-bowl", quantity: 15, tracked: true });
+
+  const invalid = await fetch(base + "/api/admin/inventory/test-bowl", {
+    method: "PATCH", headers, body: JSON.stringify({ quantity: 1.5 })
+  });
+  assert.equal(invalid.status, 400);
+  assert.equal(db.prepare("SELECT quantity FROM inventory WHERE product_id = 'test-bowl'").get().quantity, 15);
+
+  const soldOut = await fetch(base + "/api/admin/inventory/test-bowl", {
+    method: "PATCH", headers, body: JSON.stringify({ quantity: 0 })
+  });
+  assert.equal(soldOut.status, 200);
+  const refreshed = await fetch(base + "/api/admin/inventory", { headers });
+  const stock = (await refreshed.json()).inventory[0];
+  assert.equal(stock.quantity, 0);
+  assert.equal(stock.available, false);
+
+  const unlimited = await fetch(base + "/api/admin/inventory/test-bowl", {
+    method: "PATCH", headers, body: JSON.stringify({ quantity: null })
+  });
+  assert.equal(unlimited.status, 200);
+  assert.deepEqual(await unlimited.json(), { productId: "test-bowl", quantity: null, tracked: false });
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM audit_logs WHERE action = 'inventory.updated'").get().count, 3);
 });
 
 test("coupon validation is database-backed and usage can be released", async t => {
