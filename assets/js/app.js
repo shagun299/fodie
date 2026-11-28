@@ -109,6 +109,7 @@
     pendingRewardRedemption: false,
     adminKey: "",
     adminOrders: [],
+    adminInventory: [],
     adminAnalytics: null,
     adminChartView: "month",
     adminSource: "none",
@@ -2114,6 +2115,28 @@
       return '<div class="admin-chart-column" title="'+escapeHTML(title)+'"><strong>'+item.orders.toLocaleString("en-IN")+'</strong><div class="admin-chart-bar-track"><span style="height:'+height+'%"></span></div><small>'+escapeHTML(item.label)+'</small><em>'+escapeHTML(item.subLabel)+'</em></div>';
     }).join("")+'</div>';
   }
+  function renderAdminInventory(){
+    const inventory=state.adminInventory||[];
+    const count=$("#adminInventoryCount");
+    if(count)count.textContent=inventory.length+" menu items";
+    const body=$("#adminInventoryBody");
+    if(!body)return;
+    if(state.adminSource!=="live"){
+      body.innerHTML='<tr><td colspan="5">Connect the live admin dashboard to manage shared inventory.</td></tr>';
+      return;
+    }
+    if(!inventory.length){
+      body.innerHTML='<tr><td colspan="5">No inventory records were returned by the backend.</td></tr>';
+      return;
+    }
+    body.innerHTML=inventory.map(item=>{
+      const id=String(item.productId||"");
+      const quantity=item.quantity===null?"":String(item.quantity);
+      const status=item.quantity===null?"Unlimited":Number(item.quantity)===0?"Sold out":Number(item.quantity)<=5?"Low stock":"In stock";
+      const statusClass=item.quantity===null?"is-unlimited":Number(item.quantity)===0?"is-sold-out":Number(item.quantity)<=5?"is-low":"is-stocked";
+      return '<tr data-inventory-row="'+escapeHTML(id)+'"><td><strong>'+escapeHTML(item.name||id)+'</strong><small>'+escapeHTML(item.category||"Menu item")+'</small></td><td><span class="admin-stock-status '+statusClass+'">'+status+'</span></td><td><input class="admin-stock-input" type="number" min="0" max="50000" step="1" inputmode="numeric" data-inventory-quantity value="'+escapeHTML(quantity)+'" placeholder="∞" aria-label="Stock quantity for '+escapeHTML(item.name||id)+'"></td><td><small>0 = sold out · blank = unlimited</small></td><td><button type="button" class="button button-outline admin-update-button" data-inventory-save="'+escapeHTML(id)+'">Save</button></td></tr>';
+    }).join("");
+  }
   function renderAdminDashboard(){
     const orders=state.adminOrders||[],analytics=state.adminAnalytics||buildDemoAdminAnalytics(orders),summary=analytics.summary||{};
     const totalOrders=Number(summary.totalOrders==null?orders.length:summary.totalOrders),revenue=Number(summary.grossSales==null?orders.reduce((sum,order)=>sum+Number(order.total||0),0):summary.grossSales);
@@ -2122,6 +2145,7 @@
     $("#adminWeeklyAverage").textContent=Number(summary.averagePerActiveWeek||0).toLocaleString("en-IN",{maximumFractionDigits:1});
     $("#adminSourceLabel").textContent=state.adminSource==="live"?"LIVE DATABASE":"THIS DEVICE";
     renderAdminAnalytics();
+    renderAdminInventory();
     if(!orders.length){$("#adminOrdersBody").innerHTML='<tr><td colspan="5">No orders yet.</td></tr>';return;}
     $("#adminOrdersBody").innerHTML=orders.map(order=>{
       const number=order.order_number||order.orderNumber||"FH-UNKNOWN",name=order.customer_name||(order.customer&&order.customer.name)||"Demo customer",status=normalizeAdminStatus(order.status);
@@ -2138,14 +2162,14 @@
       if(!key){$("#adminError").textContent="Enter the server admin key to continue.";return;}
       try{
         const headers={Authorization:"Bearer "+key};
-        const [result,analytics]=await Promise.all([request("/api/admin/orders",{headers}),request("/api/admin/analytics",{headers})]);
-        state.adminKey=key;state.adminSource="live";state.adminOrders=Array.isArray(result.orders)?result.orders:[];state.adminAnalytics=analytics;
+        const [result,analytics,inventory]=await Promise.all([request("/api/admin/orders",{headers}),request("/api/admin/analytics",{headers}),request("/api/admin/inventory",{headers})]);
+        state.adminKey=key;state.adminSource="live";state.adminOrders=Array.isArray(result.orders)?result.orders:[];state.adminInventory=Array.isArray(inventory.inventory)?inventory.inventory:[];state.adminAnalytics=analytics;
         $("#adminConnection").textContent="Connected to the live FoodieHub database. Analytics include the full order history; the table below shows the latest 100 orders.";
         renderAdminDashboard();
       }catch(error){state.adminKey="";$("#adminError").textContent=error.message||"Admin connection failed.";}
       return;
     }
-    state.adminKey="";state.adminSource="demo";
+    state.adminKey="";state.adminSource="demo";state.adminInventory=[];
     state.adminOrders=state.orders.map(order=>({...order,customer_name:(order.customer&&order.customer.name)||"This browser",order_number:order.orderNumber,total:order.total}));
     state.adminAnalytics=buildDemoAdminAnalytics(state.adminOrders);
     $("#adminConnection").textContent="Demo mode · showing orders saved on this device only. Connect the hosted backend to view shared order history.";
@@ -2168,6 +2192,40 @@
       renderAdminDashboard();showToast("Order status updated.");
     }catch(error){$("#adminError").textContent=error.message||"The order status could not be updated.";}
     finally{button.disabled=false;}
+  }
+
+  async function updateAdminInventory(button){
+    const row=button.closest("[data-inventory-row]");
+    if(!row||state.adminSource!=="live"||!state.adminKey)return;
+    const productId=row.dataset.inventoryRow;
+    const input=$("[data-inventory-quantity]",row);
+    const raw=String(input&&input.value||"").trim();
+    const quantity=raw===""?null:Number(raw);
+    if(quantity!==null&&(!Number.isInteger(quantity)||quantity<0||quantity>50000)){
+      $("#adminError").textContent="Enter a whole stock quantity from 0 to 50,000, or leave it blank for unlimited stock.";
+      return;
+    }
+    button.disabled=true;
+    $("#adminError").textContent="";
+    try{
+      const saved=await request("/api/admin/inventory/"+encodeURIComponent(productId),{
+        method:"PATCH",
+        headers:{Authorization:"Bearer "+state.adminKey},
+        body:JSON.stringify({quantity})
+      });
+      const item=state.adminInventory.find(entry=>entry.productId===productId);
+      if(item){
+        item.quantity=saved.quantity;
+        item.tracked=saved.tracked;
+        item.available=saved.quantity===null||saved.quantity>0;
+      }
+      $("#adminConnection").textContent="Demo inventory saved for "+(item&&item.name||productId)+". Stock is shared with the live menu API.";
+      renderAdminInventory();
+      showToast("Inventory updated.");
+    }catch(error){
+      $("#adminError").textContent=error.message||"Inventory could not be updated.";
+      button.disabled=false;
+    }
   }
 
   function customerOrderStatus(status){
@@ -2343,6 +2401,7 @@
     $("#adminLoginForm").addEventListener("submit",connectAdmin);
     $$(".admin-chart-switch [data-analytics-view]").forEach(button=>button.addEventListener("click",()=>{state.adminChartView=button.dataset.analyticsView;renderAdminAnalytics();}));
     $("#adminOrdersBody").addEventListener("click",event=>{const button=event.target.closest("[data-admin-update]");if(button)updateAdminOrder(button);});
+    $("#adminInventoryBody").addEventListener("click",event=>{const button=event.target.closest("[data-inventory-save]");if(button)updateAdminInventory(button);});
   }
 
   function setTheme(theme) {
