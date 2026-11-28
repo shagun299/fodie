@@ -32,6 +32,7 @@
   <link rel="stylesheet" href="./assets/css/mobile-interaction-polish-v1.css?v=compact-sheets-spacing-actions-v2-20261118">
   <link rel="stylesheet" href="./assets/css/apple-premium-refresh-v1.css?v=apple-premium-refresh-v2-instant-detail-close-20261118">
   <link rel="stylesheet" href="./assets/css/firebase-auth-ui.css?v=firebase-auth-ui-v5-account-security">
+  <link rel="stylesheet" href="./assets/css/inventory-management.css?v=demo-inventory-v1-20261128">
   <script src="./assets/js/config.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/13.4.0/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/13.4.0/firebase-auth-compat.js"></script>
@@ -657,6 +658,19 @@
           <div class="admin-chart-header"><div><span class="drawer-kicker">ORDER VOLUME</span><h4 id="adminChartTitle">Orders per month</h4></div><span id="adminChartRange">Last 12 months</span></div>
           <div class="admin-chart-plot" id="adminAnalyticsChart" role="img" aria-label="Order volume chart"><p class="admin-chart-empty">Connect the dashboard to view order trends.</p></div>
           <div class="admin-chart-footnote"><span><i></i> Orders placed</span><span id="adminTimezoneNote">Dates shown in India time</span></div>
+        </div>
+      </section>
+      <section class="admin-inventory-section" aria-labelledby="adminInventoryTitle">
+        <div class="admin-table-heading">
+          <div><span class="drawer-kicker">DEMO STOCK CONTROL</span><h3 id="adminInventoryTitle">Menu inventory</h3></div>
+          <span id="adminInventoryCount">Not connected</span>
+        </div>
+        <p class="admin-inventory-note">Sample stock for demo testing only. Set a dish to 0 to mark it sold out. Leave the quantity blank for unlimited stock. Replace all sample quantities before taking real orders.</p>
+        <div class="admin-table-wrap admin-inventory-table-wrap">
+          <table class="admin-table admin-inventory-table">
+            <thead><tr><th>Dish</th><th>Availability</th><th>Stock units</th><th>Stock rule</th><th>Action</th></tr></thead>
+            <tbody id="adminInventoryBody"><tr><td colspan="5">Connect the hosted backend to manage inventory.</td></tr></tbody>
+          </table>
         </div>
       </section>
       <div class="admin-table-heading"><div><span class="drawer-kicker">RECENT ACTIVITY</span><h3>Order management</h3></div><span id="adminSourceLabel">Not connected</span></div>
