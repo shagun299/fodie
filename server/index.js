@@ -635,7 +635,30 @@ app.post("/api/orders", async (req, res, next) => {
       await production.claimCoupon(bill.couponCode, orderNumber);
       await production.consumeInventory(orderNumber);
     });
-    await saveDeliveryOrder();
+    try {
+      await saveDeliveryOrder();
+    } catch (error) {
+      // Concurrent retries can both pass the initial idempotency lookup. The
+      // unique index prevents a duplicate order; return the winning order
+      // instead of making the losing request look like a failed checkout.
+      const isConstraintViolation = String(error && error.code || "").startsWith("SQLITE_CONSTRAINT");
+      if (idempotencyKey && isConstraintViolation) {
+        const existing = await db.prepare("SELECT order_number, total, payment_method, payment_status, status, created_at, items_json, subtotal, coupon_discount, delivery_fee, tax, idempotency_fingerprint FROM orders WHERE idempotency_key = ?").get(idempotencyKey);
+        if (existing) {
+          if (existing.idempotency_fingerprint !== fingerprint) {
+            return res.status(409).json({ error: "This checkout request was already used with different order details. Close checkout and start again." });
+          }
+          return res.json({
+            ...publicOrder({ order_number: existing.order_number, status: existing.status, total: existing.total, payment_method: existing.payment_method, payment_status: existing.payment_status, created_at: existing.created_at }),
+            items: JSON.parse(existing.items_json || "[]"),
+            subtotal: existing.subtotal, couponDiscount: existing.coupon_discount,
+            deliveryFee: existing.delivery_fee, tax: existing.tax,
+            message: "This order was already saved. No duplicate order was created."
+          });
+        }
+      }
+      throw error;
+    }
     res.status(201).json({
       ...publicOrder({ order_number: orderNumber, status: "confirmed", total: bill.total, payment_method: paymentMethod, payment_status: "pending", created_at: createdAt }),
       items: bill.items,
