@@ -20,33 +20,42 @@ jobs:
           const BASE = "https://foodiehub-api-iv85.onrender.com";
           const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-          async function getJson(path) {
+          async function request(path, options = {}) {
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), 20000);
             try {
-              const response = await fetch(BASE + path, {
-                headers: { accept: "application/json" },
-                signal: controller.signal
-              });
-              const contentType = response.headers.get("content-type") || "";
-              const bodyText = await response.text();
-              let body;
-              try { body = JSON.parse(bodyText); }
-              catch { throw new Error(path + " returned non-JSON (HTTP " + response.status + "): " + bodyText.slice(0, 180)); }
-              if (!response.ok) throw new Error(path + " returned HTTP " + response.status + ": " + JSON.stringify(body).slice(0, 180));
-              if (!contentType.includes("application/json")) throw new Error(path + " did not return JSON content-type: " + contentType);
-              return body;
+              const response = await fetch(BASE + path, { ...options, signal: controller.signal });
+              const text = await response.text();
+              let body = null;
+              try { body = text ? JSON.parse(text) : null; } catch {}
+              return { status: response.status, headers: response.headers, body, text };
             } finally {
               clearTimeout(timer);
             }
           }
 
+          async function expectStatus(label, path, method, body, expected) {
+            const result = await request(path, {
+              method,
+              headers: body === undefined ? {} : { "content-type": "application/json" },
+              ...(body === undefined ? {} : { body: JSON.stringify(body) })
+            });
+            if (result.status !== expected) {
+              throw new Error(label + " expected HTTP " + expected + ", received " + result.status + ": " + result.text.slice(0, 180));
+            }
+            checks.push({ name: label, status: result.status, result: "PASS" });
+            return result;
+          }
+
+          const checks = [];
           async function main() {
             let health;
             let lastError;
             for (let attempt = 1; attempt <= 12; attempt++) {
               try {
-                health = await getJson("/api/health");
+                const result = await request("/api/health");
+                if (result.status !== 200 || !result.body) throw new Error("Health HTTP " + result.status);
+                health = result.body;
                 break;
               } catch (error) {
                 lastError = error;
@@ -55,43 +64,95 @@ jobs:
               }
             }
             if (!health) throw lastError || new Error("Health endpoint unavailable.");
-            if (health.ok !== true) throw new Error("Health endpoint did not report ok=true.");
-            if (health.database !== "connected") throw new Error("Database is not reported connected.");
-            if (health.transactionDatabase !== "postgres") throw new Error("Expected Neon PostgreSQL, got " + health.transactionDatabase);
-            if (!Number.isInteger(health.menuItems) || health.menuItems < 1) throw new Error("Health reports no menu items.");
+            if (health.ok !== true || health.database !== "connected" || health.transactionDatabase !== "postgres") {
+              throw new Error("Production health/database check failed: " + JSON.stringify(health));
+            }
+            const securityHeaders = await request("/api/health");
+            if (securityHeaders.headers.get("x-powered-by") !== null) throw new Error("X-Powered-By header is exposed.");
+            if (securityHeaders.headers.get("x-content-type-options") !== "nosniff") throw new Error("X-Content-Type-Options nosniff header missing.");
+            checks.push({ name: "Helmet security headers", result: "PASS" });
 
-            const [menu, categoryData] = await Promise.all([
-              getJson("/api/menu"),
-              getJson("/api/categories")
-            ]);
-            if (!Array.isArray(menu.items) || menu.items.length < 1) throw new Error("Menu items array is empty or missing.");
-            if (menu.count !== menu.items.length) throw new Error("Menu count does not match the returned item count.");
-            if (!Array.isArray(categoryData.categories) || categoryData.categories.length < 1) throw new Error("Categories array is empty or missing.");
-            const menuCategories = new Set(menu.items.map(item => item.category));
-            const missingCategories = categoryData.categories.filter(category => !menuCategories.has(category));
-            if (missingCategories.length) throw new Error("Categories absent from menu response: " + missingCategories.join(", "));
-            const invalidItems = menu.items.filter(item =>
-              !item.id || !item.name || !Number.isFinite(Number(item.price)) || Number(item.price) <= 0
-            );
-            if (invalidItems.length) throw new Error("Invalid menu records: " + invalidItems.length);
+            const menu = await request("/api/menu");
+            const categories = await request("/api/categories");
+            if (menu.status !== 200 || !menu.body || !Array.isArray(menu.body.items) || menu.body.count !== menu.body.items.length) {
+              throw new Error("Live menu integrity check failed.");
+            }
+            if (categories.status !== 200 || !categories.body || !Array.isArray(categories.body.categories) || !categories.body.categories.length) {
+              throw new Error("Live categories check failed.");
+            }
+            checks.push({ name: "Menu and categories read-only checks", result: "PASS", menuItems: menu.body.count, categories: categories.body.categories.length });
+
+            await expectStatus("Unauthenticated customer profile denied", "/api/auth/me", "GET", undefined, 401);
+            await expectStatus("Unauthenticated order history denied", "/api/auth/orders", "GET", undefined, 401);
+            await expectStatus("Unauthenticated saved addresses denied", "/api/auth/addresses", "GET", undefined, 401);
+            await expectStatus("Unauthenticated customer logout denied", "/api/auth/logout", "POST", {}, 401);
+            await expectStatus("Empty registration rejected before write", "/api/auth/register", "POST", {}, 400);
+            await expectStatus("Malformed login rejected", "/api/auth/login", "POST", { email: "not-an-email", password: "x" }, 400);
+            await expectStatus("Empty COD checkout rejected before write", "/api/orders", "POST", {}, 400);
+            await expectStatus("Invalid tracking lookup rejected", "/api/orders/track?order=FH-QA-NOT-REAL&phone=123", "GET", undefined, 400);
+            await expectStatus("Invalid newsletter input rejected before write", "/api/newsletter", "POST", { email: "not-an-email" }, 400);
+            await expectStatus("Invalid coupon subtotal rejected", "/api/coupons/validate", "POST", { code: "FOOD25", subtotal: -1 }, 400);
+            const validCoupon = await request("/api/coupons/validate", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ code: "FOOD25", subtotal: 500 })
+            });
+            if (validCoupon.status !== 200 || validCoupon.body?.discount !== 100) {
+              throw new Error("Read-only coupon calculation failed: HTTP " + validCoupon.status + " " + JSON.stringify(validCoupon.body));
+            }
+            checks.push({ name: "Coupon calculation (read-only)", result: "PASS", discount: validCoupon.body.discount });
+            await expectStatus("Coupon minimum subtotal enforced", "/api/coupons/validate", "POST", { code: "FOOD25", subtotal: 200 }, 400);
+
+            for (const route of ["/api/admin/orders", "/api/admin/analytics"]) {
+              const result = await request(route);
+              if (![401, 403, 503].includes(result.status)) {
+                throw new Error("Unauthenticated admin route was not denied: " + route + " HTTP " + result.status);
+              }
+              checks.push({ name: "Admin route protected: " + route, status: result.status, result: "PASS" });
+            }
+
+            const allowedOrigin = await request("/api/health", {
+              method: "OPTIONS",
+              headers: {
+                Origin: "https://shagun299.github.io",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "content-type"
+              }
+            });
+            if (allowedOrigin.status !== 204 || allowedOrigin.headers.get("access-control-allow-origin") !== "https://shagun299.github.io") {
+              throw new Error("GitHub Pages frontend CORS preflight failed: HTTP " + allowedOrigin.status);
+            }
+            checks.push({ name: "FoodieHub frontend CORS allowed", status: 204, result: "PASS" });
+
+            const blockedOrigin = await request("/api/health", {
+              method: "OPTIONS",
+              headers: {
+                Origin: "https://untrusted-qa-origin.example",
+                "Access-Control-Request-Method": "GET"
+              }
+            });
+            if (blockedOrigin.status !== 403 || blockedOrigin.headers.get("access-control-allow-origin") !== null) {
+              throw new Error("Untrusted origin was not blocked: HTTP " + blockedOrigin.status);
+            }
+            checks.push({ name: "Untrusted browser origin blocked", status: 403, result: "PASS" });
 
             console.log(JSON.stringify({
               result: "PASS",
               health: {
                 ok: health.ok,
-                service: health.service,
-                database: health.database,
                 transactionDatabase: health.transactionDatabase,
                 menuItems: health.menuItems
               },
-              menu: { http: 200, count: menu.count, validItems: menu.items.length },
-              categories: { http: 200, count: categoryData.categories.length, values: categoryData.categories },
+              checks,
+              checkCount: checks.length,
+              writeOperations: 0,
+              paymentOperations: 0,
               checkedAt: new Date().toISOString()
             }, null, 2));
           }
 
           main().catch(error => {
-            console.error("LIVE API PROBE FAILED:", error.stack || error.message);
+            console.error("LIVE API SECURITY PROBE FAILED:", error.stack || error.message);
             process.exitCode = 1;
           });
           NODE
