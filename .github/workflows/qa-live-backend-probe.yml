@@ -97,6 +97,11 @@ jobs:
               throw new Error("Live categories check failed.");
             }
             checks.push({ name: "Menu and categories read-only checks", result: "PASS", menuItems: menu.body.count, categories: categories.body.categories.length });
+            const invalidStock = menu.body.items.filter(item => item.stockQuantity !== 20 || item.available !== true);
+            if (menu.body.items.length !== 24 || invalidStock.length) {
+              throw new Error("Demo inventory API values do not match 20 units per dish: " + JSON.stringify(invalidStock.slice(0, 3)));
+            }
+            checks.push({ name: "Demo stock is exposed by live menu API", result: "PASS", menuItems: menu.body.items.length, sampleQuantity: 20 });
 
             await expectStatus("Unauthenticated customer profile denied", "/api/auth/me", "GET", undefined, 401);
             await expectStatus("Unauthenticated order history denied", "/api/auth/orders", "GET", undefined, 401);
