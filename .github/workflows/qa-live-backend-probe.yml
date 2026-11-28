@@ -13,6 +13,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Checkout production source snapshot
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run source checks and isolated backend tests
+        run: |
+          npm run check
+          npm test
+
       - name: Verify production FoodieHub API
         shell: bash
         run: |
