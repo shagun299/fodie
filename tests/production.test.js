@@ -259,12 +259,21 @@ test("live API integration: registered customer can save an address, place COD o
     paymentMethod: "cod"
   };
   const idempotencyKey = unique.slice(0, 32);
-  const createdOrder = await send("/api/orders", payload, account.token, { "Idempotency-Key": idempotencyKey });
-  assert.equal(createdOrder.status, 201);
-  const order = await createdOrder.json();
+  const concurrentOrders = await Promise.all([
+    send("/api/orders", payload, account.token, { "Idempotency-Key": idempotencyKey }),
+    send("/api/orders", payload, account.token, { "Idempotency-Key": idempotencyKey })
+  ]);
+  const concurrentResults = await Promise.all(concurrentOrders.map(async response => ({
+    status: response.status,
+    body: await response.json()
+  })));
+  assert.equal(concurrentResults.filter(result => result.status === 201).length, 1);
+  assert.equal(concurrentResults.filter(result => result.status === 200).length, 1);
+  const order = concurrentResults.find(result => result.status === 201).body;
   assert.ok(order.orderNumber);
   assert.equal(order.status, "confirmed");
   assert.equal(order.paymentMethod, "cod");
+  assert.ok(concurrentResults.every(result => result.body.orderNumber === order.orderNumber));
 
   const repeatedOrder = await send("/api/orders", payload, account.token, { "Idempotency-Key": idempotencyKey });
   assert.equal(repeatedOrder.status, 200);
